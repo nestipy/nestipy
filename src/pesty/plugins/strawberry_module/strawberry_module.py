@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
@@ -12,7 +13,7 @@ from pesty.plugins.strawberry_module.strawberry_middleware import StrawberryMidd
 
 @dataclass
 class StrawberryOption:
-    ide: Optional[Literal['', '', '']] = 'pathfinder'
+    graphql_ide: Optional[Literal['', '', '']] = 'pathfinder'
 
 
 @Module(providers=[])
@@ -27,13 +28,14 @@ class StrawberryModule(DynamicModule, PestyModule):
         return cls.register(option, token=STRAWBERRY_MODULE_OPTION)
 
     def configure(self, consumer: MiddlewareConsumer):
-        try:
-            compiler = GraphqlCompiler(modules=self.resolvers)
-            schema = compiler.compile()
-            setattr(StrawberryMiddleware, 'schema', schema)
-            consumer.apply_for_route(self, '/graphql', StrawberryMiddleware)
-        except Exception as e:
-            print(e)
+        if len(self.resolvers) > 0:
+            try:
+                gql_compiler = GraphqlCompiler(modules=self.resolvers)
+                schema = gql_compiler.compile()
+                setattr(StrawberryMiddleware, 'schema', schema)
+                consumer.apply_for_route(self, '/graphql', StrawberryMiddleware)
+            except Exception as e:
+                logging.error(e)
 
     async def on_startup(self):
         pass

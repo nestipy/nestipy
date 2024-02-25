@@ -12,10 +12,11 @@ class GraphqlCompiler:
         self.modules = modules
 
     def compile(self, **kwargs) -> Schema:
-        queries, mutations = self.split_class_query_mutation()
-        ComboQuery = merge_types("Query", tuple(queries))
-        ComboMutation = merge_types("Mutation", tuple(mutations))
-        return Schema(query=ComboQuery, mutation=ComboMutation, **kwargs)
+        queries, mutations, subscriptions = self.split_class_query_mutation()
+        ComboQuery = merge_types("Query", tuple(queries)) if len(queries) > 0 else None
+        ComboMutation = merge_types("Mutation", tuple(mutations)) if len(mutations) > 0 else None
+        ComboSubscription = merge_types("Subscription", tuple(subscriptions)) if len(subscriptions) > 0 else None
+        return Schema(query=ComboQuery, mutation=ComboMutation, subscription=ComboSubscription, **kwargs)
 
     def get_resolver(self):
         key = 'provider_instances__'
@@ -30,6 +31,7 @@ class GraphqlCompiler:
     def split_class_query_mutation(self):
         class_query = []
         class_mutation = []
+        class_subscription = []
         resolvers = self.get_resolver()
         for class_, instance_ in resolvers.items():
             name: str = self.get_name(class_)
@@ -37,16 +39,26 @@ class GraphqlCompiler:
             class_methods = self.extract_class_not_resolver(class_)
             instance = self.create_instance_of_class(class_.__name__, properties + class_methods)
             methods = self.put_metadata_to_resolver(instance, self.extract_class_method_resolver(class_))
+
             query_resolver = self.extract_class_query(methods)
-            mutation_resolver = self.extract_class_mutation(methods)
             query_ = strawberry_type(type(name + 'Query', (), {'__module__': class_.__module__,
                                                                **self.tuple_to_dict(query_resolver)}))
-            mutation_ = strawberry_type(type(name + 'Mutation', (), {'__module__': class_.__module__,
-                                                                     **self.tuple_to_dict(mutation_resolver)}))
-            class_mutation.append(mutation_)
             class_query.append(query_)
 
-        return class_query, class_mutation
+            mutation_resolver = self.extract_class_mutation(methods)
+            if len(mutation_resolver) > 0:
+                mutation_ = strawberry_type(type(name + 'Mutation', (), {'__module__': class_.__module__,
+                                                                         **self.tuple_to_dict(mutation_resolver)}))
+                class_mutation.append(mutation_)
+
+            subscription_resolver = self.extract_class_subscription(methods)
+            if len(subscription_resolver) > 0:
+                subscription_ = strawberry_type(type(name + 'Subscription', (), {'__module__': class_.__module__,
+                                                                                 **self.tuple_to_dict(
+                                                                                     subscription_resolver)}))
+                class_subscription.append(subscription_)
+
+        return class_query, class_mutation, class_subscription
 
     @classmethod
     def put_metadata_to_resolver(cls, instance, resolvers: list[tuple]):
@@ -68,31 +80,38 @@ class GraphqlCompiler:
                 and not p[0].endswith('_')]
 
     @classmethod
+    def is_resolver(cls, p):
+        return hasattr(p, 'graphql__resolver__')
+
+    @classmethod
     def extract_class_method_resolver(cls, resolver):
         methods = inspect.getmembers(resolver,
                                      predicate=lambda p:
-                                     (inspect.ismethod(p) or inspect.isfunction(p))
-                                     and (hasattr(p, 'mutation__') or hasattr(p, 'query__')))
+                                     (inspect.ismethod(p) or inspect.isfunction(p)) and cls.is_resolver(p))
 
         return [p for p in methods if not p[0].startswith('__')]
-
-    @classmethod
-    def extract_class_query(cls, methods):
-        return [(m[0], field(m[1])) for m in methods if hasattr(m[1], 'query__')]
-        pass
-
-    @classmethod
-    def extract_class_mutation(cls, methods):
-        return [(m[0], field(m[1])) for m in methods if hasattr(m[1], 'mutation__')]
 
     @classmethod
     def extract_class_not_resolver(cls, resolver):
         methods = inspect.getmembers(resolver,
                                      predicate=lambda p:
                                      (inspect.ismethod(p) or inspect.isfunction(p))
-                                     and not hasattr(p, 'mutation__') and not hasattr(p, 'query__'))
-        return [(m[0], field(m[1])) for m in methods if
-                not hasattr(m[1], 'mutation__') and not hasattr(m[1], 'query__')]
+                                     and not cls.is_resolver(p))
+        return [(m[0], m[1]) for m in methods if not m[0].startswith('__')]
+
+    @classmethod
+    def extract_class_query(cls, methods):
+        return [(m[0], field(m[1], **cls.get_kwargs(m[1]))) for m in methods if hasattr(m[1], 'query__')]
+        pass
+
+    @classmethod
+    def extract_class_mutation(cls, methods):
+        return [(m[0], field(m[1], **cls.get_kwargs(m[1]))) for m in methods if hasattr(m[1], 'mutation__')]
+
+    @classmethod
+    def extract_class_subscription(cls, methods):
+        return [(m[0], field(m[1], **cls.get_kwargs(m[1]), is_subscription=True)) for m in methods if
+                hasattr(m[1], 'subscription__')]
 
     @classmethod
     def tuple_to_dict(cls, tuples: list):
@@ -104,3 +123,7 @@ class GraphqlCompiler:
     @classmethod
     def get_name(cls, class_):
         return snakecase.convert(class_.__name__).split('_')[0].capitalize()
+
+    @classmethod
+    def get_kwargs(cls, method):
+        return method.kwargs if hasattr(method, 'kwargs') else {}

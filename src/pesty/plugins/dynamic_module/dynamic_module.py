@@ -62,7 +62,7 @@ class DynamicModule(ABC):
         return cls._create_module(use_value=value, token=token)
 
     @classmethod
-    def register_async(cls, option: ModuleOption, token, inject: list[Callable]):
+    def register_async(cls, option: ModuleOption = None, token=None, inject: list[Callable] = None):
         create_module_params = {
             'inject': inject or [],
             'is_async': True
