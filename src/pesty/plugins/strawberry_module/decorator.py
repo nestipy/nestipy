@@ -1,4 +1,4 @@
-from strawberry import field, input, mutation, type as strawberry_type
+from strawberry import input, type as strawberry_type
 
 from pesty.common.decorator import Injectable
 

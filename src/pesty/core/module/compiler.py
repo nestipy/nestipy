@@ -58,16 +58,16 @@ class ModuleCompiler:
             old_global_module = [m for m in imports if
                                  hasattr(m, "is_global__") and m.is_global__]
             for index, gb_module in enumerate(old_global_module):
-                m = self.modify_module_imports(gb_module, old_global_module[0:index + 1])
-                await self.register_and_resolve_provider(m)
-                global_module.append(m)
+                self.modify_module_imports(gb_module, old_global_module[0:index + 1])
+                await self.register_and_resolve_provider(gb_module)
+                global_module.append(gb_module)
 
         for module_import in [m for m in imports if
                               m not in global_module and m.__name__ not in self.module_resolved.keys()]:
-            m = self.modify_module_imports(module_import, global_module)
-            await self.register_and_resolve_provider(m)
-            instance = m()
-            self.module_resolved[m.__name__] = instance
+            self.modify_module_imports(module_import, global_module)
+            await self.register_and_resolve_provider(module_import)
+            instance = module_import()
+            self.module_resolved[module_import.__name__] = instance
             self.extract_hooks_in_module(instance)
 
     def modify_module_imports(self, module, global_modules):
@@ -77,7 +77,6 @@ class ModuleCompiler:
         module_imports_with_global = filtered_global_modules + module_imports
         setattr(module, 'imports', module_imports_with_global)
         setattr(module, 'container__', self.container)
-        return module
 
     async def recreate_async_provider(self, module):
         if hasattr(module, 'token__'):
@@ -118,8 +117,6 @@ class ModuleCompiler:
         return use_factory(**factory_dependencies)
 
     async def resolve_providers_of_module(self, module):
-        await self.resolve_controllers_of_module(module)
-        self.extract_middleware_of_module(module)
         await self.recreate_async_provider(module)
         providers = self.extract_provider(module)
         for p in providers:
@@ -131,6 +128,9 @@ class ModuleCompiler:
                 token = p.token__
                 instance = self.container.resolve_method(p, token=token)
                 self.put_module_provider_instance(module, token, instance, is_middleware=is_middleware)
+
+        await self.resolve_controllers_of_module(module)
+        self.extract_middleware_of_module(module)
 
     async def resolve_controllers_of_module(self, module):
         controllers = [ctrl for ctrl in module.controllers if hasattr(ctrl, 'controller__')]
@@ -164,11 +164,11 @@ class ModuleCompiler:
             return path, getattr(handler, 'middleware__') or []
         return path, []
 
-    def apply_middleware_to_path(self, path, middlewares: list):
+    def apply_middleware_to_path(self, module, path, middlewares: list):
         transformed_middleware = []
         for m in middlewares:
             if inspect.isclass(m):
-                instance = m()
+                instance = self.container.resolve(m, module)
                 middleware = getattr(instance, 'use')
                 transformed_middleware.append(MiddlewareDict(path=path, middleware=middleware))
             elif inspect.isfunction(m) or inspect.ismethod(m):
@@ -177,16 +177,16 @@ class ModuleCompiler:
         self.middlewares += transformed_middleware
         return transformed_middleware
 
-    def apply_middleware_to_ctrl(self, ctrl, middlewares=None):
+    def apply_middleware_to_ctrl(self, module, ctrl, middlewares=None):
         if middlewares is None:
             middlewares = []
         applied_middlewares = []
         ctrl_path, ctrl_middleware = self.get_middleware_of_handler(ctrl, path='path')
-        applied_middlewares += self.apply_middleware_to_path(ctrl_path, middlewares + ctrl_middleware)
+        applied_middlewares += self.apply_middleware_to_path(module, ctrl_path, middlewares + ctrl_middleware)
         methods = inspect.getmembers(ctrl, predicate=Utils.is_handler)
         for name, value in methods:
             method_path, method_middleware = self.get_middleware_of_handler(value)
-            applied_middlewares += self.apply_middleware_to_path(ctrl_path + method_path
+            applied_middlewares += self.apply_middleware_to_path(module, ctrl_path + method_path
                                                                  , method_middleware)
         return applied_middlewares
 
@@ -195,7 +195,7 @@ class ModuleCompiler:
         middlewares: list = [p for p in getattr(module, 'providers') if hasattr(p, 'middleware__')]
         controllers = [ctrl for ctrl in module.controllers if hasattr(ctrl, 'controller__')]
         for ctrl in controllers:
-            module_middlewares += self.apply_middleware_to_ctrl(ctrl, middlewares)
+            module_middlewares += self.apply_middleware_to_ctrl(module, ctrl, middlewares)
         setattr(module, 'middlewares__', module_middlewares)
 
         if hasattr(module, 'pesty_module__') and getattr(module, 'pesty_module__'):

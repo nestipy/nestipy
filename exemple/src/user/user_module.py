@@ -13,7 +13,8 @@ from ..auth.auth_module import AuthModule
     imports=[
         AuthModule,
         PeeweeModule.for_feature([User])
-    ]
+    ],
+    exports=[UserService]
 )
 class UserModule:
     pass
