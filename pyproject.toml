@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "pesty"
+version = "0.1.0"
+description = ""
+authors = ["tsiresymila <tsiresymila@gmail.com>"]
+readme = "README.md"
+packages = [{include = "pesty", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+litestar = "^2.6.1"
+fastapi = "^0.109.2"
+pymysql = "^1.1.0"
+uvicorn = "^0.27.1"
+peewee = "^3.17.1"
+python-dotenv = "^1.0.1"
+minijinja = "^1.0.8"
+pyee = "^11.1.0"
+snakecase = "^1.0.1"
+strawberry-graphql = "^0.219.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

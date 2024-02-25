@@ -1,0 +1,14 @@
+@Injectable()
+class {{name|capitalize}}Service:
+
+    async def list(self):
+        pass
+
+    async def create(self, data: Create{{name|capitalize}}Dto):
+        pass
+
+    async def update(self, id: int, data: Update{{name|capitalize}}Dto):
+        pass
+
+    async def delete(self, id: int):
+        pass
