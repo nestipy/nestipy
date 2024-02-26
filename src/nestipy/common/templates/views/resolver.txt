@@ -1,0 +1,20 @@
+import strawberry
+from strawberry.types import Info
+from nestipy.common.decorator import Inject
+from nestipy.plugins.strawberry_module.decorator import Resolver, Query, Mutation
+from .{{name|lower}}_input import {{name|capitalize}}Input
+from .{{name|lower}}_service import {{name|capitalize}}Service
+
+
+@Resolver()
+class {{name|capitalize}}Resolver:
+
+    {{name|lower}}_service: {{name|capitalize}}Service = Inject({{name|capitalize}}Service)
+
+    @Query()
+    async def {{name|lower}}_test_query(self, root: Info) -> str:
+        return self.{{name|lower}}_service.list()
+
+    @Mutation()
+    async def {{name|lower}}_test_mutation(self, root: Info, data: {{name|capitalize}}Input) -> str:
+        return data.test

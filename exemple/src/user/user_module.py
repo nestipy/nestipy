@@ -1,5 +1,5 @@
-from pesty.common.decorator.module import Module
-from pesty.plugins.peewee_module.peewee_module import PeeweeModule
+from nestipy.common.decorator.module import Module
+from nestipy.plugins.peewee_module.peewee_module import PeeweeModule
 from .entities.user import User
 from .user_auth_service import UserAuthService
 from .user_controller import UserController

@@ -1,6 +1,6 @@
-from pesty.common.decorator.controller import Controller
-from pesty.common.decorator.inject import Inject
-from pesty.common.decorator.methods import Post
+from nestipy.common.decorator.controller import Controller
+from nestipy.common.decorator.inject import Inject
+from nestipy.common.decorator.methods import Post
 from .auth_service import AuthService
 
 

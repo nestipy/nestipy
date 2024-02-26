@@ -1,6 +1,6 @@
 from peewee import TextField, IntegerField
 
-from pesty.plugins.peewee_module.decorator import Model
+from nestipy.plugins.peewee_module.decorator import Model
 
 
 @Model

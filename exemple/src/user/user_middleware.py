@@ -1,7 +1,7 @@
-from pesty.common.decorator.middleware import Middleware, PestyMiddleware
+from nestipy.common.decorator.middleware import Middleware, NestipyMiddleware
 
 
-class UserMiddleware(PestyMiddleware):
+class UserMiddleware(NestipyMiddleware):
 
     def use(self, scope, receive, send):
         print('UserMiddleware called ')

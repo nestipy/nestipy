@@ -1,5 +1,5 @@
-from pesty.common.decorator.inject import Inject
-from pesty.common.decorator.injectable import Injectable
+from nestipy.common.decorator.inject import Inject
+from nestipy.common.decorator.injectable import Injectable
 from ..auth import AuthService
 from ..user.entities.user import User
 

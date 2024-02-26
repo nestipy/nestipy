@@ -2,8 +2,8 @@ import strawberry
 from strawberry.types import Info
 
 from exemple.src.graphql.graphql_service import GraphqlService
-from pesty.common.decorator import Inject
-from pesty.plugins.strawberry_module.decorator import Resolver, Query, Mutation
+from nestipy.common.decorator import Inject
+from nestipy.plugins.strawberry_module.decorator import Resolver, Query, Mutation
 
 
 @Resolver()

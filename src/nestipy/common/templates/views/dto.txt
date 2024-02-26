@@ -1,0 +1,11 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class Create{{name|capitalize}}Dto:
+    name: str
+
+
+@dataclass
+class Update{{name|capitalize}}Dto(Create{{name|capitalize}}Dto):
+    id: int

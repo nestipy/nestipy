@@ -1,8 +1,8 @@
-from pesty.common.decorator.injectable import Injectable
-from pesty.common.decorator.middleware import PestyMiddleware
+from nestipy.common.decorator.injectable import Injectable
+from nestipy.common.decorator.middleware import NestipyMiddleware
 
 
 @Injectable()
-class AppMiddleware(PestyMiddleware):
+class AppMiddleware(NestipyMiddleware):
     def use(self, scope, receive, send):
         pass

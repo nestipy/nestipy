@@ -1,0 +1,15 @@
+import strawberry
+from strawberry.types import Info
+from nestipy.plugins.strawberry_module.decorator import Resolver, Query, Mutation
+
+
+@Resolver()
+class {{name|capitalize}}Resolver:
+
+    @Query()
+    def {{name|lower}}_test_query(self, root: Info) -> str:
+        return "test"
+
+    @Mutation()
+    def {{name|lower}}_test_mutation(self, root: Info, test: str) -> str:
+        return test

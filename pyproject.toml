@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "pesty"
+name = "nestipy"
 version = "0.1.0"
 description = ""
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
-packages = [{include = "pesty", from = "src"}]
+packages = [{include = "nestipy", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -18,8 +18,12 @@ minijinja = "^1.0.8"
 pyee = "^11.1.0"
 snakecase = "^1.0.1"
 strawberry-graphql = "^0.219.2"
+pathlib2 = "^2.3.7.post1"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+nestipy = "nestipy.cli.cli:main"

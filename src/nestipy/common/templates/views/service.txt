@@ -1,0 +1,17 @@
+from nestipy.common.decorator import Injectable
+from .{{name|lower}}_dto import Create{{name|capitalize}}Dto,Update{{name|capitalize}}Dto
+
+@Injectable()
+class {{name|capitalize}}Service:
+
+    async def list(self):
+        return "test"
+
+    async def create(self, data: Create{{name|capitalize}}Dto):
+        return "test"
+
+    async def update(self, id: int, data: Update{{name|capitalize}}Dto):
+        return "test"
+
+    async def delete(self, id: int):
+        return "test"

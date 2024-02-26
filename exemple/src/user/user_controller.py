@@ -1,7 +1,7 @@
-from pesty.common.decorator.controller import Controller
-from pesty.common.decorator.inject import Inject
-from pesty.common.decorator.methods import Get, Post
-from pesty.common.decorator.middleware import Middleware
+from nestipy.common.decorator.controller import Controller
+from nestipy.common.decorator.inject import Inject
+from nestipy.common.decorator.methods import Get, Post
+from nestipy.common.decorator.middleware import Middleware
 from .user_middleware import UserMiddleware, create_middleware
 from ..auth.auth_service import AuthService
 from .dto import CreateUserDto

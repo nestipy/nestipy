@@ -1,4 +1,4 @@
-from pesty.common.decorator.module import Module
+from nestipy.common.decorator.module import Module
 from .auth_controller import AuthController
 from .auth_service import AuthService
 

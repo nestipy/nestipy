@@ -1,0 +1,9 @@
+from nestipy.common.decorator import Controller, Get
+
+
+@Controller('{{name|lower}}s')
+class {{name}}Controller:
+
+    @Get()
+    async def get(self) -> str:
+        return "test"

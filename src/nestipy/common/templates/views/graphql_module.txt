@@ -1,0 +1,13 @@
+from nestipy.common.decorator import Module
+from .{{name|lower}}_service import {{name|capitalize}}Service
+from .{{name|lower}}_resolver import {{name|capitalize}}Resolver
+
+
+@Module(
+    providers=[
+        {{name|capitalize}}Service,
+        {{name|capitalize}}Resolver
+    ],
+)
+class {{name|capitalize}}Module:
+    pass

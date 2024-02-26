@@ -1,5 +1,5 @@
 from exemple.src.user import UserService
-from pesty.common.decorator import Injectable, Inject
+from nestipy.common.decorator import Injectable, Inject
 
 
 @Injectable()
