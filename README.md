@@ -1,18 +1,24 @@
 <p align="center">
-  <a href="https://nestipy.com/" target="blank"><img src="nestipy.png" width="200" alt="Nestipy Logo" /></a>
+  <a href="https://nestipy.com/" target="blank"><img src="https://github.com/tsiresymila1/nestipy/blob/main/nestipy.png" width="200" alt="Nestipy Logo" /></a>
 </p>
-
+<p align="center">
+    <a href="https://pypi.org/project/nestipy">
+        <img src="https://img.shields.io/pypi/v/nestipy?color=%2334D058&label=pypi%20package" alt="Version">
+    </a>
+    <a href="https://pypi.org/project/nestipy">
+        <img src="https://img.shields.io/pypi/pyversions/nestipy.svg?color=%2334D058" alt="Python">
+    </a>
+    <a href="https://pepy.tech/project/nestipy">
+        <img src="https://static.pepy.tech/personalized-badge/nestipy?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=Downloads" alt="Downloads">
+    </a>
+    <a href="https://github.com/tsiresymila1/nestipy/blob/main/LICENSE">
+        <img src="https://img.shields.io/github/license/tsiresymila1/nestipy" alt="License">
+    </a>
+</p>
 ## Description
 
-Nestipy is a framework for building efficient, scalable <a href="https://python.org" target="_blank">Python</a>
-server-side applications. It uses modern Python typing combines with elements of OOP (Object Oriented Programming), FP (
-Functional Programming).
-
+<p>Nestipy is a Python framework built on top of Litestar that follows the modular architecture of NestJS</p>
 <p>Under the hood, Nestipy makes use of <a href="https://litestar.dev/" target="_blank">Litestar</a>, but also provides compatibility with a wide range of other libraries, like <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a>, allowing for easy use of the myriad of third-party plugins which are available.</p>
-
-## Philosophy
-
-<p>Nestipy aims to provide an application architecture out of the box which allows for effortless creation of highly testable, scalable, and loosely coupled and easily maintainable applications. The architecture is heavily inspired by Angular.</p>
 
 ## Getting started
 
@@ -22,8 +28,6 @@ Functional Programming).
     cd my_app
     python main.py
 ```
-
-## Questions
 
 ## Issues
 
