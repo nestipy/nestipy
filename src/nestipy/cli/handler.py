@@ -1,5 +1,4 @@
 import os.path
-from pathlib2 import Path
 
 from nestipy.common.templates.generator import TemplateGenerator
 
@@ -39,6 +38,7 @@ class NestipyCliHandler:
     def generate_module(self, name: str, prefix: str = None):
         path = self.mkdir(name)
         self.generate(name, path, 'module', prefix=prefix)
+        self.modify_app_module(name)
 
     def generate_controller(self, name: str, prefix: str = None):
         path = self.mkdir(name)
@@ -73,14 +73,14 @@ class NestipyCliHandler:
     @classmethod
     def modify_app_module(cls, name):
         name = str(name)
-        app_path = os.path.join(os.getcwd(), 'app_module.py')
+        app_path = os.path.join(os.getcwd(), 'src', 'app_module.py')
         if os.path.exists(app_path):
             new_import = f"{str(name).capitalize()}Module"
             with open(app_path, 'r') as file:
                 file_content = file.read()
                 file.close()
                 module_pattern = r'@Module\(([^)]*)\)'
-                text_to_add = f'from src/{name.lower()}_module import {name.capitalize()}Module'
+                text_to_add = f'from .{name.lower()}.{name.lower()}_module import {name.capitalize()}Module'
                 import re
                 match = re.search(module_pattern, file_content)
                 if match:
@@ -96,7 +96,8 @@ class NestipyCliHandler:
                     else:
                         # If imports=[] doesn't exist, add imports directly
                         modified_content = file_content.replace(match.group(0),
-                                                                text_to_add + '\n@Module(imports=[' + new_import + '],')
+                                                                text_to_add + f'\n@Module(\n\timports=[{new_import}],'
+                                                                              f'{existing_imports_str})')
                     with open(app_path, 'w') as file2:
                         file2.write(modified_content)
                         file2.close()

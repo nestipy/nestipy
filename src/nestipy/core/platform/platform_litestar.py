@@ -38,6 +38,9 @@ class PlatformLitestar(PlatformAdapter[Litestar]):
             if not inspect.ismethod(value) and not inspect.isfunction(value) and not inspect.isbuiltin(
                     value) and name != '__slots__':
                 class_attrs[name] = value
+
+        if not hasattr(ctrl, 'tags'):
+            class_attrs['tags'] = [str(ctrl.__name__).replace('Controller', '')]
         return type(ctrl.__name__, (Controller,),
                     {**class_attrs, "__module__": ctrl.__module__})
 
