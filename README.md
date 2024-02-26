@@ -8,9 +8,6 @@
     <a href="https://pypi.org/project/nestipy">
         <img src="https://img.shields.io/pypi/pyversions/nestipy.svg?color=%2334D058" alt="Python">
     </a>
-    <a href="https://pepy.tech/project/nestipy">
-        <img src="https://static.pepy.tech/personalized-badge/nestipy?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=Downloads" alt="Downloads">
-    </a>
     <a href="https://github.com/tsiresymila1/nestipy/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/tsiresymila1/nestipy" alt="License">
     </a>
