@@ -4,6 +4,12 @@ from exemple.src.user.user_module import UserModule
 from nestipy.common.decorator import Module
 
 
-@Module(providers=[GraphqlService, GraphqlResolver], imports=[UserModule])
+@Module(
+    providers=[
+        GraphqlService,
+        GraphqlResolver
+    ],
+    imports=[UserModule]
+)
 class GraphqlModule:
     pass

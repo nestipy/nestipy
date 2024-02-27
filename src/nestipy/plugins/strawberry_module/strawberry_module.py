@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
 from nestipy.common.decorator import Module
-from nestipy.core.module.middleware import MiddlewareConsumer
 from nestipy.core.module import NestipyModule
-from nestipy.core.module.provider import ModuleProvider
+from nestipy.core.module.middleware import MiddlewareConsumer
 from nestipy.plugins.dynamic_module.dynamic_module import DynamicModule
 from nestipy.plugins.strawberry_module.compiler import GraphqlCompiler
 from nestipy.plugins.strawberry_module.constant import STRAWBERRY_MODULE_OPTION
@@ -15,7 +14,7 @@ from nestipy.plugins.strawberry_module.strawberry_middleware import StrawberryMi
 
 @dataclass
 class StrawberryOption:
-    graphql_ide: Optional[Literal['pathfinder', '', '']]
+    graphql_ide: Optional[Literal["graphiql", "apollo-sandbox", "pathfinder"]]
 
 
 @Module(providers=[])
@@ -23,7 +22,7 @@ class StrawberryModule(DynamicModule, NestipyModule):
     resolvers = []
 
     @classmethod
-    def for_root(cls, option: Any = StrawberryOption(graphql_ide='pathfinder'), resolvers=None):
+    def for_root(cls, option: Any = StrawberryOption(graphql_ide='graphiql'), resolvers=None):
         if resolvers is None:
             resolvers = []
         setattr(cls, 'resolvers', resolvers)
