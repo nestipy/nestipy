@@ -29,7 +29,7 @@
 
 ## Issues
 
-Please make sure to read the [Issue Reporting Checklist](https://github.com/tsiresymila/nestipy) before opening an
+Please make sure to read the [Issue Reporting Checklist](https://github.com/tsiresymila1/nestipy) before opening an
 issue. Issues not conforming to the guidelines may be closed immediately.
 
 ## Support

@@ -9,6 +9,7 @@ from ..common.enum.platform import PlatFormType
 from ..core.module.compiler import ModuleCompiler
 from ..core.platform.platform import PlatformAdapter
 from ..core.platform.platform_litestar import PlatformLitestar
+from ..core.platform.platform_fastapi import PlatformFastAPI
 
 Injected = Annotated[int, 'Test']
 
@@ -29,7 +30,7 @@ class AppNestipyContext:
     def __init__(self, module, platform=PlatFormType, **kwargs):
         self.platform = platform
         self.compiler = ModuleCompiler(module)
-        self.adapter = PlatformLitestar()
+        self.adapter = PlatformFastAPI() if platform == PlatFormType.FASTAPI else PlatformLitestar()
         self.kwargs = kwargs
         self.config_logger()
 

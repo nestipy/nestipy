@@ -12,7 +12,6 @@ from ..utils import Utils
 
 
 class PlatformLitestar(PlatformAdapter[Litestar]):
-    app: Litestar
     resolved: list = []
 
     async def setup(self, module):

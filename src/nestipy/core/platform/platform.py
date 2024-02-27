@@ -5,6 +5,7 @@ T = TypeVar('T')
 
 
 class PlatformAdapter(Generic[T], ABC):
+    app: T
     _handlers: list[Callable] = []
     _hooks: list[Callable] = []
     _listeners: list[Callable] = []
@@ -29,5 +30,5 @@ class PlatformAdapter(Generic[T], ABC):
         pass
 
     @abstractmethod
-    def create_server(self, *args, **kwargs) -> Any:
+    def create_server(self, *args, **kwargs) -> T:
         pass

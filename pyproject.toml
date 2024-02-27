@@ -21,6 +21,7 @@ strawberry-graphql = "^0.219.2"
 pathlib2 = "^2.3.7.post1"
 questionary = "^2.0.1"
 click-aliases = "^1.0.4"
+fastapi-utils = "^0.2.1"
 
 
 [build-system]
