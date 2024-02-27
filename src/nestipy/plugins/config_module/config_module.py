@@ -14,4 +14,4 @@ class ConfigModule(DynamicModule):
         env_file = value or '.env'
         from dotenv import dotenv_values
         value = dotenv_values(env_file)
-        return cls.register(value, CONFIG_MODULE_TOKEN)
+        return cls.register(value=value,provide=CONFIG_MODULE_TOKEN)

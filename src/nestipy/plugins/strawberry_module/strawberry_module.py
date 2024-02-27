@@ -1,10 +1,12 @@
 import logging
+import traceback
 from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
 from nestipy.common.decorator import Module
 from nestipy.core.module.middleware import MiddlewareConsumer
-from nestipy.core.module.nestipy import NestipyModule
+from nestipy.core.module import NestipyModule
+from nestipy.core.module.provider import ModuleProvider
 from nestipy.plugins.dynamic_module.dynamic_module import DynamicModule
 from nestipy.plugins.strawberry_module.compiler import GraphqlCompiler
 from nestipy.plugins.strawberry_module.constant import STRAWBERRY_MODULE_OPTION
@@ -13,7 +15,7 @@ from nestipy.plugins.strawberry_module.strawberry_middleware import StrawberryMi
 
 @dataclass
 class StrawberryOption:
-    graphql_ide: Optional[Literal['', '', '']] = 'pathfinder'
+    graphql_ide: Optional[Literal['pathfinder', '', '']]
 
 
 @Module(providers=[])
@@ -21,11 +23,11 @@ class StrawberryModule(DynamicModule, NestipyModule):
     resolvers = []
 
     @classmethod
-    def for_root(cls, option: Any = StrawberryOption(), resolvers=None):
+    def for_root(cls, option: Any = StrawberryOption(graphql_ide='pathfinder'), resolvers=None):
         if resolvers is None:
             resolvers = []
         setattr(cls, 'resolvers', resolvers)
-        return cls.register(option, token=STRAWBERRY_MODULE_OPTION)
+        return cls.register(provide=STRAWBERRY_MODULE_OPTION, value=option)
 
     def configure(self, consumer: MiddlewareConsumer):
         if len(self.resolvers) > 0:
@@ -35,7 +37,9 @@ class StrawberryModule(DynamicModule, NestipyModule):
                 setattr(StrawberryMiddleware, 'schema', schema)
                 consumer.apply_for_route(self, '/graphql', StrawberryMiddleware)
             except Exception as e:
+                tb = traceback.format_exc()
                 logging.error(e)
+                logging.error(tb)
 
     async def on_startup(self):
         pass

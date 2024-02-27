@@ -1,12 +1,12 @@
 from .app_context import AppNestipyContext
-from .factory import AppNestipyFactory
+from .factory import NestipyFactory
 from .ioc.container import NestipyContainer
 from .module.compiler import ModuleCompiler
 from .platform.platform import PlatformAdapter
 from .platform.platform_litestar import PlatformLitestar
 
 __all__ = [
-    'AppNestipyFactory',
+    'NestipyFactory',
     'AppNestipyContext',
     'NestipyContainer',
     'ModuleCompiler',

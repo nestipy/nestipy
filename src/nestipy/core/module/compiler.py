@@ -5,6 +5,7 @@ from typing import Callable, Any
 from pyee import EventEmitter
 
 from .middleware import MiddlewareConsumer
+from .provider import ModuleProvider
 from ..ioc import NestipyContainer
 from ..utils import Utils
 from ...common.decorator.injectable import Injectable
@@ -54,16 +55,22 @@ class ModuleCompiler:
         self.extract_hooks_in_module(ins_m)
         imports = getattr(module, 'imports')
         global_module = []
+        global_providers = []
         if init:
+            global_providers = self.extract_provider(module)
             old_global_module = [m for m in imports if
                                  hasattr(m, "is_global__") and m.is_global__]
             for index, gb_module in enumerate(old_global_module):
+                # set global providers for  all
+                setattr(gb_module, 'providers', global_providers + getattr(gb_module, 'providers'))
                 self.modify_module_imports(gb_module, old_global_module[0:index + 1])
                 await self.register_and_resolve_provider(gb_module)
                 global_module.append(gb_module)
 
         for module_import in [m for m in imports if
                               m not in global_module and m.__name__ not in self.module_resolved.keys()]:
+            # set global providers for  all
+            setattr(module_import, 'providers', global_providers + getattr(module_import, 'providers'))
             self.modify_module_imports(module_import, global_module)
             await self.register_and_resolve_provider(module_import)
             instance = module_import()
@@ -79,19 +86,34 @@ class ModuleCompiler:
         setattr(module, 'container__', self.container)
 
     async def recreate_async_provider(self, module):
-        if hasattr(module, 'token__'):
-            token = module.token__
-            if hasattr(module, 'use_value__'):
-                value = module.use_value__
-                setattr(module, "providers", [Injectable(token)(lambda: value)] + module.providers)
-            if hasattr(module, 'use_factory__'):
-                use_factory = module.use_factory__
-                inject = []
-                if hasattr(module, 'provider_inject__'):
-                    inject = self.filter_async_provider_inject(module.imports, module.provider_inject__)
-                value = await self.resolve_use_factory(use_factory=use_factory, inject=inject)
-                setattr(module, "providers", [Injectable(token)(lambda: value)] + module.providers)
-                return
+        if hasattr(module, 'module_provider__'):
+            provider: ModuleProvider = getattr(module, 'module_provider__')
+            if provider.provide:
+                if provider.use_value is not None:
+                    setattr(module, "providers",
+                            [Injectable(provider.provide)(lambda: provider.use_value)] + module.providers)
+                    return
+                if provider.use_factory:
+                    inject = self.filter_async_provider_inject(module.imports, provider.inject)
+                    value = await self.resolve_use_factory(use_factory=provider.use_factory, inject=inject)
+                    setattr(module, "providers", [Injectable(provider.provide)(lambda: value)] + module.providers)
+                    return
+
+    async def recreate_module_provider(self, module):
+        providers = getattr(module, 'providers')
+        instance_of_module_provider = [p for p in providers if isinstance(p, ModuleProvider)]
+        module_provider_injectable = self.extract_provider(module)
+        for p in instance_of_module_provider:
+            if p.provide is None:
+                pass
+            if p.use_value is not None:
+                module_provider_injectable = [Injectable(p.provide)(lambda: p.use_value)] + module_provider_injectable
+                continue
+            if p.use_factory is not None:
+                value = await self.resolve_use_factory(use_factory=p.use_factory, inject=module_provider_injectable)
+                module_provider_injectable = [Injectable(p.provide)(lambda: value)] + module_provider_injectable
+                continue
+        setattr(module, 'providers', module_provider_injectable)
 
     @classmethod
     def extract_provider(cls, module):
@@ -118,6 +140,7 @@ class ModuleCompiler:
 
     async def resolve_providers_of_module(self, module):
         await self.recreate_async_provider(module)
+        await self.recreate_module_provider(module)
         providers = self.extract_provider(module)
         for p in providers:
             is_middleware = hasattr(p, 'middleware__')

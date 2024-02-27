@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import traceback
 
 from litestar import Litestar, Controller, route
 from litestar.di import Provide
@@ -23,7 +24,9 @@ class PlatformLitestar(PlatformAdapter[Litestar]):
                 for m in imports:
                     await self.setup(m)
         except Exception as e:
+            tb = traceback.format_exc()
             logging.error(e)
+            logging.error(tb)
 
     def create_server(self, title: str = "My App", version: str = "1.0.0", **kwargs) -> Litestar:
         handlers = self.get_handlers()

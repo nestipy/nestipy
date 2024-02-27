@@ -1,12 +1,12 @@
 import asyncio
 
 from app_middleware import AppMiddleware
+from nestipy.core.module.provider import ModuleProvider
 from src.graphql.graphql_module import GraphqlModule
 from nestipy.common.decorator.module import Module
-from nestipy.core.module.nestipy import NestipyModule
+from nestipy.core.module import NestipyModule
 from nestipy.plugins.config_module.config_module import ConfigModule
 from nestipy.plugins.config_module.config_service import ConfigService
-from nestipy.plugins.dynamic_module.dynamic_module import ModuleOption
 from nestipy.plugins.peewee_module.peewee_module import PeeweeModule
 from nestipy.plugins.strawberry_module.strawberry_module import StrawberryModule
 from src.auth.auth_module import AuthModule
@@ -28,7 +28,7 @@ async def database_factory(config: ConfigService):
     imports=[
         ConfigModule.for_root(),
         PeeweeModule.for_root_async(
-            ModuleOption(use_factory=database_factory, use_value=None),
+            use_factory=database_factory,
             inject=[ConfigService]
         ),
         UserModule,
@@ -38,7 +38,10 @@ async def database_factory(config: ConfigService):
             resolvers=[GraphqlModule]
         ),
     ],
-    providers=[AppMiddleware]
+    providers=[
+        AppMiddleware,
+        ModuleProvider(provide='TEST_PROVIDE', use_value='ProviderTest')
+    ]
 )
 class AppModule(NestipyModule):
 

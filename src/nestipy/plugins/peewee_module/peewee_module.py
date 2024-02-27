@@ -1,13 +1,16 @@
 import inspect
 import json
 import logging
+import traceback
+from typing import Any
 
 from peewee import MySQLDatabase, Database, Model as BaseModel
 
-from ...common.decorator.module import Module
-from ..dynamic_module.dynamic_module import DynamicModule, ModuleOption
 from .constant import PEEWEE_MODULE_TOKEN
 from .peewee_service import PeeweeService
+from ..dynamic_module.dynamic_module import DynamicModule
+from ...common.decorator.module import Module
+from ...core.module.provider import ModuleProvider
 
 
 @Module(providers=[PeeweeService], exports=[PeeweeService], is_global=True)
@@ -40,10 +43,14 @@ class PeeweeModule(DynamicModule):
                 self.db.close()
 
     @classmethod
-    def for_root_async(cls, value: ModuleOption, inject=None):
-        if inject is None:
-            inject = []
-        return super().register_async(value, token=PEEWEE_MODULE_TOKEN, inject=inject)
+    def for_root_async(cls, value: Any = None, use_factory: Any = None, inject: list = None):
+        return super().register_async(
+            provider=ModuleProvider(
+                use_value=value,
+                provide=PEEWEE_MODULE_TOKEN,
+                use_factory=use_factory,
+                inject=inject or [])
+        )
 
     @classmethod
     def for_feature(cls, models: list):
@@ -66,7 +73,9 @@ class PeeweeModule(DynamicModule):
             try:
                 r[k] = v
             except Exception as e:
+                tb = traceback.format_exc()
                 logging.error(e)
+                logging.error(tb)
                 r[k] = json.dumps(getattr(self, k))
         return r
 
