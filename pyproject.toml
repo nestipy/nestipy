@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.1.01"
+version = "0.1.02"
 description = ""
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ python = "^3.11"
 litestar = "^2.6.1"
 fastapi = "^0.109.2"
 pymysql = "^1.1.0"
-uvicorn = "^0.27.1"
+uvicorn = {extras = ["standard"], version = "^0.27.1"}
 peewee = "^3.17.1"
 python-dotenv = "^1.0.1"
 minijinja = "^1.0.8"
@@ -22,6 +22,7 @@ pathlib2 = "^2.3.7.post1"
 questionary = "^2.0.1"
 click-aliases = "^1.0.4"
 fastapi-utils = "^0.2.1"
+masonite-orm = "^2.20.0"
 
 
 [build-system]

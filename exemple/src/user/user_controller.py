@@ -1,11 +1,14 @@
+from typing import Annotated
+
+from nestipy.common import Body
 from nestipy.common.decorator.controller import Controller
 from nestipy.common.decorator.inject import Inject
 from nestipy.common.decorator.methods import Get, Post
 from nestipy.common.decorator.middleware import Middleware
+from .dto import CreateUserDto, UpdateUserDto
 from .user_middleware import UserMiddleware, create_middleware
-from ..auth.auth_service import AuthService
-from .dto import CreateUserDto
 from .user_service import UserService
+from ..auth.auth_service import AuthService
 
 
 @Middleware(UserMiddleware)
@@ -20,5 +23,5 @@ class UserController:
 
     @Middleware(create_middleware)
     @Post('/create')
-    async def create_user(self, data: CreateUserDto) -> dict:
+    async def create_user(self, data: CreateUserDto, item: Annotated[UpdateUserDto, Body()]) -> dict:
         return self.user_service.create_user(data)

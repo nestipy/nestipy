@@ -80,13 +80,20 @@ class AppNestipyContext:
             raise e
 
     async def call_hooks(self, key):
+
         if key in self.compiler.hooks.keys():
             hooks = self.compiler.hooks.get(key)
             for hook in hooks:
-                if inspect.iscoroutinefunction(hook):
-                    await hook()
-                else:
-                    hook()
+                try:
+                    if inspect.iscoroutinefunction(hook):
+                        await hook()
+                    else:
+                        hook()
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    logging.error(e)
+                    logging.error(tb)
+                    raise e
 
     async def call_middleware(self, scope, receive, send):
         middlewares = self.compiler.middlewares
@@ -94,14 +101,20 @@ class AppNestipyContext:
             path = scope["path"]
             match = Utils.match_route(middleware.path, path)
             if match:
-                if inspect.iscoroutinefunction(middleware.middleware):
-                    response = await middleware.middleware(scope, receive, send)
-                    if response:
-                        return response
-                else:
-                    response = middleware.middleware(scope, receive, send)
-                    if response:
-                        return response
+                try:
+                    if inspect.iscoroutinefunction(middleware.middleware):
+                        response = await middleware.middleware(scope, receive, send)
+                        if response:
+                            return response
+                    else:
+                        response = middleware.middleware(scope, receive, send)
+                        if response:
+                            return response
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    logging.error(e)
+                    logging.error(tb)
+                    raise e
 
     async def on_startup(self):
         await self.call_hooks('on_startup')

@@ -38,20 +38,21 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
         return self.app
 
     @classmethod
-    def controller_method_to_handler(cls, router: APIRouter, method):
+    def controller_method_to_handler(cls, router: APIRouter, method, prefix=''):
         assert hasattr(method, "path__"), f'Path not exist for {method}.'
         kwargs = method.kwargs__ if hasattr(method, "kwargs__") else {}
+        path = f"{prefix.rstrip('/')}/{method.path__.lstrip('/')}"
         match str(method.method__.value).lower():
             case 'post':
-                return router.post(method.path__, **kwargs)(method)
+                return router.post(path, **kwargs)(method)
             case 'put':
-                return router.put(method.path__, **kwargs)(method)
+                return router.put(path, **kwargs)(method)
             case 'patch':
-                return router.patch(method.path__, **kwargs)(method)
+                return router.patch(path, **kwargs)(method)
             case 'delete':
-                return router.delete(method.path__, **kwargs)(method)
+                return router.delete(path, **kwargs)(method)
             case _:
-                return router.get(method.path__, **kwargs)(method)
+                return router.get(path, **kwargs)(method)
 
     @staticmethod
     def module_providers_to_dependencies(module):
@@ -66,8 +67,10 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
         controllers: list = module.controllers
         wrapped_controller = []
         for ctrl in controllers:
-            router = InferringRouter(tags=[str(ctrl.__name__).replace('Controller', '').capitalize()])
-            router.dependencies = self.module_providers_to_dependencies(module)
+            router = InferringRouter(
+                tags=[str(ctrl.__name__).replace('Controller', '').capitalize()],
+                dependencies=self.module_providers_to_dependencies(module)
+            )
             if not hasattr(ctrl, 'controller__'):
                 continue
             class_attrs = {}
@@ -77,7 +80,8 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
                     class_attrs[name] = value
             methods = inspect.getmembers(ctrl, predicate=Utils.is_handler)
             for name, value in methods:
-                class_attrs[name] = self.controller_method_to_handler(router=router, method=value)
+                class_attrs[name] = self.controller_method_to_handler(router=router, method=value,
+                                                                      prefix=getattr(ctrl, 'path').rstrip('/'))
             attrs = {**class_attrs, "__module__": ctrl.__module__, '__name__': ctrl.__name__}
             new_controller: Any = type(ctrl.__name__, ctrl.__bases__, attrs)
             new_controller = cbv(router)(new_controller)

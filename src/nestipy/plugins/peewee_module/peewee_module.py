@@ -2,15 +2,25 @@ import inspect
 import json
 import logging
 import traceback
-from typing import Any
+from dataclasses import dataclass, asdict
+from typing import Any, Literal, Callable, Awaitable
+from peewee import MySQLDatabase, PostgresqlDatabase, SqliteDatabase, Database, Model as BaseModel
 
-from peewee import MySQLDatabase, Database, Model as BaseModel
-
-from .constant import PEEWEE_MODULE_TOKEN
+from .constant import PEEWEE_MODULE_CONFIG
 from .peewee_service import PeeweeService
 from ..dynamic_module.dynamic_module import DynamicModule
 from ...common.decorator.module import Module
 from ...core.module.provider import ModuleProvider
+
+
+@dataclass
+class PeeweeDatabaseConfig:
+    driver: Literal['mysql', 'postgres', 'sqlite']
+    database: str
+    host: str
+    port: int
+    user: str
+    password: str
 
 
 @Module(providers=[PeeweeService], exports=[PeeweeService], is_global=True)
@@ -19,15 +29,10 @@ class PeeweeModule(DynamicModule):
     db: Database
 
     async def on_startup(self):
-        if PEEWEE_MODULE_TOKEN in self.get_container().instances.keys():
-            config = self.get_container().instances[PEEWEE_MODULE_TOKEN]
-            self.db = MySQLDatabase(
-                config['DB_DATABASE'],
-                host=config['DB_HOST'],
-                port=int(config['DB_PORT']),
-                user=config['DB_USER'],
-                password=config['DB_PASSWORD']
-            )
+        container_instance = self.get_container().instances
+        if PEEWEE_MODULE_CONFIG in container_instance.keys():
+            config: PeeweeDatabaseConfig = container_instance[PEEWEE_MODULE_CONFIG]
+            self.create_db(config)
             models = []
             for m in self.models:
                 new_m = PeeweeModule.class_to_model(m, self.db)
@@ -42,12 +47,29 @@ class PeeweeModule(DynamicModule):
             if not self.db.is_closed():
                 self.db.close()
 
+    def create_db(self, config: PeeweeDatabaseConfig):
+        config_dict = asdict(config)
+        del config_dict['driver']
+        database = config_dict['database']
+        del config_dict['database']
+        match config.driver:
+            case 'postgres':
+                self.db = PostgresqlDatabase(database, **config_dict)
+            case 'sqlite':
+                self.db = SqliteDatabase(database, **config_dict)
+            case _:
+                self.db = MySQLDatabase(database, **config_dict)
+
     @classmethod
-    def for_root_async(cls, value: Any = None, use_factory: Any = None, inject: list = None):
+    def for_root_async(cls,
+                       value: PeeweeDatabaseConfig = None,
+                       use_factory: Callable[[...], Awaitable[PeeweeDatabaseConfig] | PeeweeDatabaseConfig] = None,
+                       inject: list = None
+                       ):
         return super().register_async(
             provider=ModuleProvider(
                 use_value=value,
-                provide=PEEWEE_MODULE_TOKEN,
+                provide=PEEWEE_MODULE_CONFIG,
                 use_factory=use_factory,
                 inject=inject or [])
         )
@@ -85,7 +107,7 @@ class PeeweeModule(DynamicModule):
         for name, value in inspect.getmembers(m):
             if not name.startswith('__'):
                 class_attrs[name] = value
-        meta = type('Meta', (), {'database': db, 'db_table': str(m.__name__).lower()})
+        meta = type('Meta', (), {'database': db, 'table_name': str(m.__name__).lower()})
         setattr(m, "Meta", meta)
         class_attrs['Meta'] = meta
         new_cls = type(m.__name__, (BaseModel,) + m.__bases__, class_attrs)

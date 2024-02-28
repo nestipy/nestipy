@@ -21,6 +21,7 @@ class NestipyCliHandler:
         path = os.path.join(os.getcwd(), 'src', name)
         if not os.path.exists(path):
             os.mkdir(path)
+            open(os.path.join(path, '__init__.py'), 'a').close()
         return path
 
     def generate_resource_api(self, name):

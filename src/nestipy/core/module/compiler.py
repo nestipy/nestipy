@@ -50,13 +50,13 @@ class ModuleCompiler:
     async def register_and_resolve_provider(self, module, init=False):
         self.update_module_import(module)
         await self.resolve_providers_of_module(module)
-        ins_m = module()
-        self.module_resolved[module.__name__] = ins_m
-        self.extract_hooks_in_module(ins_m)
         imports = getattr(module, 'imports')
         global_module = []
         global_providers = []
         if init:
+            ins_m = module()
+            self.module_resolved[module.__name__] = ins_m
+            self.extract_hooks_in_module(ins_m)
             global_providers = self.extract_provider(module)
             old_global_module = [m for m in imports if
                                  hasattr(m, "is_global__") and m.is_global__]
@@ -205,12 +205,12 @@ class ModuleCompiler:
             middlewares = []
         applied_middlewares = []
         ctrl_path, ctrl_middleware = self.get_middleware_of_handler(ctrl, path='path')
-        applied_middlewares += self.apply_middleware_to_path(module, ctrl_path, middlewares + ctrl_middleware)
+        # applied_middlewares += self.apply_middleware_to_path(module, ctrl_path, middlewares + ctrl_middleware)
         methods = inspect.getmembers(ctrl, predicate=Utils.is_handler)
         for name, value in methods:
             method_path, method_middleware = self.get_middleware_of_handler(value)
             applied_middlewares += self.apply_middleware_to_path(module, ctrl_path + method_path
-                                                                 , method_middleware)
+                                                                 , middlewares + ctrl_middleware + method_middleware)
         return applied_middlewares
 
     def extract_middleware_of_module(self, module):
