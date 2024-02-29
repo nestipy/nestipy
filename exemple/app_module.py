@@ -4,6 +4,7 @@ from config.peewee import peewee_mysql_factory
 from nestipy.common.decorator.module import Module
 from nestipy.core.module import NestipyModule
 from nestipy.core.module.provider import ModuleProvider
+from nestipy.plugins.beanie_module.beanie_module import BeanieModule
 from nestipy.plugins.config_module.config_module import ConfigModule
 from nestipy.plugins.config_module.config_service import ConfigService
 from nestipy.plugins.masonite_orm_module.masonite_orm_module import MasoniteOrmModule
@@ -22,6 +23,7 @@ from src.user.user_module import UserModule
             use_factory=peewee_mysql_factory,
             inject=[ConfigService]
         ),
+        BeanieModule.for_root(config="mongodb://user:pass@host:27017"),
         MasoniteOrmModule.for_root_async(
             factory=masonite_factory,
             inject=[ConfigService]

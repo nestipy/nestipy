@@ -1,6 +1,7 @@
-from exemple.src.graphql.graphql_resolver import GraphqlResolver
-from exemple.src.graphql.graphql_service import GraphqlService
-from exemple.src.user.user_module import UserModule
+from ..auth.auth_module import AuthModule
+from .graphql_resolver import GraphqlResolver
+from .graphql_service import GraphqlService
+from ..user.user_module import UserModule
 from nestipy.common.decorator import Module
 
 
@@ -9,7 +10,7 @@ from nestipy.common.decorator import Module
         GraphqlService,
         GraphqlResolver
     ],
-    imports=[UserModule]
+    imports=[AuthModule, UserModule]
 )
 class GraphqlModule:
     pass

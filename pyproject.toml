@@ -23,6 +23,7 @@ questionary = "^2.0.1"
 click-aliases = "^1.0.4"
 fastapi-utils = "^0.2.1"
 masonite-orm = "^2.20.0"
+beanie = "^1.25.0"
 
 
 [build-system]
