@@ -38,6 +38,8 @@
     
        
 ```
+## [Documentation](https://tsiresymila1.github.io/nestipy)
+
 ## Issues
 
 Please make sure to read the [Issue Reporting Checklist](https://github.com/tsiresymila1/nestipy) before opening an
@@ -46,7 +48,7 @@ issue. Issues not conforming to the guidelines may be closed immediately.
 ## Support
 
 Nestipy is an MIT-licensed open source project. It can grow thanks to the sponsors and support from the amazing backers.
-If you'd like to join them, please [read more here](https://docs.nestipy.com/support).
+If you'd like to join them, please [read more here].
 
 ## Stay in touch
 
