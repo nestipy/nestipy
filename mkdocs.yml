@@ -1,0 +1,31 @@
+site_name: Nestipy
+theme:
+  name: material
+  features:
+    - content.code.copy
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+- search
+- mkdocstrings
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Overview: index.md
+  - Usage:
+      - Getting started: start.md
+#      - Sync ORM Application: sync_orm.md
+#      - Async ORM Application: async_orm.md
+#      - MongoDB Application: mongodb.md
+#  - API Reference:
+#    - database: database.md
+#    - decorators: decorators.md
+#    - App: api.md
+#  - License: license.md
