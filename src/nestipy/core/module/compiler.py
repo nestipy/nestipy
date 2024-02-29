@@ -9,6 +9,7 @@ from .provider import ModuleProvider
 from ..ioc import NestipyContainer
 from ..utils import Utils
 from ...common.decorator.injectable import Injectable
+from ...plugins.dynamic_module.dynamic_module import DynamicModule
 
 
 @dataclass
@@ -83,7 +84,8 @@ class ModuleCompiler:
         module_imports: list = (module.imports or [])
         module_imports_with_global = filtered_global_modules + module_imports
         setattr(module, 'imports', module_imports_with_global)
-        setattr(module, 'container__', self.container)
+        if issubclass(module, DynamicModule):
+            setattr(module, 'container__', self.container)
 
     async def recreate_async_provider(self, module):
         if hasattr(module, 'module_provider__'):
