@@ -62,7 +62,7 @@ class NestipyCliHandler:
         self.generate(name, path, 'input', prefix=prefix)
 
     def generate(self, name, parent_path, template, prefix: str = None):
-        pref = f"{prefix if prefix is not None else ''}"
+        pref = f"{f'{prefix}_' if prefix is not None else ''}"
         content = self.generator.render_template(f"{pref}{template}.txt", name=name)
         file_path = str(os.path.join(parent_path, f"{name.lower()}_{template}.py"))
         print(file_path)
@@ -79,17 +79,21 @@ class NestipyCliHandler:
             with open(app_path, 'r') as file:
                 file_content = file.read()
                 file.close()
-                module_pattern = r'@Module\(([^)]*)\)'
+                module_pattern = r'@Module\(\s*(.*?)\s*\)(?=\s*class\s+\w+\(.*\):)'
+
                 text_to_add = f'from src.{name.lower()}.{name.lower()}_module import {name.capitalize()}Module'
                 import re
-                match = re.search(module_pattern, file_content)
+                match = re.search(module_pattern, file_content, re.DOTALL)
                 if match:
                     existing_imports_str = match.group(1)
-                    existing_imports_match = re.search(r'imports=\[(.*?)\]', existing_imports_str)
+                    existing_imports_match = re.search(r'imports\s*=\s*\[\s*((?:[^][]|\[[^\]]*\])*)\s*]',
+                                                       existing_imports_str)
+                    print(existing_imports_str)
                     if existing_imports_match:
                         existing_imports = existing_imports_match.group(1)
-                        new_imports = existing_imports + ', ' + new_import
-                        modified_imports_str = re.sub(r'imports=\[(.*?)\]', 'imports=[' + new_imports + ']',
+                        new_imports = existing_imports + ',\n\t' + new_import if not existing_imports.strip().endswith(',' ) else existing_imports + new_import
+                        modified_imports_str = re.sub(r'imports\s*=\s*\[\s*((?:[^][]|\[[^\]]*\])*)\s*]',
+                                                      '\n\timports=[\n\t' + new_imports + ']',
                                                       existing_imports_str)
                         modified_content = file_content.replace(match.group(0),
                                                                 text_to_add + '\n@Module(' + modified_imports_str + ')')

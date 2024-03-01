@@ -1,3 +1,7 @@
+import re
+
+# Your module content
+module_content = """
 from config.masonite_orm import masonite_factory
 from config.peewee import peewee_mysql_factory
 from nestipy.common.decorator.module import Module
@@ -14,6 +18,7 @@ from src.graphql.graphql_module import GraphqlModule
 from src.user.user_module import UserModule
 
 
+from src.invoice.invoice_module import InvoiceModule
 @Module(
     imports=[
         ConfigModule.for_root(),
@@ -33,14 +38,24 @@ from src.user.user_module import UserModule
             imports=[GraphqlModule],
             option=StrawberryOption(graphql_ide='graphiql')
         ),
-
     ],
     providers=[
         # AppMiddleware,
         ModuleProvider(provide='TEST_PROVIDE', use_value='ProviderTest'),
         ModuleProvider(provide=STRAWBERRY_PUB_SUB, use_value=PubSub())
-    ])
+    ]
+)
 class AppModule(NestipyModule):
 
     def on_startup(self):
         pass
+"""
+
+# Define the regular expression pattern for capturing all content within @Module
+module_pattern = r'@Module\(\s*(.*?)\s*\)\s*class\s+(\w+)\(.*\):'
+
+# Search for @Module decorator in the module content
+match = re.search(module_pattern, module_content, re.DOTALL)
+if match:
+    module_content_within_module = match.group(1).strip()
+    print(module_content_within_module)

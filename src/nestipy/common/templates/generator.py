@@ -23,6 +23,7 @@ class TemplateGenerator:
             segments.append(segment)
         try:
             path = os.path.join(os.path.dirname(__file__), 'views', *segments)
+            print(path)
             with open(path) as f:
                 content = f.read()
                 return content
