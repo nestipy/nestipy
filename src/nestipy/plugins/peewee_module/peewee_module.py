@@ -61,11 +61,17 @@ class PeeweeModule(DynamicModule):
                 self.db = MySQLDatabase(database, **config_dict)
 
     @classmethod
+    def for_root(cls, value: PeeweeDatabaseConfig = None, models: list = None, ):
+        cls.for_root_async(value=value, models=models)
+
+    @classmethod
     def for_root_async(cls,
                        value: PeeweeDatabaseConfig = None,
                        use_factory: Callable[[...], Awaitable[PeeweeDatabaseConfig] | PeeweeDatabaseConfig] = None,
-                       inject: list = None
+                       inject: list = None,
+                       models: list = None
                        ):
+        cls.for_feature(models or [])
         return super().register_async(
             provider=ModuleProvider(
                 use_value=value,
@@ -80,7 +86,7 @@ class PeeweeModule(DynamicModule):
         for model in models:
             if hasattr(model, 'peewee_model__'):
                 peewee_models.append(model)
-        cls.models = cls.models + peewee_models
+        cls.models = list(set(cls.models + peewee_models))
         return None
 
     @staticmethod

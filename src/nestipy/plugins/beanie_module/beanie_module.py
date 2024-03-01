@@ -27,7 +27,7 @@ class BeanieModule(DynamicModule):
 
     @classmethod
     def for_root(cls, config: str = None, document: list = None):
-        cls.documents += document or []
+        cls.for_feature(models=document or [])
         if config is not None:
             return cls.register(provide=BEANIE_MODULE_CONFIG, value=config)
 
@@ -54,9 +54,11 @@ class BeanieModule(DynamicModule):
         container_instance = self.get_container().instances
         if BEANIE_MODULE_CONFIG in container_instance.keys():
             config: str = container_instance[BEANIE_MODULE_CONFIG]
-            client = AsyncIOMotorClient(config or "mongodb://user:pass@host:27017")
+            client = AsyncIOMotorClient(config or "mongodb://user:password@host:27017")
             try:
+                logging.info('Initializing mongo connection ...')
                 await init_beanie(database=client.db_name, document_models=list(set(self.documents)))
+                logging.info('Connection to mongo database successfully ...')
             except Exception as e:
                 tb = traceback.format_exc()
                 logging.error(e)

@@ -1,3 +1,13 @@
+from dataclasses import dataclass
+from typing import Callable
+
+
+@dataclass
+class MiddlewareDict:
+    path: str
+    middleware: Callable
+
+
 class MiddlewareConsumer:
 
     def __init__(self, compiler):
