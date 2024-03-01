@@ -32,7 +32,7 @@ class NestipyCliHandler:
 
     def generate_resource_graphql(self, name):
         self.generate_input(name)
-        self.generate_service(name)
+        self.generate_service(name, prefix='graphql')
         self.generate_resolver(name)
         self.generate_module(name, prefix='graphql')
 
@@ -62,9 +62,8 @@ class NestipyCliHandler:
         self.generate(name, path, 'input', prefix=prefix)
 
     def generate(self, name, parent_path, template, prefix: str = None):
-        content = self.generator.render_template(
-            f'{prefix}_' if prefix is not None else ''
-                                                    f"{template}.txt", name=name)
+        pref = f"{prefix if prefix is not None else ''}"
+        content = self.generator.render_template(f"{pref}{template}.txt", name=name)
         file_path = str(os.path.join(parent_path, f"{name.lower()}_{template}.py"))
         print(file_path)
         f = open(file_path, 'w+')
@@ -74,14 +73,14 @@ class NestipyCliHandler:
     @classmethod
     def modify_app_module(cls, name):
         name = str(name)
-        app_path = os.path.join(os.getcwd(), 'src', 'app_module.py')
+        app_path = os.path.join(os.getcwd(), 'app_module.py')
         if os.path.exists(app_path):
             new_import = f"{str(name).capitalize()}Module"
             with open(app_path, 'r') as file:
                 file_content = file.read()
                 file.close()
                 module_pattern = r'@Module\(([^)]*)\)'
-                text_to_add = f'from .{name.lower()}.{name.lower()}_module import {name.capitalize()}Module'
+                text_to_add = f'from src.{name.lower()}.{name.lower()}_module import {name.capitalize()}Module'
                 import re
                 match = re.search(module_pattern, file_content)
                 if match:

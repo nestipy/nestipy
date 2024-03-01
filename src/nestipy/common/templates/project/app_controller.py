@@ -1,5 +1,6 @@
 from nestipy.common.decorator import Controller, Get, Inject, Post, Put, Delete
-from .app_service import AppService
+
+from app_service import AppService
 
 
 @Controller()

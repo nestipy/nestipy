@@ -23,7 +23,7 @@ from src.user.user_module import UserModule
             use_factory=peewee_mysql_factory,
             inject=[ConfigService]
         ),
-        BeanieModule.for_root(config="mongodb://user:pass@host:27017"),
+        # BeanieModule.for_root(config="mongodb://user:pass@host:27017"),
         MasoniteOrmModule.for_root_async(
             factory=masonite_factory,
             inject=[ConfigService]
@@ -32,12 +32,12 @@ from src.user.user_module import UserModule
         AuthModule,
         GraphqlModule,
         StrawberryModule.for_root(
-            resolvers=[GraphqlModule],
+            imports=[GraphqlModule],
             option=StrawberryOption(graphql_ide='graphiql')
         ),
     ],
     providers=[
-        AppMiddleware,
+        # AppMiddleware,
         ModuleProvider(provide='TEST_PROVIDE', use_value='ProviderTest'),
         ModuleProvider(provide=STRAWBERRY_PUB_SUB, use_value=PubSub())
     ]

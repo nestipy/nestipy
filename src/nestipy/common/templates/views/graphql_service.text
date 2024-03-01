@@ -1,0 +1,13 @@
+from nestipy.common.decorator import Injectable
+
+from .{{name|lower}}_input import {{name|capitalize}}Input
+
+
+@Injectable()
+class {{name|capitalize}}Service:
+
+    async def list(self) -> str:
+        return "test"
+
+    async def create(self, data: {{name|capitalize}}Input) -> str:
+        return "test"

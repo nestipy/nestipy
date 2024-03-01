@@ -1,4 +1,5 @@
 from nestipy.common.decorator import Module
+
 from .{{name|lower}}_service import {{name|capitalize}}Service
 from .{{name|lower}}_controller import {{name|capitalize}}Controller
 

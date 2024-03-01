@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.1.04"
-description = ""
+version = "0.1.5"
+description = "Nestipy is a Python framework built on top of Litestar that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
 packages = [{include = "nestipy", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 litestar = "^2.6.1"
 fastapi = "^0.109.2"
 pymysql = "^1.1.0"

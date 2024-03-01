@@ -22,10 +22,10 @@ class StrawberryModule(DynamicModule, NestipyModule):
     resolvers = []
 
     @classmethod
-    def for_root(cls, option: Any = StrawberryOption(graphql_ide='graphiql'), resolvers=None):
-        if resolvers is None:
-            resolvers = []
-        setattr(cls, 'resolvers', resolvers)
+    def for_root(cls, option: Any = StrawberryOption(graphql_ide='graphiql'), imports=None):
+        if imports is None:
+            imports = []
+        setattr(cls, 'resolvers', imports)
         return cls.register(provide=STRAWBERRY_MODULE_OPTION, value=option)
 
     def configure(self, consumer: MiddlewareConsumer):

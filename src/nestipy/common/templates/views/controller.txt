@@ -1,5 +1,6 @@
 from nestipy.common.decorator import Controller, Get, Post, Put, Delete, Inject
-from .{{name|lower}}_dto import Create{{name|capitalize}}Dto,Update{{name|capitalize}}Dto
+
+from .{{name|lower}}_dto import Create{{name|capitalize}}Dto, Update{{name|capitalize}}Dto
 from .{{name|lower}}_service import {{name|capitalize}}Service
 
 
