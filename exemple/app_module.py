@@ -13,6 +13,8 @@ from src.auth.auth_module import AuthModule
 from src.graphql.graphql_module import GraphqlModule
 from src.user.user_module import UserModule
 
+from src.invoice.invoice_module import InvoiceModule
+
 
 @Module(
     imports=[
@@ -29,8 +31,9 @@ from src.user.user_module import UserModule
         UserModule,
         AuthModule,
         GraphqlModule,
+        InvoiceModule,
         StrawberryModule.for_root(
-            imports=[GraphqlModule],
+            imports=[GraphqlModule, InvoiceModule],
             option=StrawberryOption(graphql_ide='graphiql')
         ),
 

@@ -88,7 +88,6 @@ class NestipyCliHandler:
                     existing_imports_str = match.group(1)
                     existing_imports_match = re.search(r'imports\s*=\s*\[\s*((?:[^][]|\[[^\]]*\])*)\s*]',
                                                        existing_imports_str)
-                    print(existing_imports_str)
                     if existing_imports_match:
                         existing_imports = existing_imports_match.group(1)
                         new_imports = existing_imports + ',\n\t' + new_import if not existing_imports.strip().endswith(',' ) else existing_imports + new_import

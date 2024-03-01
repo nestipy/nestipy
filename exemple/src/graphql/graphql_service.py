@@ -1,4 +1,4 @@
-from exemple.src.user import UserService
+from ..user import UserService
 from nestipy.common.decorator import Injectable, Inject
 
 

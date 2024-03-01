@@ -19,10 +19,10 @@ class GraphqlCompiler:
         return Schema(query=ComboQuery, mutation=ComboMutation, subscription=ComboSubscription, **kwargs)
 
     def get_resolver(self):
-        key = 'provider_instances__'
+        instance_key = 'provider_instances__'
         resolvers = {}
         for m in self.modules:
-            module_resolvers_instances = getattr(m, key) if hasattr(m, key) else []
+            module_resolvers_instances = getattr(m, instance_key, [])
             for key, value in module_resolvers_instances.items():
                 if hasattr(value, 'graphql__resolver__'):
                     resolvers[key] = value

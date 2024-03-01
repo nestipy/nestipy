@@ -58,7 +58,9 @@ class NestipyContainer:
                 else:
                     setattr(cls, name, dep.default)
             else:
-                if dependency_cls not in providers_imports.keys():
+                modules_providers_name = [m.__module__ for m in providers_imports.keys() if inspect.isclass(m)]
+                m_name = getattr(dependency_cls, '__module__', '')
+                if m_name not in modules_providers_name:
                     return setattr(cls, name, dep.default)
                 dep_resolved = self.resolve(dependency_cls, providers_imports[dependency_cls], dependency_resolved)
                 setattr(cls, name, dep_resolved)
