@@ -6,6 +6,7 @@ from typing import Callable
 class MiddlewareDict:
     path: str
     middleware: Callable
+    guard: bool = False
 
 
 class MiddlewareConsumer:

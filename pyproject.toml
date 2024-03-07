@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.1.52"
+version = "0.1.6"
 description = "Nestipy is a Python framework built on top of Litestar that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -24,6 +24,10 @@ click-aliases = "^1.0.4"
 fastapi-utils = "^0.2.1"
 masonite-orm = "^2.20.0"
 beanie = "^1.25.0"
+python-socketio = "^5.11.1"
+autopep8 = "^2.0.4"
+isort = "^5.13.2"
+autoflake = "^2.3.0"
 
 
 [build-system]

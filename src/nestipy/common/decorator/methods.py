@@ -19,8 +19,8 @@ class Route:
 
 
 class Get(Route):
-    def __init__(self, path='/'):
-        super().__init__(HttpMethod.GET, path)
+    def __init__(self, path='/', **kwargs):
+        super().__init__(HttpMethod.GET, path, **kwargs)
 
 
 class Post(Route):

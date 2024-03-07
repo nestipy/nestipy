@@ -12,11 +12,11 @@ from ...plugins.dynamic_module.dynamic_module import DynamicModule
 
 
 class ModuleCompiler:
-    module: Any
+    # module: Any
     middlewares: list[MiddlewareDict]
 
-    def __init__(self, module: Callable):
-        self.module = module
+    def __init__(self):
+        # self.module = module
         self.container = NestipyContainer()
         self.module_resolved = {}
         self.hooks = {}
@@ -66,6 +66,6 @@ class ModuleCompiler:
     # MIDDLEWARE
 
     # COMPILE
-    async def compile(self):
-        await self.provider_compiler.compile(self.module, init=True)
-        return self.module
+    async def compile(self, module):
+        await self.provider_compiler.compile(module, init=True)
+        return module

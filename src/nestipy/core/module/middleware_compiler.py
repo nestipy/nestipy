@@ -1,5 +1,7 @@
 import inspect
 
+from nestipy.common.decorator.middleware import NestipyMiddleware
+from nestipy.common.decorator.use_gards import NestipyCanActivate
 from nestipy.core.module import MiddlewareConsumer
 from nestipy.core.module.middleware import MiddlewareDict
 from nestipy.core.utils import Utils
@@ -13,8 +15,8 @@ class MiddlewareCompiler:
     @classmethod
     def get_middleware_of_handler(cls, handler, path='path__'):
         path = getattr(handler, path) or ''
-        if hasattr(handler, 'middleware__'):
-            return path, getattr(handler, 'middleware__') or []
+        if hasattr(handler, 'middlewares__'):
+            return path, getattr(handler, 'middlewares__', [])
         return path, []
 
     def apply_middleware_to_path(self, module, path, middlewares: list):
@@ -22,10 +24,16 @@ class MiddlewareCompiler:
         for m in middlewares:
             if inspect.isclass(m):
                 instance = self.compiler.container.resolve(m, module)
-                middleware = getattr(instance, 'use')
-                transformed_middleware.append(MiddlewareDict(path=path, middleware=middleware))
+                if isinstance(instance, NestipyMiddleware):
+                    middleware = getattr(instance, 'use')
+                    transformed_middleware.append(MiddlewareDict(path=path, middleware=middleware))
+                elif isinstance(instance, NestipyCanActivate):
+                    middleware = getattr(instance, 'can_activate')
+                    transformed_middleware.append(MiddlewareDict(path=path, middleware=middleware, guard=True))
+                else:
+                    pass
             elif inspect.isfunction(m) or inspect.ismethod(m):
-                transformed_middleware.append(MiddlewareDict(path=path, middleware=m))
+                transformed_middleware.append(MiddlewareDict(path=path, middleware=m, guard=hasattr(m, 'guard__')))
 
         self.compiler.middlewares += transformed_middleware
         return transformed_middleware

@@ -23,9 +23,17 @@ class NestipyContainer:
             self.register(method, token)
         if token in self.instances:
             return self.instances[token]
-        instance = method()
-        self.instances[token] = instance
-        return instance
+        ins_ = method()
+        self.instances[token] = ins_
+        return ins_
+
+    def resolve_value(self, token, value):
+        if token not in self.dependencies:
+            self.register(value, token)
+        if token in self.instances:
+            return self.instances[token]
+        self.instances[token] = value
+        return value
 
     def resolve_class_property_inject(self, cls, module, exist=None):
         dependency_resolved = []

@@ -2,12 +2,13 @@ import asyncio
 import inspect
 import logging
 import traceback
+from typing import Callable
 
-from litestar import Litestar, Controller, route
+from litestar import Litestar, Controller, route, asgi
 from litestar.di import Provide
 from litestar.openapi import OpenAPIConfig
 
-from .platform import PlatformAdapter
+from .platform import PlatformAdapter, T
 from ..utils import Utils
 
 
@@ -31,6 +32,11 @@ class PlatformLitestar(PlatformAdapter[Litestar]):
         handlers = self.get_handlers()
         self.app = Litestar(debug=True, route_handlers=handlers,
                             openapi_config=OpenAPIConfig(title, version, **kwargs))
+
+        super().create_server()
+        return self.create_websocket_server()
+
+    def create_websocket_server(self, *args, **kwargs) -> Litestar:
         return self.app
 
     @staticmethod
@@ -85,3 +91,8 @@ class PlatformLitestar(PlatformAdapter[Litestar]):
         sync_to_thread = True if not inspect.iscoroutinefunction(method) else None
         return route(path=method.path__, http_method=method.method__,
                      sync_to_thread=sync_to_thread, **kwargs)(method)
+
+    def mounting(self):
+        for path, handler in self.mounts.items():
+            app = asgi(path, is_mount=True)(handler)
+            self.app.register(app)

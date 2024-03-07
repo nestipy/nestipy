@@ -1,6 +1,10 @@
 import os.path
 
+import autoflake
+import isort
+
 from nestipy.common.templates.generator import TemplateGenerator
+import autopep8
 
 
 class NestipyCliHandler:
@@ -90,19 +94,25 @@ class NestipyCliHandler:
                                                        existing_imports_str)
                     if existing_imports_match:
                         existing_imports = existing_imports_match.group(1)
-                        new_imports = existing_imports + ',\n\t' + new_import if not existing_imports.strip().endswith(',' ) else existing_imports + new_import
+                        new_imports = existing_imports + ',\n\t' + new_import if not existing_imports.strip().endswith(
+                            ',') else existing_imports + new_import
                         modified_imports_str = re.sub(r'imports\s*=\s*\[\s*((?:[^][]|\[[^\]]*\])*)\s*]',
-                                                      '\n\timports=[\n\t' + new_imports + ']',
+                                                      '\n\timports=[\n\t' + new_imports + '\n]',
                                                       existing_imports_str)
                         modified_content = file_content.replace(match.group(0),
                                                                 text_to_add + '\n@Module(' + modified_imports_str + ')')
                     else:
                         # If imports=[] doesn't exist, add imports directly
                         modified_content = file_content.replace(match.group(0),
-                                                                text_to_add + f'\n@Module(\n\timports=[{new_import}],'
+                                                                text_to_add + f'\n@Module(\n\timports=[{new_import}\n],'
                                                                               f'{existing_imports_str})')
+
+                    cleaned_code = autoflake.fix_code(modified_content)
+                    sorted_code = isort.code(cleaned_code)
+                    fixed_code = autopep8.fix_code(sorted_code)
                     with open(app_path, 'w') as file2:
-                        file2.write(modified_content)
+                        file2.write(fixed_code)
                         file2.close()
+
                 else:
                     print("No @Module decorator found in the file.")

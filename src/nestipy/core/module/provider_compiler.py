@@ -23,8 +23,8 @@ class ProviderCompiler:
             old_global_module = [m for m in imports if
                                  hasattr(m, "is_global__") and m.is_global__]
             for index, gb_module in enumerate(old_global_module):
-                # set global providers for  all
-                setattr(gb_module, 'providers', global_providers + getattr(gb_module, 'providers'))
+                # set global providers for  all imports
+                setattr(gb_module, 'providers', global_providers + getattr(gb_module, 'providers', []))
                 self.compiler.modify_module_imports(gb_module, old_global_module[0:index + 1])
                 await self.compile(gb_module)
                 global_module.append(gb_module)
@@ -44,16 +44,16 @@ class ProviderCompiler:
         await self.recreate_async_provider(module)
         await self.recreate_module_provider(module)
         providers = self.extract_provider(module)
-        for p in providers:
-            is_middleware = hasattr(p, 'middleware__')
-            if inspect.isclass(p):
+        for provider in providers:
+            is_middleware = hasattr(provider, 'middleware__')
+            if inspect.isclass(provider):
                 # put instance of provider inside container
-                instance = self.compiler.container.resolve(p, module)
-                self.compiler.put_module_provider_instance(module, p, instance, is_middleware=is_middleware)
+                instance = self.compiler.container.resolve(provider, module)
+                self.compiler.put_module_provider_instance(module, provider, instance, is_middleware=is_middleware)
             else:
                 # put value identified by token  inside container
-                token = p.token__
-                instance = self.compiler.container.resolve_method(p, token=token)
+                token = provider.token__
+                instance = self.compiler.container.resolve_method(provider, token=token)
                 self.compiler.put_module_provider_instance(module, token, instance, is_middleware=is_middleware)
 
         await self.compiler.resolve_controllers_of_module(module)
@@ -76,16 +76,22 @@ class ProviderCompiler:
     async def recreate_module_provider(self, module):
         providers = getattr(module, 'providers')
         instance_of_module_provider = [p for p in providers if isinstance(p, ModuleProvider)]
+        instance_of_module_provider.reverse()
         module_provider_injectable = self.extract_provider(module)
-        for p in instance_of_module_provider:
-            if p.provide is None:
-                pass
-            if p.use_value is not None:
-                module_provider_injectable = [Injectable(p.provide)(lambda: p.use_value)] + module_provider_injectable
+        for pr in instance_of_module_provider:
+            if pr.provide is None:
                 continue
-            if p.use_factory is not None:
-                value = await self.resolve_use_factory(use_factory=p.use_factory, inject=module_provider_injectable)
-                module_provider_injectable = [Injectable(p.provide)(lambda: value)] + module_provider_injectable
+            if pr.use_value is not None:
+                class_value = type(str(pr.provide).capitalize(), (), {
+                    'value': pr.use_value,
+                    '__name__': str(pr.provide).capitalize(),
+                    '__call__': lambda self_: self_.value
+                })
+                module_provider_injectable = [Injectable(pr.provide)(class_value())] + module_provider_injectable
+                continue
+            if pr.use_factory is not None:
+                value = await self.resolve_use_factory(use_factory=pr.use_factory, inject=module_provider_injectable)
+                module_provider_injectable = [Injectable(pr.provide)(lambda: value)] + module_provider_injectable
                 continue
         setattr(module, 'providers', module_provider_injectable)
 

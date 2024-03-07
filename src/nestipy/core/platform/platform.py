@@ -5,7 +5,8 @@ T = TypeVar('T')
 
 
 class PlatformAdapter(Generic[T], ABC):
-    app: T
+    app: T = None
+    mounts: dict = {}
     _handlers: list[Callable] = []
     _hooks: list[Callable] = []
     _listeners: list[Callable] = []
@@ -29,6 +30,18 @@ class PlatformAdapter(Generic[T], ABC):
     async def setup(self, module):
         pass
 
-    @abstractmethod
     def create_server(self, *args, **kwargs) -> T:
+        self.mounting()
+
+    def create_websocket_server(self, *args, **kwargs) -> T:
+        pass
+
+    def create_http_server(self, *args, **kwargs) -> T:
+        pass
+
+    def mount(self, path: str, handler: Callable):
+        self.mounts[path] = handler
+
+    @abstractmethod
+    def mounting(self):
         pass

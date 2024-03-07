@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import logging
 import traceback
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import FastAPI, Depends, APIRouter
 from fastapi_utils.cbv import cbv
@@ -35,6 +35,7 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
         self.app = FastAPI(*args, debug=True, **kwargs)
         for router in routes:
             self.app.include_router(router, include_in_schema=True)
+        super().create_server()
         return self.app
 
     @classmethod
@@ -89,3 +90,7 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
             self.add_handler(router)
         module.controllers = wrapped_controller
         return module
+
+    def mounting(self):
+        for path, handler in self.mounts.items():
+            self.app.mount(path, handler)

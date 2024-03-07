@@ -38,7 +38,7 @@ class GraphqlCompiler:
             properties = self.extract_class_property(class_, instance_)
             class_methods = self.extract_class_not_resolver(class_)
             instance = self.create_instance_of_class(class_.__name__, properties + class_methods)
-            methods = self.put_metadata_to_resolver(instance, self.extract_class_method_resolver(class_))
+            methods = self.put_metadata_to_resolver(class_, instance, self.extract_class_method_resolver(class_))
 
             query_resolver = self.extract_class_query(methods)
             query_ = strawberry_type(type(name + 'Query', (), {'__module__': class_.__module__,
@@ -61,10 +61,12 @@ class GraphqlCompiler:
         return class_query, class_mutation, class_subscription
 
     @classmethod
-    def put_metadata_to_resolver(cls, instance, resolvers: list[tuple]):
+    def put_metadata_to_resolver(cls, class_, instance, resolvers: list[tuple]):
         modified_resolvers: list[tuple] = []
         for key, method in resolvers:
             setattr(method, 'metadata__', instance)
+            middlewares = getattr(class_, 'middlewares__', []) + getattr(method, 'middlewares__', [])
+            setattr(method, 'middlewares__', middlewares)
             modified_resolvers.append((key, method))
         return modified_resolvers
 

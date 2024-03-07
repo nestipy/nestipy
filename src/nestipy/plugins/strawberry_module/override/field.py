@@ -43,7 +43,6 @@ def field(
         init: Literal[True, False, None] = None,
 ) -> Any:
     type_annotation = StrawberryAnnotation.from_annotation(graphql_type)
-
     field_ = StrawberryField(
         python_name=None,
         graphql_name=name,

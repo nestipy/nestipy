@@ -1,13 +1,15 @@
-from nestipy.common.decorator.middleware import Middleware, NestipyMiddleware
-from litestar import Request
-from litestar import Response
+from nestipy.common.decorator.middleware import NestipyMiddleware
 
 
 class UserMiddleware(NestipyMiddleware):
 
-    def use(self, scope, receive, send):
-        print('UserMiddleware called')
+    async def use(self, request, response, next_function):
+        print('await UserMiddleware called')
+        await next_function()
+        print('await after UserMiddleware called')
+        return response
 
 
-def create_middleware(scope, receive, send):
+async def create_middleware(request, response, next_function):
     print('create_middleware called ')
+    return await next_function()
