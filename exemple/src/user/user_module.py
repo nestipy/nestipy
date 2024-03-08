@@ -8,6 +8,7 @@ from .user_gateway import UserGateway
 from .user_middleware import UserMiddleware, create_middleware
 from .user_service import UserService
 from ..auth.auth_module import AuthModule
+from ..guard.guard_module import GuardModule
 
 
 @Module(
@@ -19,7 +20,8 @@ from ..auth.auth_module import AuthModule
     ],
     imports=[
         AuthModule,
-        PeeweeModule.for_feature([User])
+        PeeweeModule.for_feature([User]),
+        GuardModule
     ],
     exports=[UserService]
 )

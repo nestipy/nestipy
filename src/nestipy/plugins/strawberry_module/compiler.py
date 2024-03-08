@@ -25,6 +25,7 @@ class GraphqlCompiler:
             module_resolvers_instances = getattr(m, instance_key, [])
             for key, value in module_resolvers_instances.items():
                 if hasattr(value, 'graphql__resolver__'):
+                    setattr(key, 'module__parent__', m)
                     resolvers[key] = value
         return resolvers
 
@@ -65,6 +66,7 @@ class GraphqlCompiler:
         modified_resolvers: list[tuple] = []
         for key, method in resolvers:
             setattr(method, 'metadata__', instance)
+            setattr(method, 'module__parent__', getattr(class_, 'module__parent__'))
             middlewares = getattr(class_, 'middlewares__', []) + getattr(method, 'middlewares__', [])
             setattr(method, 'middlewares__', middlewares)
             modified_resolvers.append((key, method))

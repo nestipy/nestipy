@@ -75,7 +75,7 @@ class AppNestipyContext:
 
     async def __call__(self, scope, receive, send, **kwargs):
         scope['app'] = self
-
+        scope['container'] = self.compiler.container
         # platform socket
         if scope['type'] in ['http', 'websocket'] and \
                 self.engine_io is not None and scope['path'].startswith(self.engine_io_path):

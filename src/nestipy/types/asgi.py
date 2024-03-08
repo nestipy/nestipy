@@ -44,6 +44,7 @@ from typing import (
     Union,
 )
 
+from litestar import Litestar
 from litestar.enums import HttpMethod
 
 __all__ = (
@@ -92,6 +93,8 @@ __all__ = (
     "WebSocketSendEvent",
     "WebSocketSendMessage",
 )
+
+from litestar.types import RouteHandlerType
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias

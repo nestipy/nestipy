@@ -8,7 +8,7 @@ from .graphql_service import GraphqlService
 from nestipy.common.decorator import Inject
 from nestipy.plugins.strawberry_module.decorator import Resolver, Query, Mutation, Subscription, Type
 from nestipy.plugins.strawberry_module.pubsub import PubSub, STRAWBERRY_PUB_SUB
-from ..user.auth_guard import AuthGuard
+from ..guard.auth_guard import AuthGuard
 
 
 @Type()

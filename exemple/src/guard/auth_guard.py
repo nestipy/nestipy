@@ -1,9 +1,12 @@
+from nestipy.common import Inject
+from .guard_service import GuardService
 from nestipy.common.context import ExecutionContext
-from strawberry.types import ExecutionContext as StrawberryExecutionContext
 from nestipy.common.decorator.use_gards import NestipyCanActivate
 
 
 class AuthGuard(NestipyCanActivate):
-    def can_activate(self, context: ExecutionContext | StrawberryExecutionContext) -> bool:
+    service: GuardService = Inject(GuardService)
+
+    def can_activate(self, context: ExecutionContext) -> bool:
         print(f'AuthGuard called')
         return True

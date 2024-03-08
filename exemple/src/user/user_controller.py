@@ -6,10 +6,10 @@ from nestipy.common import Body, UseGuards, GATEWAY_SERVER
 from nestipy.common.decorator.controller import Controller
 from nestipy.common.decorator.inject import Inject
 from nestipy.common.decorator.methods import Get, Post
-from .auth_guard import AuthGuard
 from .dto import CreateUserDto
 from .user_service import UserService
 from ..auth.auth_service import AuthService
+from ..guard.auth_guard import AuthGuard
 
 
 @UseGuards(AuthGuard)
