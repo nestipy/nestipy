@@ -1,10 +1,29 @@
 import json
+from typing import Any, Callable
 
 
 class Response:
+    send: Callable
+    headers: dict = {}
+
     def __init__(self, send):
         self.send = send
         self.headers = {}
+
+    def add_headers(self, headers: list[tuple]):
+
+        send = self.send
+        send = send
+
+        async def send_with_header_modifier(event: Any):
+            if event['type'] == 'http.response.start':
+                old_headers = event.get('headers', [])
+                for (key, value) in headers:
+                    old_headers.append((key.encode(), value.encode()))
+                event['headers'] = old_headers
+            await send(event)
+
+        self.send = send_with_header_modifier
 
     async def send_json(self, content, status_code=200):
         await self.send_response("json", content, status_code)

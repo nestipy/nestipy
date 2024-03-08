@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from typing import Callable
+from uuid import uuid4
 
 
 @dataclass
 class MiddlewareDict:
-    path: str
     middleware: Callable
+    path: str = '/'
     guard: bool = False
+    key: str = None
 
 
 class MiddlewareConsumer:

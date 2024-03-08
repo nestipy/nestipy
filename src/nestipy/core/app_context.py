@@ -8,8 +8,10 @@ from .module.provider import ModuleProvider
 from .utils import Utils
 from ..common.context import ExecutionContext
 from ..common.decorator.gateway import GATEWAY_SERVER
+from ..common.decorator.middleware import NestipyMiddleware
 from ..common.enum.platform import PlatFormType
 from ..core.module.compiler import ModuleCompiler
+from ..core.module.middleware import MiddlewareDict
 from ..core.platform.platform import PlatformAdapter
 from ..core.platform.platform_fastapi import PlatformFastAPI
 from ..core.platform.platform_litestar import PlatformLitestar
@@ -30,9 +32,11 @@ class AppNestipyContext:
     message: Any = None
     logger: logging.Logger
     context: ExecutionContext
+    middlewares: list[MiddlewareDict] = []
 
     engine_io: Any = None
     engine_io_path: Any = ''
+    middleware_includes: list = []
 
     def __init__(self, module, platform=PlatFormType, adapter: PlatformAdapter = None, **kwargs):
         self.module = module
@@ -45,6 +49,17 @@ class AppNestipyContext:
 
     def mount(self, path: str, handler: Callable):
         self.adapter.mount(path, handler)
+
+    def use(self, *middlewares):
+        for m in list(middlewares):
+            if isinstance(m, NestipyMiddleware):
+                if m.__class__.__name__ not in self.middleware_includes:
+                    self.middlewares.append(MiddlewareDict(middleware=m.use))
+                    self.middleware_includes.append(m.__class__.__name__)
+            elif isinstance(m, Callable):
+                if m.__name__ not in self.middleware_includes:
+                    self.middlewares.append(MiddlewareDict(middleware=m))
+                    self.middleware_includes.append(m.__name__)
 
     def useSocketIo(self, engine_io: Any = None, engine_io_path: str = 'socket.io'):
         self.engine_io = engine_io
@@ -73,6 +88,21 @@ class AppNestipyContext:
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
 
+    def add_timing_header(self):
+
+        send = self.context.get_response().send
+
+        async def send_with_header_modifier(event: Any):
+            if event['type'] == 'http.response.start':
+                old_headers = event.get('headers', [])
+                old_headers.append(
+                    (b'Duration',
+                     f"{asyncio.get_event_loop().time() - self.context.get_request().start_time}s".encode()))
+                event['headers'] = old_headers
+            await send(event)
+
+        self.context.get_response().send = send_with_header_modifier
+
     async def __call__(self, scope, receive, send, **kwargs):
         scope['app'] = self
         scope['container'] = self.compiler.container
@@ -82,7 +112,8 @@ class AppNestipyContext:
             await self.engine_io.handle_request(scope, receive, send)
         elif scope.get('type') == 'websocket':
             self.context = ExecutionContext(scope, receive, send)
-            await self.call_middlewares(scope=scope, receive=receive, send=send)
+            self.add_timing_header()
+            await self.call_middlewares(receive=receive)
         else:
             self.message = await receive()
             if scope['type'] == 'lifespan':
@@ -90,8 +121,9 @@ class AppNestipyContext:
                 await self.app(scope, self.receive, send)
             else:
                 self.context = ExecutionContext(scope, self.receive, send)
+                self.add_timing_header()
                 # call middleware before
-                await self.call_middlewares(scope=scope, receive=self.receive, send=send)
+                await self.call_middlewares(receive=self.receive)
 
     async def receive(self):
         await asyncio.sleep(0.001)
@@ -134,18 +166,18 @@ class AppNestipyContext:
                     logging.error(tb)
                     raise e
 
-    async def call_middleware(self, scope, receive, send, index: int, middlewares: list):
+    async def call_middleware(self, receive, index: int, middlewares: list):
         middleware = middlewares[index]
 
         async def next_function():
             if index + 1 == len(middlewares):
                 if hasattr(self, 'app') and self.app is not None:
-                    return await self.app(scope, receive, send)
+                    return await self.app(self.context.get_request().scope, receive, self.context.get_response().send)
                 else:
                     await self.handle_lifespan()
                     raise Exception('Platform Handler not initialized')
             else:
-                return await self.call_middleware(scope, receive, send, index + 1, middlewares)
+                return await self.call_middleware(receive, index + 1, middlewares)
 
         dependencies = (self.context,) if middleware.guard else (
             self.context.get_request(), self.context.get_response(), next_function)
@@ -161,19 +193,19 @@ class AppNestipyContext:
                     {'error': 'Access to this resource on the server is denied'}, 403)
         return response or None
 
-    async def call_middlewares(self, scope, receive, send):
+    async def call_middlewares(self, receive):
         matched_middleware = []
-        middlewares = self.compiler.middlewares
+        middlewares = self.middlewares + self.compiler.middlewares
         for middleware in middlewares:
-            path = scope["path"]
+            path = self.context.get_request().scope["path"]
             match = Utils.match_route(middleware.path, path)
             if match:
                 matched_middleware.append(middleware)
         try:
             if len(matched_middleware) > 0:
-                response = await self.call_middleware(scope, receive, send, 0, matched_middleware)
+                response = await self.call_middleware(receive, 0, matched_middleware)
             else:
-                response = await self.app(scope, receive, send)
+                response = await self.app(self.context.get_request().scope, receive, self.context.get_response().send)
             return response
         except Exception as e:
             tb = traceback.format_exc()

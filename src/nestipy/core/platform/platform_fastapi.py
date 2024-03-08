@@ -32,7 +32,7 @@ class PlatformFastAPI(PlatformAdapter[FastAPI]):
 
     def create_server(self, *args, **kwargs) -> FastAPI:
         routes = self.get_handlers()
-        self.app = FastAPI(*args, debug=True, **kwargs)
+        self.app: FastAPI = FastAPI(*args, debug=True, **kwargs)
         for router in routes:
             self.app.include_router(router, include_in_schema=True)
         super().create_server()

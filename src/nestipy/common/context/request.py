@@ -8,12 +8,20 @@ class Request:
         self.method = getattr(scope, 'method', None)
         self.path = scope["path"]
         self.user = None
+        self.start_time = asyncio.get_event_loop().time()
         self.query_params = scope["query_string"]
         self.headers = {key.decode(): value.decode() for key, value in scope["headers"]}
         self.body = None
         self._receive, self._receive_copy = asyncio.Queue(), asyncio.Queue()
         # asyncio.create_task(self._fill_receive_copy())
         # asyncio.create_task(self._parse_body())
+
+    def put(self, key: str, value: str):
+        setattr(self, key, value)
+        self.scope[key.encode()] = value.encode()
+
+    def get(self, key: str, default=None):
+        return getattr(self, key, default)
 
     async def _fill_receive_copy(self):
         while True:

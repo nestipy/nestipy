@@ -14,7 +14,7 @@ class MiddlewareCompiler:
 
     @classmethod
     def get_middleware_of_handler(cls, handler, path='path__'):
-        path = getattr(handler, path) or ''
+        path = getattr(handler, path, None) or ''
         if hasattr(handler, 'middlewares__'):
             return path, getattr(handler, 'middlewares__', [])
         return path, []

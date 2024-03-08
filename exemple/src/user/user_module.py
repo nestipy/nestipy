@@ -27,5 +27,5 @@ from ..guard.guard_module import GuardModule
 )
 class UserModule(NestipyModule):
     def configure(self, consumer: MiddlewareConsumer):
-        consumer.apply_for_controller(self, UserController, UserMiddleware)
+        consumer.apply_for_controller(self, self, UserMiddleware)
         consumer.apply_for_route(self, "/users/create", create_middleware)
