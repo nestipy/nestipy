@@ -11,4 +11,4 @@ from .{{name|lower}}_resolver import {{name|capitalize}}Resolver
     ],
 )
 class {{name|capitalize}}Module:
-    pass
+    ...

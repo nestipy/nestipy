@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import logging
 import traceback
-from typing import Any, Annotated, Callable
+from typing import Any, Callable
 
 from .module.provider import ModuleProvider
 from .utils import Utils
@@ -15,8 +15,6 @@ from ..core.module.middleware import MiddlewareDict
 from ..core.platform.platform import PlatformAdapter
 from ..core.platform.platform_fastapi import PlatformFastAPI
 from ..core.platform.platform_litestar import PlatformLitestar
-
-Injected = Annotated[int, 'Test']
 
 FORMAT = '%(levelname)-10s%(asctime)-15s - %(message)s'
 DATE_FORMAT = '%b %d %H:%M:%S'
@@ -45,7 +43,7 @@ class AppNestipyContext:
         self.adapter = adapter if adapter is not None else (
             PlatformLitestar() if platform == PlatFormType.LITESTAR else PlatformFastAPI())
         self.kwargs = kwargs
-        self.config_logger()
+        self._config_logger()
 
     def mount(self, path: str, handler: Callable):
         self.adapter.mount(path, handler)
@@ -70,7 +68,10 @@ class AppNestipyContext:
                      + getattr(self.module, 'providers', []))
         setattr(self.module, 'providers', providers)
 
-    def registerSocketIoHandler(self):
+    def _registerSocketIoHandler(self):
+        """
+        Call to register all gateway handler declared by SubscribeMessage
+        """
         handlers = [(k, v) for k, v in self.compiler.container.instances.items() if
                     inspect.isclass(k) and hasattr(k, 'gateway__')]
         for k, gate in handlers:
@@ -81,15 +82,20 @@ class AppNestipyContext:
                 if event is not None:
                     self.engine_io.on(event)(getattr(gate, name))
 
-    def config_logger(self):
+    def _config_logger(self):
+        """
+        Config logger
+        """
         formatter = logging.Formatter(fmt=FORMAT, datefmt=DATE_FORMAT)
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
 
-    def add_timing_header(self):
-
+    def _add_timing_header(self):
+        """
+        Add Duration of process in response header
+        """
         send = self.context.get_response().send
 
         async def send_with_header_modifier(event: Any):
@@ -104,6 +110,13 @@ class AppNestipyContext:
         self.context.get_response().send = send_with_header_modifier
 
     async def __call__(self, scope, receive, send, **kwargs):
+        """
+        Handle ASGI
+        :param scope:
+        :param receive:
+        :param send:
+        :param kwargs:
+        """
         scope['app'] = self
         scope['container'] = self.compiler.container
         # platform socket
@@ -112,36 +125,43 @@ class AppNestipyContext:
             await self.engine_io.handle_request(scope, receive, send)
         elif scope.get('type') == 'websocket':
             self.context = ExecutionContext(scope, receive, send)
-            self.add_timing_header()
-            await self.call_middlewares(receive=receive)
+            self._add_timing_header()
+            await self._call_middlewares(receive=receive)
         else:
             self.message = await receive()
             if scope['type'] == 'lifespan':
-                await self.handle_lifespan()
-                await self.app(scope, self.receive, send)
+                await self._handle_lifespan()
+                await self.app(scope, self._receive, send)
             else:
-                self.context = ExecutionContext(scope, self.receive, send)
-                self.add_timing_header()
+                self.context = ExecutionContext(scope, self._receive, send)
+                self._add_timing_header()
                 # call middleware before
-                await self.call_middlewares(receive=self.receive)
+                await self._call_middlewares(receive=self._receive)
 
-    async def receive(self):
+    async def _receive(self):
+        """
+        Copy receive from request receive
+        :return:
+        """
         await asyncio.sleep(0.001)
         return self.message
 
-    async def handle_lifespan(self):
+    async def _handle_lifespan(self):
         if self.message['type'] == 'lifespan.startup':
-            await self.setup()
-            await self.on_startup()
+            await self._setup()
+            await self._on_startup()
         elif self.message['type'] == 'lifespan.shutdown':
-            await self.on_shutdown()
+            await self._on_shutdown()
         return self.message
 
-    async def setup(self):
+    async def _setup(self):
+        """
+        By using module compile, this function is the responsible for compiling all module recursively
+        """
         try:
             compiled_module = await self.compiler.compile(self.module)
             if self.engine_io is not None:
-                self.registerSocketIoHandler()
+                self._registerSocketIoHandler()
             await self.adapter.setup(compiled_module)
             self.app = self.adapter.create_server(**self.kwargs)
             self.logger.info("Application initialized successfully.")
@@ -151,7 +171,11 @@ class AppNestipyContext:
             logging.error(tb)
             raise e
 
-    async def call_hooks(self, key):
+    async def _call_hooks(self, key):
+        """
+        Call app hook(on_startup, on_shut_down) by key         will be on_startup or on_shut_down
+        :param key:
+        """
         if key in self.compiler.hooks.keys():
             hooks = self.compiler.hooks.get(key)
             for hook in hooks:
@@ -166,18 +190,30 @@ class AppNestipyContext:
                     logging.error(tb)
                     raise e
 
-    async def call_middleware(self, receive, index: int, middlewares: list):
+    async def _call_middleware(self, receive, index: int, middlewares: list):
+        """
+        Recursive function to call middleware
+
+        :param receive:
+        :param index:
+        :param middlewares:
+        :return:
+        """
         middleware = middlewares[index]
 
         async def next_function():
+            """
+            Next function to be called in middleware
+            :return:
+            """
             if index + 1 == len(middlewares):
                 if hasattr(self, 'app') and self.app is not None:
                     return await self.app(self.context.get_request().scope, receive, self.context.get_response().send)
                 else:
-                    await self.handle_lifespan()
+                    await self._handle_lifespan()
                     raise Exception('Platform Handler not initialized')
             else:
-                return await self.call_middleware(receive, index + 1, middlewares)
+                return await self._call_middleware(receive, index + 1, middlewares)
 
         dependencies = (self.context,) if middleware.guard else (
             self.context.get_request(), self.context.get_response(), next_function)
@@ -193,7 +229,7 @@ class AppNestipyContext:
                     {'error': 'Access to this resource on the server is denied'}, 403)
         return response or None
 
-    async def call_middlewares(self, receive):
+    async def _call_middlewares(self, receive):
         matched_middleware = []
         middlewares = self.middlewares + self.compiler.middlewares
         for middleware in middlewares:
@@ -203,7 +239,7 @@ class AppNestipyContext:
                 matched_middleware.append(middleware)
         try:
             if len(matched_middleware) > 0:
-                response = await self.call_middleware(receive, 0, matched_middleware)
+                response = await self._call_middleware(receive, 0, matched_middleware)
             else:
                 response = await self.app(self.context.get_request().scope, receive, self.context.get_response().send)
             return response
@@ -213,8 +249,8 @@ class AppNestipyContext:
             logging.error(tb)
             raise e
 
-    async def on_startup(self):
-        await self.call_hooks('on_startup')
+    async def _on_startup(self):
+        await self._call_hooks('on_startup')
 
-    async def on_shutdown(self):
-        await self.call_hooks('on_shutdown')
+    async def _on_shutdown(self):
+        await self._call_hooks('on_shutdown')

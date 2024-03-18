@@ -11,4 +11,4 @@ from .invoice_resolver import InvoiceResolver
     ],
 )
 class InvoiceModule:
-    pass
+    ...

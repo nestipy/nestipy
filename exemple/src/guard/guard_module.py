@@ -8,4 +8,4 @@ from .guard_service import GuardService
     exports=[GuardService],
 )
 class GuardModule:
-    pass
+    ...

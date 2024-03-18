@@ -3,4 +3,4 @@ from nestipy.common.decorator import Module
 
 @Module()
 class {{name|capitalize}}Module:
-    pass
+    ...

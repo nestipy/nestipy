@@ -8,4 +8,4 @@ from nestipy.common import Module
     is_global=True
 )
 class EventModule:
-    pass
+    ...

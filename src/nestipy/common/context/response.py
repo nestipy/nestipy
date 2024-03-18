@@ -1,7 +1,10 @@
 import json
 from typing import Any, Callable
 
+# from nestipy.utils import singleton
 
+
+# @singleton(get_aware=lambda send: id(send))
 class Response:
     send: Callable
     headers: dict = {}

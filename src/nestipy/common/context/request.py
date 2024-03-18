@@ -1,6 +1,9 @@
 import asyncio
 
+# from nestipy.utils import singleton
 
+
+# @singleton()
 class Request:
     def __init__(self, scope, receive):
         self.scope = scope

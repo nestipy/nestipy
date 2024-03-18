@@ -18,4 +18,4 @@ from nestipy.common.decorator import Module
     ]
 )
 class GraphqlModule:
-    pass
+    ...

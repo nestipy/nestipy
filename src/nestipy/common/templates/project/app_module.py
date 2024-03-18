@@ -8,4 +8,4 @@ from app_service import AppService
     providers=[AppService]
 )
 class AppModule:
-    pass
+    ...

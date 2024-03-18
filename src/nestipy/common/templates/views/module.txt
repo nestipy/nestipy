@@ -9,4 +9,4 @@ from .{{name|lower}}_controller import {{name|capitalize}}Controller
     controllers=[{{name|capitalize}}Controller]
 )
 class {{name|capitalize}}Module:
-    pass
+    ...

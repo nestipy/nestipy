@@ -14,4 +14,4 @@ from .auth_service import AuthService
     ]
 )
 class AuthModule:
-    pass
+    ...
