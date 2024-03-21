@@ -1,29 +1,79 @@
-from .controller import Controller
-from .dto import Dto
-from .gateway import Gateway, GATEWAY_SERVER, SubscribeMessage
-from .inject import Inject
-from .injectable import Injectable
-from .methods import Get, Post, Route, Put, Patch, Delete
-from .middleware import NestipyMiddleware
-from .module import Module
-from .use_gards import UseGuards, NestipyCanActivate
+import enum
+from typing import Type, Callable, Union
 
-__all__ = [
-    'Controller',
-    'Inject',
-    'Module',
-    'Get',
-    'Post',
-    'Route',
-    'Put',
-    'Patch',
-    'Delete',
-    'Dto',
-    'NestipyMiddleware',
-    'Injectable',
-    'UseGuards',
-    'Gateway',
-    'GATEWAY_SERVER',
-    'SubscribeMessage',
-    "NestipyCanActivate"
-]
+from nestipy.core.ioc.nestipy_container import NestipyContainer
+from ..metadata.module import ModuleMetadata
+from ..metadata.reflect import Reflect
+from ..metadata.route import RouteKey
+from ..provider import ModuleProviderDict
+
+
+class Scope(enum.Enum):
+    Request = 'Request'
+    Transient = 'Transient'
+    Singleton = 'Singleton'
+
+
+class Injectable:
+    scope: Scope = None
+
+    def __init__(self, scope: Scope = Scope.Singleton):
+        self.scope = scope
+        self.container = NestipyContainer.get_instance()
+
+    def __call__(self, cls: Type) -> Type:
+        match self.scope:
+            case Scope.Transient:
+                self.container.add_transient(cls)
+            case Scope.Request:
+                self.container.add_transient(cls)
+            case _:
+                self.container.add_singleton(cls)
+        return cls
+
+
+class Controller:
+    def __init__(self, path: str = '/', **kwargs):
+        self.path = path
+        self.kwargs = kwargs
+        self.container = NestipyContainer.get_instance()
+
+    def __call__(self, cls, **kwargs):
+        self.container.add_singleton(cls)
+        # put path and kwargs in controller property
+        Reflect.set_metadata(cls, RouteKey.path, self.path)
+        Reflect.set_metadata(cls, RouteKey.kwargs, self.kwargs)
+        return cls
+
+
+class Module:
+    providers: list[Union[Type, ModuleProviderDict]] = []
+    controllers: list[Type] = []
+    imports: list[Type] = []
+    exports: list[Type] = []
+    is_global: bool = False
+
+    def __init__(
+            self,
+            providers: list[Callable | ModuleProviderDict] = None,
+            controllers: list[Callable] = None,
+            imports: list[Callable | ModuleProviderDict] = None,
+            exports: list[Callable] = None,
+            is_global: bool = False
+    ):
+        self.providers = providers or []
+        self.controllers = controllers or []
+        self.imports = imports or []
+        self.exports = exports or []
+        self.is_global = is_global
+        self.container = NestipyContainer.get_instance()
+
+    def __call__(self, cls: Type):
+        Reflect.set_metadata(cls, ModuleMetadata.Providers, self.providers + getattr(cls, ModuleMetadata.Providers, []))
+        Reflect.set_metadata(cls, ModuleMetadata.Controllers,
+                             self.controllers + getattr(cls, ModuleMetadata.Controllers, []))
+        Reflect.set_metadata(cls, ModuleMetadata.Imports, self.imports + getattr(cls, ModuleMetadata.Imports, []))
+        Reflect.set_metadata(cls, ModuleMetadata.Exports, self.exports + getattr(cls, ModuleMetadata.Exports, []))
+        Reflect.set_metadata(cls, ModuleMetadata.Global, self.is_global or getattr(cls, ModuleMetadata.Global, False))
+        self.container.add_singleton(cls)
+        return cls

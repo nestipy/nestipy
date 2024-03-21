@@ -1,33 +1,36 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.1.7"
-description = "Nestipy is a Python framework built on top of Litestar that follows the modular architecture of NestJS"
+version = "1.0.0-alpha-1"
+description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
-packages = [{include = "nestipy", from = "src"}]
+packages = [{ include = "nestipy", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 litestar = "^2.6.1"
-fastapi = "^0.109.2"
 pymysql = "^1.1.0"
-uvicorn = {extras = ["standard"], version = "^0.27.1"}
 peewee = "^3.17.1"
 python-dotenv = "^1.0.1"
 minijinja = "^1.0.8"
 pyee = "^11.1.0"
 snakecase = "^1.0.1"
-strawberry-graphql = "^0.219.2"
 pathlib2 = "^2.3.7.post1"
 questionary = "^2.0.1"
 click-aliases = "^1.0.4"
-fastapi-utils = "^0.2.1"
 masonite-orm = "^2.20.0"
 beanie = "^1.25.0"
 python-socketio = "^5.11.1"
 autopep8 = "^2.0.4"
 isort = "^5.13.2"
 autoflake = "^2.3.0"
+blacksheep = "^2.0.7"
+aiofiles = "^23.2.1"
+fastapi = "^0.110.0"
+uvicorn = {extras = ["standard"], version = "^0.28.0"}
+strawberry-graphql = "^0.220.0"
+ujson = "^5.9.0"
+aiofile = "^3.8.8"
 
 
 [build-system]

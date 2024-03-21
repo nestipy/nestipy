@@ -5218,7 +5218,7 @@ process.umask = function() { return 0; };
   // Function (ahem) Functions
   // ------------------
 
-  // Determines whether to execute a function as a constructor
+  // Determines whether to process a function as a constructor
   // or a normal function with the provided arguments
   var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
     if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
@@ -5371,7 +5371,7 @@ process.umask = function() { return 0; };
 
   // Returns the first function passed as an argument to the second,
   // allowing you to adjust arguments, run code before and after, and
-  // conditionally execute the original function.
+  // conditionally process the original function.
   _.wrap = function(func, wrapper) {
     return _.partial(wrapper, func);
   };
