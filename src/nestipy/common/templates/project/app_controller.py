@@ -1,11 +1,11 @@
-from nestipy.common.decorator import Controller, Get, Inject, Post, Put, Delete
-
 from app_service import AppService
+from nestipy.common import Controller, Get, Post, Put, Delete
+from nestipy.types_ import Inject
 
 
 @Controller()
 class AppController:
-    service: AppService = Inject(AppService)
+    service: Inject[AppService]
 
     @Get()
     async def get(self) -> str:

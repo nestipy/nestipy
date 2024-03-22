@@ -1,15 +1,14 @@
 import strawberry
-from strawberry.types import Info
-from nestipy.plugins.strawberry_module.decorator import Resolver, Query, Mutation
+from nestipy.graphql import Resolver, Query, Mutation
 
 
 @Resolver()
 class {{name|capitalize}}Resolver:
 
     @Query()
-    def {{name|lower}}_test_query(self, root: Info) -> str:
+    def {{name|lower}}_test_query(self) -> str:
         return "test"
 
     @Mutation()
-    def {{name|lower}}_test_mutation(self, root: Info, test: str) -> str:
+    def {{name|lower}}_test_mutation(self,test: str) -> str:
         return test

@@ -1,6 +1,6 @@
 from typing import Union, Type, Callable
 
-from nestipy.graphql.graphql_builder import GraphqlBuilder
+from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
@@ -14,7 +14,7 @@ from ..core.ioc.nestipy_context_container import NestipyContextContainer
 
 class GraphqlProxy:
 
-    def __init__(self, adapter: HttpServer, graphql_server: GraphqlBuilder):
+    def __init__(self, adapter: HttpServer, graphql_server: GraphqlAdapter):
         self._graphql_server = graphql_server
         self._adapter = adapter
 
@@ -65,13 +65,13 @@ class GraphqlProxy:
             finally:
                 context_container.destroy()
 
-        # mutate handle inside server
+        # mutate handle inside adapter
         return_type = self._graphql_server.mutate_handler(method, graphql_handler)
         return method_name, return_type, graphql_handler,
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
         self._adapter.mount(
-            option.url,
+            f"/{option.url.strip('/')}",
             self._graphql_server.create_graphql_asgi_app(
                 option=option,
                 schema=self._graphql_server.create_schema()

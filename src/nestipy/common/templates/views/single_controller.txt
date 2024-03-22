@@ -1,4 +1,4 @@
-from nestipy.common.decorator import Controller, Get
+from nestipy.common import Controller, Get
 
 
 @Controller('{{name|lower}}s')

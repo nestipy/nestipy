@@ -1,8 +1,7 @@
 import dataclasses
 
 from app_provider import AppProvider
-from nestipy.common.decorator import Controller
-from nestipy.common.decorator.method import Post, Get
+from nestipy.common import Controller, Post, Get
 from nestipy.common.http_ import Request, Response
 from nestipy.openapi.decorator import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse
 from nestipy.types_ import Inject, Req, Res, Body

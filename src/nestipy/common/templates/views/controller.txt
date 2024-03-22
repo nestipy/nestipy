@@ -1,4 +1,5 @@
-from nestipy.common.decorator import Controller, Get, Post, Put, Delete, Inject
+from nestipy.common import Controller, Get, Post, Put, Delete
+from nestipy.types_ import Inject, Body, Params
 
 from .{{name|lower}}_dto import Create{{name|capitalize}}Dto, Update{{name|capitalize}}Dto
 from .{{name|lower}}_service import {{name|capitalize}}Service
@@ -7,20 +8,20 @@ from .{{name|lower}}_service import {{name|capitalize}}Service
 @Controller('{{name|lower}}s')
 class {{name|capitalize}}Controller:
 
-    {{name|lower}}_service: {{name|capitalize}}Service = Inject({{name|capitalize}}Service)
+    {{name|lower}}_service:  Inject[{{name|capitalize}}Service]
 
     @Get()
     async def list(self) -> str:
         return await self.{{name|lower}}_service.list()
 
     @Post()
-    async def create(self, data: Create{{name|capitalize}}Dto) -> str:
+    async def create(self, data: Body[Create{{name|capitalize}}Dto]) -> str:
         return await self.{{name|lower}}_service.create(data)
 
     @Put('/{{name|lower}}_id')
-    async def update(self,{{name|lower}}_id: int, data: Update{{name|capitalize}}Dto) -> str:
+    async def update(self,{{name|lower}}_id: int, data: Body[Update{{name|capitalize}}Dto]) -> str:
         return await self.{{name|lower}}_service.update({{name|lower}}_id,data)
 
     @Delete('/{{name|lower}}_id')
-    async def delete(self, {{name|lower}}_id: int) -> None:
+    async def delete(self, {{name|lower}}_id: Params[int] ) -> None:
         return await self.{{name|lower}}_service.delete({{name|lower}}_id)

@@ -5,7 +5,7 @@ from .graphql_asgi import GraphqlAsgi
 from .graphql_module import GraphqlOption
 
 
-class GraphqlBuilder(ABC):
+class GraphqlAdapter(ABC):
     _query_properties: list = []
     _mutation_properties: list = []
     _subscription_properties: list = []
@@ -48,10 +48,6 @@ class GraphqlBuilder(ABC):
 
     @abstractmethod
     def create_schema(self) -> Any:
-        pass
-
-    @abstractmethod
-    async def __call__(self, scope, receive, send):
         pass
 
     @abstractmethod

@@ -1,1 +1,1 @@
-nestipy==0.1.7
+nestipy==1.0.0

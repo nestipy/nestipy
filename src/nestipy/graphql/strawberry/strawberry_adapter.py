@@ -3,17 +3,14 @@ from typing import Callable, Type, Any
 
 from strawberry import type as strawberry_type, field as strawberry_field, mutation, subscription, Schema
 
-from .graphql_asgi import GraphqlAsgi
-from .graphql_builder import GraphqlBuilder
-from .graphql_module import GraphqlOption
-from .strawberry_custom_asgi import StrawberryCustomAsgi
+from ..graphql_adapter import GraphqlAdapter
+from ..graphql_asgi import GraphqlAsgi
+from ..graphql_module import GraphqlOption
+from ..strawberry.strawberry_asgi import StrawberryAsgi
 
 
-class StrawberryBuilder(GraphqlBuilder):
+class StrawberryAdapter(GraphqlAdapter):
     _schema: Schema = None
-
-    async def __call__(self, scope, receive, send):
-        pass
 
     def create_query_field_resolver(self, resolver: Callable) -> object:
         return strawberry_field(resolver)
@@ -52,5 +49,5 @@ class StrawberryBuilder(GraphqlBuilder):
         )
 
     def create_graphql_asgi_app(self, schema: Any, option: GraphqlOption) -> GraphqlAsgi:
-        app_asgi = StrawberryCustomAsgi(schema=schema, option=option)
+        app_asgi = StrawberryAsgi(schema=schema, option=option)
         return app_asgi

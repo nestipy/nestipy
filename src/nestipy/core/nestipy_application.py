@@ -5,8 +5,8 @@ from typing import Type, Callable
 from nestipy.common.dynamic_module.builder import DynamicModule
 from nestipy.common.metadata.module import ModuleMetadata
 from nestipy.common.metadata.reflect import Reflect
-from nestipy.graphql.graphql_builder import GraphqlBuilder
-from nestipy.graphql.strawberry_server import StrawberryBuilder
+from nestipy.graphql.graphql_adapter import GraphqlAdapter
+from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
 from .adapter.blacksheep_adapter import BlackSheepAdapter
 from .adapter.http_server import HttpServer
@@ -28,9 +28,9 @@ class NestipyApplication:
     def __init__(self):
         # self._http_adapter: HttpServer = FastAPIAdapter()
         self._http_adapter: HttpServer = BlackSheepAdapter()
-        self._graphql_server = StrawberryBuilder()
+        self._graphql_builder = StrawberryAdapter()
         self._router_proxy = RouterProxy(self._http_adapter)
-        self._graphql_proxy = GraphqlProxy(self._http_adapter, self._graphql_server)
+        self._graphql_proxy = GraphqlProxy(self._http_adapter, self._graphql_builder)
         self._middleware_container = MiddlewareContainer().get_instance()
 
     @classmethod
@@ -80,8 +80,8 @@ class NestipyApplication:
     def get_adapter(self) -> HttpServer:
         return self._http_adapter
 
-    def get_graphql_server(self) -> GraphqlBuilder:
-        return self._graphql_server
+    def get_graphql_server(self) -> GraphqlAdapter:
+        return self._graphql_builder
 
     def get_openapi_paths(self):
         return self._openapi_paths
