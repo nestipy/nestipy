@@ -65,13 +65,13 @@ class Response:
         await self._write(json.dumps(content).encode("utf-8"))
         return self
 
-    async def download(self, file_path: str, file_name: str) -> "Response":
+    async def download(self, file_path: str, file_name: str, attachment: bool = True) -> "Response":
         if not os.path.isfile(file_path):
             self.status(404)
             await self._write(b"File not found")
             return self
 
-        self.header("Content-Disposition", f"attachment; filename={file_name}")
+        self.header("Content-Disposition", f"{'attachment; ' if attachment else ''}filename={file_name}")
         async with aiofiles.open(file_path, "rb") as file:
             content = await file.read()
             self.header("Content-Length", str(len(content)))

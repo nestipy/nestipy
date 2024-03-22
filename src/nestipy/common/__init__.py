@@ -8,3 +8,4 @@ from .templates import *
 from .guards import *
 from .decorator.method import *
 from .dynamic_module import *
+from .template import *

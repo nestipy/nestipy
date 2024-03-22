@@ -1,7 +1,7 @@
 import dataclasses
 
 from app_provider import AppProvider
-from nestipy.common import Controller, Post, Get
+from nestipy.common import Controller, Post, Get, Render
 from nestipy.common.http_ import Request, Response
 from nestipy.openapi.decorator import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse
 from nestipy.types_ import Inject, Req, Res, Body
@@ -19,9 +19,10 @@ class TestBody:
 class AppController:
     provider: Inject[AppProvider]
 
+    @Render('index.html')
     @Get()
     async def test(self, req: Req[Request], res: Res[Response]):
-        return await res.json({'test': 'Get ok'})
+        return {'title': 'Hello'}
 
     @Post()
     @ApiCreatedResponse()

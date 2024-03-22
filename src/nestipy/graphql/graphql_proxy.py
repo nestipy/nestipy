@@ -6,7 +6,7 @@ from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
 from ..common.guards.exector import GuardProcessor
 from ..common.metadata.container import NestipyContainerKey
-from ..core.adapter.http_server import HttpServer
+from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 from ..core.ioc.nestipy_container import NestipyContainer
 from ..core.ioc.nestipy_context_container import NestipyContextContainer
@@ -14,7 +14,7 @@ from ..core.ioc.nestipy_context_container import NestipyContextContainer
 
 class GraphqlProxy:
 
-    def __init__(self, adapter: HttpServer, graphql_server: GraphqlAdapter):
+    def __init__(self, adapter: HttpAdapter, graphql_server: GraphqlAdapter):
         self._graphql_server = graphql_server
         self._adapter = adapter
 

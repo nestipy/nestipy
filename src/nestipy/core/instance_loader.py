@@ -65,4 +65,11 @@ class InstanceLoader:
         # call configure for module
         if issubclass(class_ref, NestipyModule):
             consumer = MiddlewareConsumer(module=class_ref)
-            typing.cast(NestipyModule, instance).configure(consumer)
+            module = typing.cast(NestipyModule, instance)
+            module.configure(consumer)
+            await module.on_startup()
+
+    async def destroy(self):
+        for module in self._module_instances:
+            if isinstance(module, NestipyModule):
+                await module.on_shutdown()

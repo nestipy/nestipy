@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, Any
 
-from nestipy.common import Websocket
+from nestipy.common import Websocket, Reflect
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response
+from nestipy.common.metadata.decorator import SetMetadata
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 
 
-class HttpServer(ABC):
+class HttpAdapter(ABC):
+    STATE_KEY: str = '__state__'
+
     @abstractmethod
     def get_instance(self) -> any:
         pass
@@ -61,10 +64,6 @@ class HttpServer(ABC):
         pass
 
     @abstractmethod
-    def set(self, args, *kwargs) -> None:
-        pass
-
-    @abstractmethod
     def enable(self, args, *kwargs) -> None:
         pass
 
@@ -79,6 +78,16 @@ class HttpServer(ABC):
     @abstractmethod
     def enable_cors(self) -> None:
         pass
+
+    def set(self, key: str, value: Any = None) -> None:
+        SetMetadata(self.STATE_KEY, {key: value}, as_dict=True)(self)
+
+    def get_state(self, key: str) -> Any:
+        meta: dict = Reflect.get_metadata(self, self.STATE_KEY, {})
+        if key in meta.keys():
+            return meta[key]
+        else:
+            return None
 
     async def __call__(self, scope, receive, send):
         self.scope = scope

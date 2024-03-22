@@ -9,7 +9,7 @@ from nestipy.common.metadata.container import NestipyContainerKey
 from nestipy.common.utils import snakecase_to_camelcase
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
-from ..adapter.http_server import HttpServer
+from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
 from ..ioc.nestipy_container import NestipyContainer
 from ..ioc.nestipy_context_container import NestipyContextContainer
@@ -17,10 +17,11 @@ from ...common.exception.http import HttpException
 from ...common.exception.status import HttpStatus
 from ...common.guards.exector import GuardProcessor
 from ...common.middleware.executor import MiddlewareExecutor
+from ...common.template import TemplateRendererProcessor
 
 
 class RouterProxy:
-    def __init__(self, router: HttpServer):
+    def __init__(self, router: HttpAdapter):
         self.router = router
 
     def apply_routes(self, modules: set[Union[Type, object]]):
@@ -53,8 +54,7 @@ class RouterProxy:
             paths[path] = PathItem(**op)
         return paths
 
-    @classmethod
-    def create_request_handler(cls, controller: Union[object, Type], method_name: str) -> CallableHandler:
+    def create_request_handler(self, controller: Union[object, Type], method_name: str) -> CallableHandler:
 
         async def request_handler(req: Request, res: Response, next_fn: NextFn):
 
@@ -73,7 +73,8 @@ class RouterProxy:
                     return await NestipyContainer.get_instance().get(controller, method_name)
 
                 # create execution context
-                execution_context = ExecutionContext(controller, getattr(controller, method_name), req, res)
+                controller_method = getattr(controller, method_name)
+                execution_context = ExecutionContext(controller, controller_method, req, res)
                 # Execute Guard
                 guard_processor: GuardProcessor = await NestipyContainer.get_instance().get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context)
@@ -86,8 +87,13 @@ class RouterProxy:
                     ))
                 #  execute middleware
                 result = await MiddlewareExecutor(req, res, next_fn_res).execute()
+                # process template rendering
+                template_processor = TemplateRendererProcessor(self.router)
+                if template_processor.can_process(controller_method, result):
+                    result = await res.html(template_processor.render())
+
                 # transform result to response
-                response = await cls._create_response(res, result)
+                response = await self._create_response(res, result)
                 # result = await getattr(controller, method_name)(req, res, next)
                 # apply after middleware
                 # Reset container Request
@@ -95,13 +101,13 @@ class RouterProxy:
                 return response
             except HttpException as e:
                 # Call exception handler
-                return await cls._create_response(res, await next_fn(e))
+                return await self._create_response(res, await next_fn(e))
             except Exception as e:
                 tb = traceback.format_exc()
                 # Call exception handler
-                return await cls._create_response(res,
-                                                  await next_fn(
-                                                      HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))))
+                return await self._create_response(
+                    res,
+                    await next_fn(HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))))
             finally:
                 context_container.destroy()
 

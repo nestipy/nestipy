@@ -1,15 +1,15 @@
 import typing
-from typing import Any
 
 from blacksheep import Application, Response as BlackSheepResponse
-from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, WebSocket as BSWebSocket
+from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, \
+    WebSocket as BSWebSocket
 
 from nestipy.common.http_ import Response
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
-from .http_server import HttpServer
+from .http_adapter import HttpAdapter
 
 
-class BlackSheepAdapter(HttpServer):
+class BlackSheepAdapter(HttpAdapter):
 
     def __init__(self):
         self.instance = Application()
@@ -18,10 +18,6 @@ class BlackSheepAdapter(HttpServer):
         return self.instance
 
     def close(self) -> None:
-        pass
-
-    def set(self, key: str, value: Any = None) -> None:
-        # self.instance.state['key'] = value
         pass
 
     def enable(self, args, *kwargs) -> None:
@@ -34,7 +30,12 @@ class BlackSheepAdapter(HttpServer):
         pass
 
     def enable_cors(self) -> None:
-        pass
+        self.instance.use_cors(
+            allow_methods="GET POST PUT DELETE OPTIONS",
+            allow_origins="*",
+            allow_headers="Content-Type",
+            max_age=300,
+        )
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:
         # need to transform
