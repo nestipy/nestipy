@@ -12,26 +12,13 @@ class SetMetadata:
         pass
 
     def __call__(self, cls):
-        default = [] if self.as_list else {}
+        default = [] if self.as_list else {} if self.as_dict else None
         meta: Union[list, dict] = Reflect.get_metadata(cls, self.key, default)
         if self.as_list:
             meta = meta + self.data
-        else:
+        elif self.as_dict:
             meta.update(self.data)
-
-        # if self.key in meta.keys():
-        #
-        #         data: Union[list[Any], Any] = meta[self.key]
-        #         if isinstance(data, list):
-        #             data += self.data
-        #         else:
-        #             data = data + self.data
-        #         meta[self.key] = data
-        #     if self.as_dict:
-        #         data: dict = meta[self.key]
-        #         data.update(self.data)
-        #         meta[self.key] = data
-        # else:
-        #     meta[self.key] = self.data
+        else:
+            meta = self.data
         Reflect.set_metadata(cls, self.key, meta)
         return cls

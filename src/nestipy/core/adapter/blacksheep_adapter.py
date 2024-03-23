@@ -13,6 +13,8 @@ class BlackSheepAdapter(HttpAdapter):
 
     def __init__(self):
         self.instance = Application()
+        self.instance.on_start(self.on_startup)
+        self.instance.on_stop(self.on_shutdown)
 
     def get_instance(self) -> Application:
         return self.instance

@@ -11,8 +11,9 @@ from .interface import NestipyMiddleware
 
 class MiddlewareExecutor:
     def __init__(self, req: Request, res: Response, next_fn: Callable):
+        self.container = MiddlewareContainer.get_instance()
         # load all middleware inside a container
-        self._middlewares: list[MiddlewareProxy] = MiddlewareContainer.get_instance().all()
+        self._middlewares: list[MiddlewareProxy] = self.container.all()
         self._req = req
         self._res = res
         self._next_fn = next_fn
@@ -26,12 +27,11 @@ class MiddlewareExecutor:
             return await self._next_fn()
         return await self._recursively_call_middleware(0, middleware_to_apply)
 
-    @classmethod
-    async def _create_middleware_callable(cls, proxy: MiddlewareProxy):
+    async def _create_middleware_callable(self, proxy: MiddlewareProxy):
         if issubclass(proxy.middleware, NestipyMiddleware):
             try:
                 #  get instance of Middleware
-                instance = await MiddlewareContainer.get_instance().get(proxy)
+                instance = await self.container.get(proxy)
                 # get use method if it is a middleware class
                 return getattr(instance, 'use')
             except Exception as e:

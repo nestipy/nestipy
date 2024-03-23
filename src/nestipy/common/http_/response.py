@@ -37,6 +37,7 @@ class Response:
         return self
 
     def header(self, name: str, value: str) -> "Response":
+        self._headers = set([(k, v) for k, v in self._headers if k.lower() != name.lower])
         self._headers.add((name, value))
         return self
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Any
+from typing import Tuple, Any, Callable
 
 from nestipy.common import Websocket, Reflect
 from nestipy.common.exception.http import HttpException
@@ -10,6 +10,9 @@ from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandl
 
 class HttpAdapter(ABC):
     STATE_KEY: str = '__state__'
+
+    startup_hooks: list = []
+    shutdown_hook: list = []
 
     @abstractmethod
     def get_instance(self) -> any:
@@ -79,6 +82,20 @@ class HttpAdapter(ABC):
     def enable_cors(self) -> None:
         pass
 
+    async def on_startup(self, *_args, **_kwargs):
+        for hook in self.startup_hooks:
+            await hook()
+
+    async def on_shutdown(self, *_args, **_kwargs):
+        for hook in self.shutdown_hook:
+            await hook()
+
+    def on_startup_callback(self, callback: Callable):
+        self.startup_hooks.append(callback)
+
+    def on_shutdown_callback(self, callback: Callable):
+        self.shutdown_hook.append(callback)
+
     def set(self, key: str, value: Any = None) -> None:
         SetMetadata(self.STATE_KEY, {key: value}, as_dict=True)(self)
 
@@ -113,11 +130,15 @@ class HttpAdapter(ABC):
         async def next_fn(error: HttpException = None):
             #  handler error
             if error is not None:
-                return await res.status(error.status_code).json({
-                    "message": error.message,
-                    "status": error.status_code,
-                    "details": error.details
-                })
+                accept = req.headers.get('accept')
+                if 'application/json' in accept:
+                    return await res.status(error.status_code).json({
+                        "message": error.message,
+                        "status": error.status_code,
+                        "details": error.details
+                    })
+                else:
+                    return await res.status(error.status_code).send(str(error))
             else:
                 return await res.status(204).send("No content")
 

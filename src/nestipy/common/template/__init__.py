@@ -50,5 +50,6 @@ __all__ = [
     "MinimalJinjaTemplateEngine",
     "TEMPLATE_ENGINE_KEY",
     "TEMPLATE_RENDER_KEY",
-    "Render"
+    "Render",
+    "TemplateRendererProcessor"
 ]

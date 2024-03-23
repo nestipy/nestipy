@@ -14,11 +14,15 @@ from .adapter.blacksheep_adapter import BlackSheepAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
 from .ioc.middleware_container import MiddlewareContainer
+from .ioc.nestipy_container import NestipyContainer
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
 from .router.router_proxy import RouterProxy
+from ..common.exception.filter import ExceptionFilter
 from ..common.http_ import Response, Request
+from ..common.interceptor import NestipyInterceptor
+from ..common.metadata.provide import Provide
 from ..common.middleware import NestipyMiddleware
 from ..common.middleware.consumer import MiddlewareProxy
 from ..common.template import TEMPLATE_ENGINE_KEY
@@ -38,6 +42,7 @@ class NestipyApplication:
     _openapi_paths = {}
 
     def __init__(self, config: NestipyApplicationConfig = None):
+        config = config if config is not None else NestipyApplicationConfig()
         # self._http_adapter: HttpServer = FastAPIAdapter()
         self._http_adapter: HttpAdapter = config.adapter if config.adapter is not None else BlackSheepAdapter()
         self._graphql_builder = StrawberryAdapter()
@@ -45,7 +50,26 @@ class NestipyApplication:
         self._graphql_proxy = GraphqlProxy(self._http_adapter, self._graphql_builder)
         self._middleware_container = MiddlewareContainer().get_instance()
         self.instance_loader = InstanceLoader()
-        self.process_config(config if config is not None else NestipyApplicationConfig())
+        self.process_config(config)
+        self.on_shutdown()(self._destroy)
+
+    def on_startup(self):
+        def decorator(callback: Callable):
+            self._http_adapter.on_startup_callback(callback)
+            return callback
+
+        return decorator
+
+    def on_shutdown(self):
+        def decorator(callback: Callable):
+            self._http_adapter.on_shutdown_callback(callback)
+            return callback
+
+        return decorator
+
+    @classmethod
+    async def get(cls, key: Union[Type, Provide]):
+        return NestipyContainer.get_instance().get(key)
 
     def process_config(self, config: NestipyApplicationConfig):
         if config.cors is not None:
@@ -94,6 +118,9 @@ class NestipyApplication:
             logging.error(e)
             logging.error(tb)
 
+    async def _destroy(self):
+        await self.instance_loader.destroy()
+
     def get_adapter(self) -> HttpAdapter:
         return self._http_adapter
 
@@ -105,12 +132,7 @@ class NestipyApplication:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get('type') == 'lifespan':
-            message = await receive()
-            if message['type'] == 'lifespan.startup':
-                await self._setup()
-            elif message['type'] == 'lifespan.shutdown':
-                #  call on shutdown on NestipyModule
-                await self.instance_loader.destroy()
+            await self._setup()
         await self.get_adapter()(scope, receive, send)
 
     def use(self, *middleware):
@@ -152,3 +174,9 @@ class NestipyApplication:
         if engine is None:
             raise Exception('Template engine to configured')
         return engine
+
+    def use_global_interceptors(self, *interceptors: Union[Type[NestipyInterceptor], NestipyInterceptor]):
+        pass
+
+    def use_global_filters(self, *filters: Union[Type[ExceptionFilter], ExceptionFilter]):
+        pass

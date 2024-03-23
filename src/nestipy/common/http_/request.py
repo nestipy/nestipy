@@ -2,6 +2,8 @@ from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
 
 import ujson
+from starlette.datastructures import UploadFile
+from starlette.types import Request as StarletteRequest
 
 
 class Request:
@@ -17,6 +19,8 @@ class Request:
         self._host = None
         self._body = None
         self._json = None
+        self._files = None
+        self.starlette_request = StarletteRequest(scope, receive, send)
 
     @property
     def query_params(self) -> dict:
@@ -76,6 +80,10 @@ class Request:
                     break
             self._body = body
         return self._body.decode()
+
+    async def files(self) -> list[UploadFile]:
+        form_data = await self.starlette_request.form()
+        return form_data.getlist('files')
 
     async def json(self) -> dict:
         if self._json is None:

@@ -17,5 +17,5 @@ __all__ = [
     "Session",
     "DependencyMeta",
     "Args",
-    "Annotation"
+    "Annotation",
 ]

@@ -8,4 +8,4 @@ class HttpException(Exception):
         self.details = details
 
     def __str__(self):
-        return f"{self.status_code} - {self.message} - {self.details}"
+        return f"{self.status_code} - {self.message} {f' - {self.details}' if self.details is not None else ''}"
