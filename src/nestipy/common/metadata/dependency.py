@@ -7,6 +7,9 @@ class DependencyKey:
     Body: str = 'body'
     Params: str = 'params'
     Args: str = 'args'
+    Context: str = 'execution_context'
+    WebSocketServer: str = 'websocket_server'
+    Files: str = 'files'
 
     @classmethod
     def to_list(cls) -> list:

@@ -80,6 +80,7 @@ class RouterProxy:
             container = NestipyContainer.get_instance()
             controller_method = getattr(controller, method_name)
             execution_context = ExecutionContext(self.router, module_ref, controller, controller_method, req, res)
+            context_container.set_value(NestipyContainerKey.execution_context, execution_context)
 
             try:
                 # TODO : Refactor

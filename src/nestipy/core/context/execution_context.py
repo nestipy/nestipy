@@ -6,12 +6,13 @@ from ...common import Response, Request
 
 
 class ExecutionContext(ArgumentHost):
-    def get_args(self) -> tuple[Union[Type, object], Callable, Request, Response]:
+    def get_args(self) -> tuple[Union[Type, object], Callable, Union[Request, None], Union[Response, None]]:
         return self.get_class(), self.get_handler(), self.get_request(), self.get_response()
 
     def switch_to_http(self) -> HttpArgumentHost:
         return HttpArgumentHost(
             self.get_adapter(),
+            self.get_module(),
             self.get_class(),
             self.get_handler(),
             self.get_request(),

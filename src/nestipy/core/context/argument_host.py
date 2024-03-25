@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Type, Union, Callable, TYPE_CHECKING
 
 from nestipy.common import Request, Response
+
 if TYPE_CHECKING:
     from nestipy.core.adapter.http_adapter import HttpAdapter
 
@@ -14,8 +15,8 @@ class ArgumentHost(ABC):
             module: Union[Type, object],
             class_handler: Union[Type, object],
             handler: Callable,
-            req: Request,
-            res: Response
+            req: Union[Request, Request],
+            res: Union[Response, None]
     ):
         self._adapter = adapter
         self._module = module

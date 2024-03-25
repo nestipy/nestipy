@@ -10,4 +10,6 @@ class NestipyContainerKey(enum.Enum):
     body: str = '_body'
     headers: str = '_headers'
     args: str = '_args'
+    files: str = '_files'
     execution_context: str = '_execution_context'
+    websocket_server: str = '_websocket_sever'

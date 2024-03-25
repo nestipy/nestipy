@@ -94,8 +94,6 @@ class BlackSheepAdapter(HttpAdapter):
 
     def _create_blacksheep_websocket_handler(self, callback: WebsocketHandler, metadata: dict):
         async def blacksheep_websocket_handler(bsw: BSWebSocket):
-            await bsw.accept(subprotocol='graphql-ws-protocol')
-            # TODO
             wbs = self.create_websocket_parameter()
             return await callback(wbs)
 

@@ -17,6 +17,7 @@ class GraphqlProxy:
     def __init__(self, adapter: HttpAdapter, graphql_server: GraphqlAdapter):
         self._graphql_server = graphql_server
         self._adapter = adapter
+        self.container = NestipyContainer.get_instance()
 
     def apply_resolvers(self, graphql_module: GraphqlModule, modules: set[Union[Type, object]]):
 
@@ -53,16 +54,16 @@ class GraphqlProxy:
                     context_container.get_value(NestipyContainerKey.request),
                     context_container.get_value(NestipyContainerKey.response)
                 )
+                context_container.set_value(NestipyContainerKey.execution_context, execution_context)
                 #  apply guards
-                guard_processor: GuardProcessor = await NestipyContainer.get_instance().get(GuardProcessor)
+                guard_processor: GuardProcessor = await self.container.get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context)
                 if not can_activate[0]:
                     # TODO: is this need to specify return Exception
                     raise Exception(f"Not authorized from guard {can_activate[1]}")
 
                 # perform query request
-                ins = NestipyContainer.get_instance()
-                result = await ins.get(resolver, method_name)
+                result = await self.container.get(resolver, method_name)
                 return result
             finally:
                 context_container.destroy()
@@ -72,6 +73,7 @@ class GraphqlProxy:
         return method_name, return_type, graphql_handler,
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
+        # create graphql handler but using handle of graphql_adapter
         self._adapter.mount(
             f"/{option.url.strip('/')}",
             self._graphql_server.create_graphql_asgi_app(

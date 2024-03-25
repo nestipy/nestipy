@@ -95,16 +95,29 @@ class NestipyContainer:
                 return context_container.get_value(NestipyContainerKey.response)
             case DependencyKey.Body:
                 return context_container.get_value(NestipyContainerKey.body)
+            case DependencyKey.Context:
+                return context_container.get_value(NestipyContainerKey.execution_context)
+            case DependencyKey.WebSocketServer:
+                return context_container.get_value(NestipyContainerKey.websocket_server)
             case DependencyKey.Session:
-                return context_container.get_value(NestipyContainerKey.session)[name] or None
+                return cls.get_value_from_dict(context_container.get_value(NestipyContainerKey.session), name)
             case DependencyKey.Params:
-                return context_container.get_value(NestipyContainerKey.params)[name] or None
+                return cls.get_value_from_dict(context_container.get_value(NestipyContainerKey.params), name)
             case DependencyKey.Query:
-                return context_container.get_value(NestipyContainerKey.query_params)[name] or None
+                return cls.get_value_from_dict(context_container.get_value(NestipyContainerKey.query_params), name)
             case DependencyKey.Args:
-                return context_container.get_value(NestipyContainerKey.args)[name] or None
+                return cls.get_value_from_dict(context_container.get_value(NestipyContainerKey.args), name)
+            case DependencyKey.Files:
+                return cls.get_value_from_dict(context_container.get_value(NestipyContainerKey.files), name)
             case _:
                 return None
+
+    @classmethod
+    def get_value_from_dict(cls, values: dict, key: str, default=None):
+        if key in values.keys():
+            return values[key]
+        else:
+            return default
 
     async def _resolve_module_provider_dict(self, instance: "ModuleProviderDict", search_scope: list):
         if instance.value:

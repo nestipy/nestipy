@@ -13,6 +13,9 @@ class NestipyContextContainer:
     _headers = {}
     _body = {}
     _args = {}
+    _files = {}
+    _execution_context = None
+    _websocket_sever = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -42,4 +45,6 @@ class NestipyContextContainer:
         self._headers = {}
         self._body = {}
         self._args = {}
+        self._execution_context = None
+        self._websocket_sever = None
         self._instance = None
