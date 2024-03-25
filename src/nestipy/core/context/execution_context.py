@@ -11,6 +11,7 @@ class ExecutionContext(ArgumentHost):
 
     def switch_to_http(self) -> HttpArgumentHost:
         return HttpArgumentHost(
+            self.get_adapter(),
             self.get_class(),
             self.get_handler(),
             self.get_request(),

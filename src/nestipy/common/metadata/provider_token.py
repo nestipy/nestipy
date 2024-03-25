@@ -2,5 +2,5 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Provide:
+class ProviderToken:
     key: str = None

@@ -1,14 +1,25 @@
+from typing import Union, Awaitable
+
 from app_controller import AppController
 from app_provider import AppProvider
-from nestipy.common import Request, Response, Module, Injectable
+from nestipy.common import Request, Response, Module, Injectable, CanActivate
 from nestipy.common.dynamic_module.test import ConfigModule
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.middleware.consumer import MiddlewareConsumer
 from nestipy.common.module import NestipyModule
 from nestipy.common.provider import ModuleProviderDict
+from nestipy.core.constant import APP_KEY
+from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.graphql import GraphqlModule, GraphqlOption
 from nestipy.types_ import NextFn
 from user.user_module import UserModule
+
+
+@Injectable()
+class ModuleGuard(CanActivate):
+
+    async def can_activate(self, context: ExecutionContext) -> Union[Awaitable[bool], bool]:
+        return True
 
 
 @Injectable()
@@ -33,6 +44,10 @@ class TestMiddleware(NestipyMiddleware):
         ModuleProviderDict(
             value='Test',
             provide='TEST'
+        ),
+        ModuleProviderDict(
+            use_class=ModuleGuard,
+            provide=APP_KEY.APP_GUARD
         )
     ],
     controllers=[

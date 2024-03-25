@@ -4,7 +4,7 @@ from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
-from ..common.guards.exector import GuardProcessor
+from ..common.guards.processor import GuardProcessor
 from ..common.metadata.container import NestipyContainerKey
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
@@ -23,18 +23,18 @@ class GraphqlProxy:
         for module_ref in modules:
             query, mutation, subscription = GraphqlExplorer.explore(module_ref)
             for q in query:
-                name, return_type, resolver = self._create_graphql_query_handler(q)
+                name, return_type, resolver = self._create_graphql_query_handler(module_ref, q)
                 self._graphql_server.add_query_property(name, return_type, resolver)
             for m in mutation:
-                name, return_type, resolver = self._create_graphql_query_handler(m)
+                name, return_type, resolver = self._create_graphql_query_handler(module_ref, m)
                 self._graphql_server.add_mutation_property(name, return_type, resolver)
             for s in subscription:
-                name, return_type, resolver = self._create_graphql_query_handler(s)
+                name, return_type, resolver = self._create_graphql_query_handler(module_ref, s)
                 self._graphql_server.add_subscription_property(name, return_type, resolver)
 
         self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
-    def _create_graphql_query_handler(self, meta: dict) -> tuple[str, Type, Callable]:
+    def _create_graphql_query_handler(self, module_ref: Union[Type, object], meta: dict) -> tuple[str, Type, Callable]:
         resolver: Union[object, Type] = meta['class']
         method_name: str = meta['handler_name']
         method = getattr(resolver, method_name)
@@ -46,6 +46,8 @@ class GraphqlProxy:
                 # TODO: Refactor with routerProxy
                 # create execution context
                 execution_context = ExecutionContext(
+                    self._adapter,
+                    module_ref,
                     resolver,
                     getattr(resolver, method_name),
                     context_container.get_value(NestipyContainerKey.request),

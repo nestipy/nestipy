@@ -5,7 +5,7 @@ from nestipy.common.decorator import Module, Injectable
 from nestipy.common.provider import ModuleProviderDict
 from nestipy.types_ import Inject
 from .builder import ConfigurableModuleBuilder
-from ..metadata.provide import Provide
+from ..metadata.provider_token import ProviderToken
 from ..metadata.reflect import Reflect
 
 Config = dict[Literal['folder'], str]
@@ -14,7 +14,7 @@ ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[
 
 @Injectable()
 class ConfigService:
-    token: Inject[Provide(CONFIG_MODULE_OPTION_TOKEN)]
+    token: Inject[ProviderToken(CONFIG_MODULE_OPTION_TOKEN)]
 
 
 @Module(

@@ -1,15 +1,22 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Any, Callable
+from typing import Tuple, Any, Callable, Union, Type
 
 from nestipy.common import Websocket, Reflect
+from nestipy.common.exception.filter import ExceptionFilter
 from nestipy.common.exception.http import HttpException
+from nestipy.common.guards import CanActivate
 from nestipy.common.http_ import Request, Response
+from nestipy.common.interceptor import NestipyInterceptor
 from nestipy.common.metadata.decorator import SetMetadata
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 
 
 class HttpAdapter(ABC):
     STATE_KEY: str = '__state__'
+
+    _global_interceptors: list = []
+    _global_filters: list = []
+    _global_guards: list = []
 
     startup_hooks: list = []
     shutdown_hook: list = []
@@ -106,6 +113,24 @@ class HttpAdapter(ABC):
         else:
             return None
 
+    def add_global_interceptors(self, *interceptors: Union[NestipyInterceptor, Type]):
+        self._global_interceptors = self._global_interceptors + list(interceptors)
+
+    def get_global_interceptors(self):
+        return self._global_interceptors
+
+    def add_global_filters(self, *filters: Union[ExceptionFilter, Type]):
+        self._global_filters = self._global_filters + list(filters)
+
+    def get_global_filters(self):
+        return self._global_filters
+
+    def add_global_guards(self, *guards: Union[CanActivate, Type]):
+        self._global_guards = self._global_guards + list(guards)
+
+    def get_global_guards(self):
+        return self._global_guards
+
     async def __call__(self, scope, receive, send):
         self.scope = scope
         self.receive = receive
@@ -128,7 +153,7 @@ class HttpAdapter(ABC):
         res = Response()
 
         async def next_fn(error: HttpException = None):
-            #  handler error
+            #  catch error
             if error is not None:
                 accept = req.headers.get('accept')
                 if 'application/json' in accept:

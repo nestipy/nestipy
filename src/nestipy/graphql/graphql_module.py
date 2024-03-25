@@ -3,7 +3,7 @@ from typing import Literal
 
 from nestipy.common import Module
 from nestipy.common.dynamic_module.builder import ConfigurableModuleBuilder
-from nestipy.common.metadata.provide import Provide
+from nestipy.common.metadata.provider_token import ProviderToken
 from nestipy.types_ import Inject
 
 
@@ -19,4 +19,4 @@ ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[
 
 @Module()
 class GraphqlModule(ConfigurableModuleClass):
-    config: Inject[Provide(CONFIG_MODULE_OPTION_TOKEN)]
+    config: Inject[ProviderToken(CONFIG_MODULE_OPTION_TOKEN)]

@@ -5,7 +5,7 @@ from typing import Type, Union, Any, get_args, Optional, ForwardRef, Callable, A
 from nestipy.common.metadata.class_ import ClassMetadata
 from nestipy.common.metadata.dependency import DependencyKey
 from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.provide import Provide
+from nestipy.common.metadata.provider_token import ProviderToken
 from nestipy.common.metadata.reflect import Reflect
 from nestipy.common.utils import uniq
 from .nestipy_context_container import NestipyContextContainer
@@ -66,7 +66,7 @@ class NestipyContainer:
         if metadata is not None:
             global_providers = cls.get_global_providers()
             providers, import_providers = metadata.get_service_providers()
-            return uniq([m.provide if isinstance(m, ModuleProviderDict)
+            return uniq([m.token if isinstance(m, ModuleProviderDict)
                          else m for m in uniq(providers + global_providers + import_providers)])
         # raise ValueError(f"Dependency Metadata not found  for {service.__name__} service ")
         return []
@@ -77,11 +77,11 @@ class NestipyContainer:
         # check if key is from provide(ModuleProviderDict)
         if len(args) == 2:
             arg1, annot = args
-            if isinstance(arg1, Provide):
+            if isinstance(arg1, ProviderToken):
                 return args[0].key, args[1]
             return args[0], args[1]
         else:
-            if isinstance(annotation, Provide):
+            if isinstance(annotation, ProviderToken):
                 return annotation.key, Annotation()
             return annotation, Annotation()
 
@@ -109,14 +109,17 @@ class NestipyContainer:
     async def _resolve_module_provider_dict(self, instance: "ModuleProviderDict", search_scope: list):
         if instance.value:
             return instance.value
+        elif instance.existing:
+            return await self.get(instance.existing)
+        elif instance.use_class:
+            return await self.get(instance.use_class)
         elif instance.factory:
             return await self.resolve_factory(
                 factory=instance.factory,
                 inject=instance.inject,
                 search_scope=search_scope
             )
-        elif instance.existing:
-            return await self.get(instance.existing)
+
         else:
             return None
 
@@ -127,7 +130,7 @@ class NestipyContainer:
             # to keep improve
             if isinstance(instance, ModuleProviderDict):
                 search_scope = self.get_dependency_metadata(instance)
-                if instance.provide in search_scope:
+                if instance.token in search_scope:
                     value = await self._resolve_module_provider_dict(instance, search_scope=search_scope)
                     # update singleton instance to have the async valur from ModuleProviderDict
                     self._singleton_instances[key] = value

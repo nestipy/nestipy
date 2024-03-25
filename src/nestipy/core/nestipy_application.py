@@ -19,10 +19,11 @@ from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
 from .router.router_proxy import RouterProxy
+from ..common import CanActivate
 from ..common.exception.filter import ExceptionFilter
 from ..common.http_ import Response, Request
 from ..common.interceptor import NestipyInterceptor
-from ..common.metadata.provide import Provide
+from ..common.metadata.provider_token import ProviderToken
 from ..common.middleware import NestipyMiddleware
 from ..common.middleware.consumer import MiddlewareProxy
 from ..common.template import TEMPLATE_ENGINE_KEY
@@ -68,7 +69,7 @@ class NestipyApplication:
         return decorator
 
     @classmethod
-    async def get(cls, key: Union[Type, Provide]):
+    async def get(cls, key: Union[Type, ProviderToken]):
         return NestipyContainer.get_instance().get(key)
 
     def process_config(self, config: NestipyApplicationConfig):
@@ -109,7 +110,7 @@ class NestipyApplication:
             if graphql_module_instance is not None:
                 # check if graphql is enabled
                 self._graphql_proxy.apply_resolvers(graphql_module_instance, modules)
-            # Register open api handler asynchronously
+            # Register open api catch asynchronously
             if hasattr(self, OPENAPI_HANDLER_METADATA):
                 openapi_register: Callable = getattr(self, OPENAPI_HANDLER_METADATA)
                 openapi_register()
@@ -176,7 +177,10 @@ class NestipyApplication:
         return engine
 
     def use_global_interceptors(self, *interceptors: Union[Type[NestipyInterceptor], NestipyInterceptor]):
-        pass
+        self._http_adapter.add_global_interceptors(*interceptors)
 
     def use_global_filters(self, *filters: Union[Type[ExceptionFilter], ExceptionFilter]):
-        pass
+        self._http_adapter.add_global_filters(*filters)
+
+    def use_global_guards(self, *guards: Union[Type[CanActivate], CanActivate]):
+        self._http_adapter.add_global_guards(*guards)

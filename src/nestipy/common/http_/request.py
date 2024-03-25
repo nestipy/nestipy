@@ -3,7 +3,7 @@ from urllib.parse import parse_qsl
 
 import ujson
 from starlette.datastructures import UploadFile
-from starlette.types import Request as StarletteRequest
+from starlette.requests import Request as StarletteRequest
 
 
 class Request:
