@@ -8,7 +8,9 @@ from nestipy.common.guards import CanActivate
 from nestipy.common.http_ import Request, Response
 from nestipy.common.interceptor import NestipyInterceptor
 from nestipy.common.metadata.decorator import SetMetadata
+from nestipy.common.template import TEMPLATE_ENGINE_KEY
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
+from nestipy.websocket.adapter import IoAdapter
 
 
 class HttpAdapter(ABC):
@@ -20,6 +22,8 @@ class HttpAdapter(ABC):
 
     startup_hooks: list = []
     shutdown_hook: list = []
+
+    _io_adapter: IoAdapter = None
 
     @abstractmethod
     def get_instance(self) -> any:
@@ -85,6 +89,12 @@ class HttpAdapter(ABC):
     def engine(self, args, *kwargs) -> None:
         pass
 
+    def use_io_adapter(self, io_adapter: IoAdapter):
+        self._io_adapter = io_adapter
+
+    def get_io_adapter(self) -> Union[IoAdapter, None]:
+        return self._io_adapter
+
     @abstractmethod
     def enable_cors(self) -> None:
         pass
@@ -135,7 +145,13 @@ class HttpAdapter(ABC):
         self.scope = scope
         self.receive = receive
         self.send = send
-        await self.get_instance()(scope, receive, send)
+        response_sent: bool = False
+        if self._io_adapter is not None:
+            # Register socketio adapter
+            response_sent = await self._io_adapter(scope, receive, send)
+        # pass to http handler
+        if not response_sent:
+            await self.get_instance()(scope, receive, send)
 
     def create_websocket_parameter(self) -> Websocket:
         return Websocket(
@@ -150,7 +166,7 @@ class HttpAdapter(ABC):
             self.receive,
             self.send
         )
-        res = Response()
+        res = Response(template_engine=self.get_state(TEMPLATE_ENGINE_KEY))
 
         async def next_fn(error: HttpException = None):
             #  catch error

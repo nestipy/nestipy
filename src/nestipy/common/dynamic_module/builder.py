@@ -42,14 +42,14 @@ class ConfigurableModuleBuilder(Generic[T]):
 
         def register(cls_: Any, options: Optional[T]) -> DynamicModule:
             provider = ModuleProviderDict(
-                provide=MODULE_OPTION_TOKEN,
+                token=MODULE_OPTION_TOKEN,
                 value=options
             )
             return self._create_dynamic_module(cls_, [provider])
 
         def register_async(cls_: Any, factory: Callable[..., T]) -> DynamicModule:
             provider = ModuleProviderDict(
-                provide=MODULE_OPTION_TOKEN,
+                token=MODULE_OPTION_TOKEN,
                 factory=factory
             )
             return self._create_dynamic_module(cls_, [provider])

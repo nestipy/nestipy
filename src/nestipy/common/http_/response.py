@@ -1,8 +1,14 @@
 import os
-from typing import Union
+from typing import Union, TYPE_CHECKING
 
 import aiofiles
 import ujson as json
+
+from nestipy.common.exception.http import HttpException
+from nestipy.common.exception.message import HttpStatusMessages
+from nestipy.common.exception.status import HttpStatus
+if TYPE_CHECKING:
+    from nestipy.common.template.engine import TemplateEngine
 
 
 class Response:
@@ -10,10 +16,11 @@ class Response:
     _headers: set[tuple[str, str]] = set()
     _content: Union[bytes, None]
 
-    def __init__(self) -> None:
+    def __init__(self, template_engine: "TemplateEngine") -> None:
         self._headers = set()
         self._status_code = 200
         self._content = None
+        self.template_engine = template_engine
 
     async def _start(self) -> None:
         # await self._send({
@@ -97,3 +104,14 @@ class Response:
             if str(key).lower() == 'content-type':
                 return value
         return 'text/plain'
+
+    async def render(self, template: str, context=None):
+        if context is None:
+            context = {}
+        if self.template_engine is not None:
+            content = self.template_engine.render(template, context)
+            await self.html(content)
+        else:
+            raise HttpException(HttpStatus.BAD_GATEWAY, HttpStatusMessages.BAD_GATEWAY,
+                                'Template engine not configured')
+        return self

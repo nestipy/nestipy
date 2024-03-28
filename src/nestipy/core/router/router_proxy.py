@@ -28,6 +28,7 @@ from ...common.template import TemplateRendererProcessor
 class RouterProxy:
     def __init__(self, router: HttpAdapter):
         self.router = router
+        self._template_processor = TemplateRendererProcessor(router)
 
     def apply_routes(self, modules: set[Union[Type, object]]):
         json_paths = {}
@@ -65,7 +66,6 @@ class RouterProxy:
             controller: Union[object, Type],
             method_name: str
     ) -> CallableHandler:
-        template_processor = TemplateRendererProcessor(self.router)
 
         async def request_handler(req: Request, res: Response, next_fn: NextFn):
 
@@ -117,8 +117,8 @@ class RouterProxy:
                     )
 
                 # process template rendering
-                if template_processor.can_process(controller_method, result):
-                    result = await res.html(template_processor.render())
+                if self._template_processor.can_process(controller_method, result):
+                    result = await res.html(self._template_processor.render())
                 # transform result to response
                 response = await self._ensure_response(res, result)
 

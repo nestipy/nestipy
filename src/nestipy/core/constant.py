@@ -20,4 +20,4 @@ class _AppKey:
         return APP_INTERCEPTOR + uuid.uuid4().hex
 
 
-APP_KEY = _AppKey()
+AppKey = _AppKey()

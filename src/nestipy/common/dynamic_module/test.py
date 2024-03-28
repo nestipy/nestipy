@@ -20,7 +20,7 @@ class ConfigService:
 @Module(
     providers=[
         ConfigService,
-        ModuleProviderDict(value='hello', provide='MyProvider')
+        ModuleProviderDict(value='hello', token='MyProvider')
     ]
 )
 class ConfigModule(ConfigurableModuleClass):

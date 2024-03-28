@@ -1,5 +1,3 @@
-import typing
-
 from blacksheep import Application, Response as BlackSheepResponse
 from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, \
     WebSocket as BSWebSocket
@@ -42,11 +40,6 @@ class BlackSheepAdapter(HttpAdapter):
     def use(self, callback: CallableHandler, metadata: dict) -> None:
         # need to transform
         self.instance.middlewares.append(callback)
-
-    @classmethod
-    def get_tag(cls, metadata: dict) -> list:
-        ctrl: typing.Type = metadata['controller']
-        return [ctrl.__name__]
 
     def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
         get(route)(self._create_blacksheep_handler(callback, metadata))

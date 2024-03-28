@@ -1,17 +1,19 @@
 import os.path
 from typing import Any
 
+import socketio
 import uvicorn
 
 from app_module import AppModule
 from nestipy.common.exception.filter import ExceptionFilter, Catch
 from nestipy.common.exception.http import HttpException
 from nestipy.core.context.argument_host import ArgumentHost
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core.nestipy_factory import NestipyFactory, NestipyFastApiApplication
 from nestipy.openapi.document_builder import DocumentBuilder
 from nestipy.openapi.swagger_module import SwaggerModule
+from nestipy.websocket.adapter import SocketIoAdapter
 
-app = NestipyFactory.create(AppModule)
+app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
 app.enable_cors()
 config = DocumentBuilder().set_title('Example API') \
     .set_description('The API description').set_version('1.0').add_bearer_auth().add_basic_auth().build()
@@ -37,6 +39,10 @@ class TestGlobalFilter(ExceptionFilter):
 
 
 app.use_global_filters(TestGlobalFilter)
+
+# socket io
+sio = socketio.AsyncServer(async_mode='asgi')
+app.use_io_adapter(SocketIoAdapter(sio))
 
 if __name__ == '__main__':
     uvicorn.run('main:app', reload=True)

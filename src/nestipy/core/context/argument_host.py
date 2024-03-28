@@ -15,7 +15,7 @@ class ArgumentHost(ABC):
             module: Union[Type, object],
             class_handler: Union[Type, object],
             handler: Callable,
-            req: Union[Request, Request],
+            req: Union[Request, None],
             res: Union[Response, None]
     ):
         self._adapter = adapter
@@ -31,7 +31,7 @@ class ArgumentHost(ABC):
     def get_module(self) -> Union[Type, object, None]:
         return self._module
 
-    def get_request(self) -> Request:
+    def get_request(self) -> Union[Request, None]:
         return self._req
 
     def get_response(self) -> Response:

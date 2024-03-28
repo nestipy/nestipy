@@ -14,7 +14,8 @@ class SpecialProviderExtractor:
     ) -> list[Type]:
         providers = []
         for p in Reflect.get_metadata(module_class, ModuleMetadata.Providers, []):
-            if isinstance(p, ModuleProviderDict) and p.token.startswith(key) and p.use_class is not None:
+            if (isinstance(p, ModuleProviderDict) and
+                    isinstance(p.token, str) and p.token.startswith(key) and p.use_class is not None):
                 if issubclass(p.use_class, subclass):
                     providers.append(p.use_class)
         return providers

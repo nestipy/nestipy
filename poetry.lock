@@ -829,19 +829,19 @@ files = [
 
 [[package]]
 name = "minijinja"
-version = "1.0.8"
+version = "1.0.14"
 description = "An experimental Python binding of the Rust MiniJinja template engine."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "minijinja-1.0.8-cp38-abi3-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:e24ef6508af8b6e4efaf63ddfa66ef0502cbf201a1d30c4d7d520e4c22eaf8cc"},
-    {file = "minijinja-1.0.8-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:27184753e54f967fcc0e62876badcf8d09d12e5df3f688a7ab641b7bbe05444f"},
-    {file = "minijinja-1.0.8-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:9b1d6ff5d73881c7283065560604333673f3c6956afe723f36dd48421eddec81"},
-    {file = "minijinja-1.0.8-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:808f72613fd057498200f947941c6b17c5e6b3e61bbd5fb10f1422270d27b126"},
-    {file = "minijinja-1.0.8-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:e2d9e0d7a7fe78523d72cd7d362e377eaadaf767fee26a75577205991daea2d1"},
-    {file = "minijinja-1.0.8-cp38-abi3-win32.whl", hash = "sha256:00c1fb73f5300a0736677fb21bfee6890cd70c5599fa28f31dd790988e610cc5"},
-    {file = "minijinja-1.0.8-cp38-abi3-win_amd64.whl", hash = "sha256:97a3204ca03afe57f88bb3e71e32c71658236fd52e471768fc8a120847045d95"},
-    {file = "minijinja-1.0.8.tar.gz", hash = "sha256:c204b15dc663326214a5e05670c30c66afead2420add1c6246b30eaff1aeb225"},
+    {file = "minijinja-1.0.14-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:90a18cf6d0c046c33e5c331c2de36386a2b41f2a128cbc9c0a38924acf42edda"},
+    {file = "minijinja-1.0.14-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1928e2c3716b6a5f3a93d5213a7454a356f11c84d71b8a7f082acaace366168a"},
+    {file = "minijinja-1.0.14-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3483deab95c5a1b5a46b2244bef06a97a5293608885f7143631c31e7cb39d84b"},
+    {file = "minijinja-1.0.14-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:933e8ac097dc384d1bca60feff5e71a0c25744103f4a73e396f7b718a144dca8"},
+    {file = "minijinja-1.0.14-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:99a451ccde5ac3c1a829d150e2a864dbfe40e0f446a9db17fbfefa7fa79e7664"},
+    {file = "minijinja-1.0.14-cp38-abi3-win32.whl", hash = "sha256:429e4c4ef03b8ae7b46a61c1fdd446375050bffcac8ec198787a07d828d1ba1a"},
+    {file = "minijinja-1.0.14-cp38-abi3-win_amd64.whl", hash = "sha256:e2f2fa3311f0c3d1f0ce78d73998423e5723a309122ca149cc9f634e0c407728"},
+    {file = "minijinja-1.0.14.tar.gz", hash = "sha256:a7b8ba9bb3ce32b6d83d50730882c14ddf8643b245378367dac41d0a24104706"},
 ]
 
 [[package]]
@@ -1468,13 +1468,13 @@ docs = ["sphinx"]
 
 [[package]]
 name = "python-socketio"
-version = "5.11.1"
+version = "5.11.2"
 description = "Socket.IO server and client for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "python-socketio-5.11.1.tar.gz", hash = "sha256:bbcbd758ed8c183775cb2853ba001361e2fa018babf5cbe11a5b77e91c2ec2a2"},
-    {file = "python_socketio-5.11.1-py3-none-any.whl", hash = "sha256:f1a0228b8b1fbdbd93fbbedd821ebce0ef54b2b5bf6e98fcf710deaa7c574259"},
+    {file = "python-socketio-5.11.2.tar.gz", hash = "sha256:ae6a1de5c5209ca859dc574dccc8931c4be17ee003e74ce3b8d1306162bb4a37"},
+    {file = "python_socketio-5.11.2-py3-none-any.whl", hash = "sha256:b9f22a8ff762d7a6e123d16a43ddb1a27d50f07c3c88ea999334f2f89b0ad52b"},
 ]
 
 [package.dependencies]
@@ -1829,13 +1829,13 @@ files = [
 
 [[package]]
 name = "uvicorn"
-version = "0.28.0"
+version = "0.28.1"
 description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "uvicorn-0.28.0-py3-none-any.whl", hash = "sha256:6623abbbe6176204a4226e67607b4d52cc60ff62cda0ff177613645cefa2ece1"},
-    {file = "uvicorn-0.28.0.tar.gz", hash = "sha256:cab4473b5d1eaeb5a0f6375ac4bc85007ffc75c3cc1768816d9e5d589857b067"},
+    {file = "uvicorn-0.28.1-py3-none-any.whl", hash = "sha256:5162f6d652f545be91b1feeaee8180774af143965ca9dc8a47ff1dc6bafa4ad5"},
+    {file = "uvicorn-0.28.1.tar.gz", hash = "sha256:08103e79d546b6cf20f67c7e5e434d2cf500a6e29b28773e407250c54fc4fa3c"},
 ]
 
 [package.dependencies]

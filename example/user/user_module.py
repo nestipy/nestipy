@@ -5,6 +5,7 @@ from nestipy.common.middleware.consumer import MiddlewareConsumer
 from nestipy.common.module import NestipyModule
 from nestipy.types_ import NextFn
 from .user_controller import UserController
+from .user_gateway import UserGateway
 from .user_resolver import UserResolver
 from .user_service import UserService
 
@@ -21,7 +22,8 @@ class TestMiddleware2(NestipyMiddleware):
 @Module(
     providers=[
         UserService,
-        UserResolver
+        UserResolver,
+        UserGateway
     ],
     controllers=[
         UserController

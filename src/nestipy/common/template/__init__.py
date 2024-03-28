@@ -1,11 +1,13 @@
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, TYPE_CHECKING
 
 from .engine import TemplateEngine
 from .minimal_jinja import MinimalJinjaTemplateEngine
 from .. import Reflect
 from ..exception.http import HttpException
 from ..exception.status import HttpStatus
-from ...core.adapter.http_adapter import HttpAdapter
+
+if TYPE_CHECKING:
+    from ...core.adapter.http_adapter import HttpAdapter
 
 TEMPLATE_RENDER_KEY = "__template__render__"
 TEMPLATE_ENGINE_KEY = "__template__engine__"
@@ -20,7 +22,7 @@ def Render(template: str):
 
 
 class TemplateRendererProcessor:
-    def __init__(self, adapter: HttpAdapter):
+    def __init__(self, adapter: "HttpAdapter"):
         self.template = None
         self.adapter = adapter
         self.template_engine = None

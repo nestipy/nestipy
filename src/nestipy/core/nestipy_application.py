@@ -19,7 +19,7 @@ from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
 from .router.router_proxy import RouterProxy
-from ..common import CanActivate
+from ..common import CanActivate, ModuleProviderDict
 from ..common.exception.filter import ExceptionFilter
 from ..common.http_ import Response, Request
 from ..common.interceptor import NestipyInterceptor
@@ -30,6 +30,8 @@ from ..common.template import TEMPLATE_ENGINE_KEY
 from ..common.template import TemplateEngine, MinimalJinjaTemplateEngine
 from ..graphql.graphql_proxy import GraphqlProxy
 from ..types_ import NextFn
+from ..websocket.adapter import IoAdapter
+from ..websocket.proxy import IoSocketProxy
 
 
 @dataclasses.dataclass
@@ -110,6 +112,8 @@ class NestipyApplication:
             if graphql_module_instance is not None:
                 # check if graphql is enabled
                 self._graphql_proxy.apply_resolvers(graphql_module_instance, modules)
+            if self._http_adapter.get_io_adapter() is not None:
+                IoSocketProxy(self._http_adapter).apply_routes(modules)
             # Register open api catch asynchronously
             if hasattr(self, OPENAPI_HANDLER_METADATA):
                 openapi_register: Callable = getattr(self, OPENAPI_HANDLER_METADATA)
@@ -173,7 +177,7 @@ class NestipyApplication:
     def get_template_engine(self) -> Union[TemplateEngine, None]:
         engine: Union[TemplateEngine, None] = self._http_adapter.get_state(TEMPLATE_ENGINE_KEY)
         if engine is None:
-            raise Exception('Template engine to configured')
+            raise Exception('Template engine not configured')
         return engine
 
     def use_global_interceptors(self, *interceptors: Union[Type[NestipyInterceptor], NestipyInterceptor]):
@@ -184,3 +188,18 @@ class NestipyApplication:
 
     def use_global_guards(self, *guards: Union[Type[CanActivate], CanActivate]):
         self._http_adapter.add_global_guards(*guards)
+
+    def _add_module_root_provider(self, *providers: Union[ModuleProviderDict, Type]):
+        root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])
+        root_providers = root_providers + list(providers)
+        Reflect.set_metadata(self._root_module, ModuleMetadata.Providers, root_providers)
+        #  re init setting metadata
+        self.init(self._root_module)
+
+    def use_io_adapter(self, io_adapter: IoAdapter):
+        # edit root module provider
+        # TODO refactor
+        NestipyContainer.get_instance().add_singleton_instance(IoAdapter, io_adapter)
+        self._add_module_root_provider(ModuleProviderDict(token=IoAdapter, value=io_adapter))
+        # setup io adapter to http_adapter
+        self._http_adapter.use_io_adapter(io_adapter=io_adapter)

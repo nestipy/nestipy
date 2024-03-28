@@ -8,7 +8,7 @@ from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.middleware.consumer import MiddlewareConsumer
 from nestipy.common.module import NestipyModule
 from nestipy.common.provider import ModuleProviderDict
-from nestipy.core.constant import APP_KEY
+from nestipy.core.constant import AppKey
 from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.graphql import GraphqlModule, GraphqlOption
 from nestipy.types_ import NextFn
@@ -43,11 +43,11 @@ class TestMiddleware(NestipyMiddleware):
         AppProvider,
         ModuleProviderDict(
             value='Test',
-            provide='TEST'
+            token='TEST'
         ),
         ModuleProviderDict(
             use_class=ModuleGuard,
-            provide=APP_KEY.APP_GUARD
+            token=AppKey.APP_GUARD
         )
     ],
     controllers=[

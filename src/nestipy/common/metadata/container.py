@@ -12,4 +12,6 @@ class NestipyContainerKey(enum.Enum):
     args: str = '_args'
     files: str = '_files'
     execution_context: str = '_execution_context'
-    websocket_server: str = '_websocket_sever'
+    io_server: str = '_websocket_sever'
+    io_client: str = '_socket_sid'
+    io_data: str = '_socket_data'

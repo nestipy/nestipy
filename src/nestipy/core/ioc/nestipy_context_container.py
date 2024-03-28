@@ -16,6 +16,8 @@ class NestipyContextContainer:
     _files = {}
     _execution_context = None
     _websocket_sever = None
+    _socket_sid = None
+    _socket_data = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

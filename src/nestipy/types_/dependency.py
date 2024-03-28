@@ -1,6 +1,6 @@
 from typing import Union, TypeVar, Tuple, Any, Annotated
 
-from nestipy.common.metadata.dependency import DependencyKey
+from nestipy.common.metadata.dependency import CtxDepKey
 
 T = TypeVar('T')
 
@@ -29,14 +29,16 @@ class DependencyMeta:
             return Annotated[params, Annotation(self.metadata)]
 
 
-Inject = DependencyMeta(DependencyKey.Service)
-Req = DependencyMeta(DependencyKey.Request)
-Res = DependencyMeta(DependencyKey.Response)
-Session = DependencyMeta(DependencyKey.Session)
-Query = DependencyMeta(DependencyKey.Query)
-Body = DependencyMeta(DependencyKey.Body)
-Params = DependencyMeta(DependencyKey.Params)
-Args = DependencyMeta(DependencyKey.Args)
-Context = DependencyMeta(DependencyKey.Context)
-Files = DependencyMeta(DependencyKey.Files)
-WebSocketServer = DependencyMeta(DependencyKey.WebSocketServer)
+Inject = DependencyMeta(CtxDepKey.Service)
+Req = DependencyMeta(CtxDepKey.Request)
+Res = DependencyMeta(CtxDepKey.Response)
+Session = DependencyMeta(CtxDepKey.Session)
+Query = DependencyMeta(CtxDepKey.Query)
+Body = DependencyMeta(CtxDepKey.Body)
+Params = DependencyMeta(CtxDepKey.Params)
+Args = DependencyMeta(CtxDepKey.Args)
+Context = DependencyMeta(CtxDepKey.Context)
+Files = DependencyMeta(CtxDepKey.Files)
+SocketServer = DependencyMeta(CtxDepKey.Service)
+SocketClient = DependencyMeta(CtxDepKey.SocketClient)
+SocketData = DependencyMeta(CtxDepKey.SocketData)

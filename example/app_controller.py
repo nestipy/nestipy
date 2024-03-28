@@ -2,7 +2,7 @@ import dataclasses
 from typing import Any
 
 from app_provider import AppProvider
-from nestipy.common import Controller, Post, Get, Render, NestipyInterceptor, Injectable, UseInterceptors
+from nestipy.common import Controller, Post, Get, NestipyInterceptor, Injectable, UseInterceptors, Render
 from nestipy.common.exception.filter import ExceptionFilter, Catch, UseFilters
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
@@ -57,6 +57,7 @@ class AppController:
     @Get()
     async def test(self, req: Req[Request], res: Res[Response]):
         return {'title': 'Hello'}
+        # return await res.render('index.html', {'title': 'Hello'})
 
     @Post()
     @ApiCreatedResponse()

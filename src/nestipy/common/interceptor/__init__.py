@@ -48,7 +48,7 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
                 continue
             else:
                 return result
-        return None
+        return await next_fn()
 
 
 __all__ = [
