@@ -2,6 +2,7 @@ import typing
 
 from fastapi import Response as FResponse, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware import _MiddlewareClass
 from starlette.types import ASGIApp
 
 from .http_adapter import HttpAdapter
@@ -14,14 +15,15 @@ class FastApiAdapter(HttpAdapter):
         self.instance = FastAPI(
             on_startup=[self.on_startup],
             on_shutdown=[self.on_shutdown],
-            openapi_url=None
+            openapi_url=None,
         )
 
     def get_instance(self) -> any:
         return self.instance
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:
-        pass
+        # need to transform if we use middleware from here
+        self.instance.middleware('http')
 
     def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
         self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
@@ -53,21 +55,15 @@ class FastApiAdapter(HttpAdapter):
     def all(self, route: str, callback: CallableHandler, metadata: dict) -> None:
         pass
 
-    def close(self) -> None:
-        pass
-
-    def enable(self, args, *kwargs) -> None:
-        pass
-
-    def disable(self, args, *kwargs) -> None:
-        pass
-
     def engine(self, args, *kwargs) -> None:
         pass
 
     def enable_cors(self) -> None:
         self.instance.add_middleware(
-            CORSMiddleware,
+            typing.cast(
+                _MiddlewareClass[typing.Any],
+                CORSMiddleware
+            ),
             allow_origins=['*'],
             allow_credentials=True,
             allow_methods=["*"],
@@ -81,9 +77,9 @@ class FastApiAdapter(HttpAdapter):
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
             return FResponse(
-                content=getattr(result, '_content', ''),
-                headers={k: v for k, v in getattr(result, '_headers', [])},
-                status_code=getattr(result, '_status_code', 200)
+                content=result.content(),
+                headers={k: v for k, v in result.headers()},
+                status_code=result.status_code() or 200
             )
 
         return fastapi_handler

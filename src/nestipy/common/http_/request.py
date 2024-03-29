@@ -20,7 +20,8 @@ class Request:
         self._body = None
         self._json = None
         self._files = None
-        self.starlette_request = StarletteRequest(scope, receive, send)
+        if scope["type"] == "http":
+            self.starlette_request = StarletteRequest(scope, receive, send)
 
     @property
     def query_params(self) -> dict:
