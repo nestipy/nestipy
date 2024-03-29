@@ -7,6 +7,7 @@ import ujson as json
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
+
 if TYPE_CHECKING:
     from nestipy.common.template.engine import TemplateEngine
 
@@ -16,7 +17,7 @@ class Response:
     _headers: set[tuple[str, str]] = set()
     _content: Union[bytes, None]
 
-    def __init__(self, template_engine: "TemplateEngine") -> None:
+    def __init__(self, template_engine: "TemplateEngine" = None) -> None:
         self._headers = set()
         self._status_code = 200
         self._content = None
@@ -93,17 +94,12 @@ class Response:
             return self
         async with aiofiles.open(file_path, "rb") as file:
             chunk: bytes = await file.read(chunk_size)
+            # no benefit because we don't send response directly
             while chunk:
                 await self._write(chunk)
                 chunk: bytes = await file.read(chunk_size)
 
         return self
-
-    def content_type(self) -> str:
-        for key, value in self._headers:
-            if str(key).lower() == 'content-type':
-                return value
-        return 'text/plain'
 
     async def render(self, template: str, context=None):
         if context is None:
@@ -112,6 +108,24 @@ class Response:
             content = self.template_engine.render(template, context)
             await self.html(content)
         else:
-            raise HttpException(HttpStatus.BAD_GATEWAY, HttpStatusMessages.BAD_GATEWAY,
-                                'Template engine not configured')
+            raise HttpException(
+                HttpStatus.BAD_GATEWAY,
+                HttpStatusMessages.BAD_GATEWAY,
+                'Template engine not configured'
+            )
         return self
+
+    def content_type(self) -> str:
+        for key, value in self._headers:
+            if str(key).lower() == 'content-type':
+                return value
+        return 'text/plain'
+
+    def status_code(self) -> int:
+        return self._status_code
+
+    def content(self) -> Union[bytes, None]:
+        return self._content
+
+    def headers(self) -> set[tuple[str, str]]:
+        return self._headers

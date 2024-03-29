@@ -17,15 +17,6 @@ class BlackSheepAdapter(HttpAdapter):
     def get_instance(self) -> Application:
         return self.instance
 
-    def close(self) -> None:
-        pass
-
-    def enable(self, args, *kwargs) -> None:
-        pass
-
-    def disable(self, args, *kwargs) -> None:
-        pass
-
     def engine(self, args, *kwargs) -> None:
         pass
 
@@ -71,16 +62,16 @@ class BlackSheepAdapter(HttpAdapter):
     def mount(self, route: str, callback: MountHandler) -> None:
         self.instance.mount(route, callback)
 
-    def _create_blacksheep_handler(self, callback: CallableHandler, metadata: dict):
+    def _create_blacksheep_handler(self, callback: CallableHandler, _metadata: dict):
         # path = metadata['path']
         # params = RouteParamsExtractor.extract_params(path)
         async def blacksheep_handler() -> BlackSheepResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
             return BlackSheepResponse(
-                content=Content(data=getattr(result, '_content', ''), content_type=result.content_type().encode()),
-                headers=[(k.encode(), v.encode()) for k, v in getattr(result, '_headers', [])],
-                status=getattr(result, '_status_code', 200)
+                content=Content(data=result.content(), content_type=result.content_type().encode()),
+                headers=[(k.encode(), v.encode()) for k, v in result.headers()],
+                status=result.status_code() or 200
             )
 
         return blacksheep_handler

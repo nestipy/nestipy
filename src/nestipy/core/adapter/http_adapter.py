@@ -74,18 +74,6 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def close(self) -> None:
-        pass
-
-    @abstractmethod
-    def enable(self, args, *kwargs) -> None:
-        pass
-
-    @abstractmethod
-    def disable(self, args, *kwargs) -> None:
-        pass
-
-    @abstractmethod
     def engine(self, args, *kwargs) -> None:
         pass
 

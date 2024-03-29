@@ -3,7 +3,7 @@ import os.path
 import autoflake
 import isort
 
-from nestipy.common.templates.generator import TemplateGenerator
+from nestipy.cli.templates.generator import TemplateGenerator
 import autopep8
 
 
