@@ -1,5 +1,8 @@
 site_name: Nestipy
 docs_dir: site
+repo_url: https://github.com/nestipy/nestipy
+repo_name: nestipy/nestipy
+copyright: Copyright &copy; 2024  <strong style="color:#ed2945">Tsiresy Mila</strong>
 
 
 theme:
@@ -19,12 +22,17 @@ theme:
     #    - navigation.tabs.sticky
     #    - navigation.sections
     - navigation.top
+  icon:
+    repo: fontawesome/brands/github
 
 extra:
   social:
-    - icon: material/github
-      link: https://github.com/nestipy/nestipy
-      name: Github
+    - icon: material/email
+      link: mailto:tsiresymila@gmail.com
+    - icon: fontawesome/brands/x-twitter
+      link: mailto:tsiresymila@gmail.com
+    - icon: fontawesome/brands/linkedin
+      link: mailto:tsiresymila@gmail.com
 
 extra_css:
   - stylesheets/extra.css
