@@ -48,6 +48,7 @@ body {
     letter-spacing: .3px;
 }
 
+
 .highlight button.md-clipboard {
     color: #f5f5f5;
 }
@@ -64,6 +65,8 @@ body {
     font-size: 16px;
     line-height: 1.8;
     font-family: 'Source Sans 3', Montserrat, -apple-system, monospace;
+    padding-left: 2.8rem;
+    padding-right: 2.8rem;
 }
 
 .md-content__inner h1 {
@@ -94,8 +97,8 @@ body {
 
 .md-nav__list > .md-nav__item {
     color: #151515;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     text-transform: uppercase;
 }
 
@@ -119,12 +122,28 @@ body {
     max-width: 100%;
 }
 
+.md-footer-meta__inner {
+    display: flex;
+    justify-content: center;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+.md-footer-meta__inner .md-social__link:hover {
+    color: #ed2945 !important;
+}
+
+
 .md-main__inner {
     margin-top: 0;
 }
 
 .md-sidebar {
     background-color: #f5f5f5;
+}
+
+.md-sidebar--primary .md-sidebar__inner {
+    padding-right: 16px;
+    padding-left: 10px;
 }
 
 .md-sidebar__scrollwrap {
