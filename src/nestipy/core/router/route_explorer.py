@@ -7,17 +7,14 @@ from nestipy.common.metadata.module import ModuleMetadata
 from nestipy.common.metadata.reflect import Reflect
 from nestipy.common.metadata.route import RouteKey
 from nestipy.common.utils import deep_merge
-from nestipy.openapi.scanner import OpenApiScanner
+from nestipy.openapi.explorer import OpenApiExplorer
 from .route_extractor import RouteParamsExtractor
 from ..ioc.middleware_container import MiddlewareContainer
 
 
 class RouteExplorer:
     _middleware_container: MiddlewareContainer
-    _openapi_scanner = OpenApiScanner()
-
-    def __init__(self, middleware_container: MiddlewareContainer = None):
-        self.middleware_container = middleware_container
+    _openapi_scanner = OpenApiExplorer()
 
     @classmethod
     def _normalize_path(cls, path: str) -> str:
@@ -27,26 +24,26 @@ class RouteExplorer:
     def explore(cls, module_ref: Union[Type, object]):
         controllers = Reflect.get_metadata(module_ref, ModuleMetadata.Controllers, [])
         routes = []
+        ins = cls()
         for controller in controllers:
-            controller_routes = cls.explore_controller(controller)
+            controller_routes = ins.explore_controller(controller)
             routes = routes + controller_routes
         return routes
 
-    @classmethod
-    def explore_controller(cls, controller: Type) -> List[dict]:
+    def explore_controller(self, controller: Type) -> List[dict]:
 
-        docs = cls._openapi_scanner.scan(controller)
+        docs = self._openapi_scanner.explore(controller)
         routes = []
         # need to extract middleware, guards, exception_handler,
-        controller_path = cls._normalize_path(Reflect.get_metadata(controller, RouteKey.path, ''))
+        controller_path = self._normalize_path(Reflect.get_metadata(controller, RouteKey.path, ''))
         for method_name, _ in getmembers(controller, isfunction):
             if method_name.startswith("__"):
                 continue
             method = getattr(controller, method_name)
             path = Reflect.get_metadata(method, RouteKey.path, None)
             if path is not None:
-                method_path = cls._normalize_path(path)
-                path = f"/{cls._normalize_path(f'{controller_path}/{method_path}')}"
+                method_path = self._normalize_path(path)
+                path = f"/{self._normalize_path(f'{controller_path}/{method_path}')}"
                 request_method = Reflect.get_metadata(method, RouteKey.method)
 
                 # openapi docs
@@ -54,7 +51,7 @@ class RouteExplorer:
                 parameters = [Parameter(name=name, in_=ParameterLocation.PATH, required=True, description='Route path',
                                         allow_empty_value=False)
                               for name in params.keys()]
-                method_docs = deep_merge(cls._openapi_scanner.scan(method), {'parameters': parameters})
+                method_docs = deep_merge(self._openapi_scanner.explore(method), {'parameters': parameters})
                 path_docs = deep_merge(
                     {'tags': [controller.__name__.replace('Controller', '')]},
                     deep_merge(docs, method_docs)

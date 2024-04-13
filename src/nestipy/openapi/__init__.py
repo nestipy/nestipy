@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pydantic import create_model
 
 from .document_builder import DocumentBuilder
+from .swagger_module import SwaggerModule
 
 
 def ApiSchema(cls):
@@ -28,5 +29,7 @@ if __name__ == '__main__':
         breed: str
         test: TestDto
 
-
-    print(CreateCatDto.schema())
+__all__ = [
+    'DocumentBuilder',
+    'SwaggerModule'
+]

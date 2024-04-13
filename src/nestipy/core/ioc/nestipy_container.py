@@ -125,7 +125,10 @@ class NestipyContainer:
         if instance.value:
             return instance.value
         elif instance.existing:
-            return await self.get(instance.existing)
+            if isinstance(instance.existing, ProviderToken):
+                return await self.get(instance.existing.key)
+            else:
+                return await self.get(instance.existing)
         elif instance.use_class:
             return await self.get(instance.use_class)
         elif instance.factory:
