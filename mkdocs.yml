@@ -1,32 +1,78 @@
 site_name: Nestipy
 docs_dir: site
+
+
 theme:
   name: material
+  palette:
+    primary: custom
+    accent: custom
+  font:
+    text: Montserrat
+    size: 400
+  logo: images/nestipy.png
+  favicon: images/nestipy.png
   features:
     - content.code.copy
+    - content.code.annotate
+    #    - navigation.tabs
+    #    - navigation.tabs.sticky
+    #    - navigation.sections
+    - navigation.top
+
+extra:
+  social:
+    - icon: material/github
+      link: https://github.com/nestipy/nestipy
+      name: Github
+
 extra_css:
   - stylesheets/extra.css
 
 plugins:
-- search
-- mkdocstrings
+  - search
+  - mkdocstrings
+#- offline
 
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
+      linenums: false
+      use_pygments: true
+      pygments_lang_class: true
+      auto_title: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  #  - pymdownx.snippets
   - pymdownx.superfences
 
 nav:
-  - Overview: index.md
-  - Usage:
-      - Getting started: start.md
-#      - Sync ORM Application: sync_orm.md
-#      - Async ORM Application: async_orm.md
-#      - MongoDB Application: mongodb.md
-#  - API Reference:
-#    - database: database.md
-#    - decorators: decorators.md
-#    - App: api.md
-#  - License: license.md
+  - Introduction: index.md
+  - Overview:
+      - First steps: overview/first-step.md
+      - Controllers: overview/controller.md
+      - Providers: overview/provider.md
+      - Modules: overview/module.md
+      - Middlewares: overview/middleware.md
+      - Exceptions filters: overview/exception-filter.md
+      - Guards: overview/guard.md
+      - Interceptors: overview/interceptor.md
+      - Custom decorators: overview/custom-decorator.md
+  - Fundamentals:
+      - Custom providers: fundamental/custom-provider.md
+      - Asynchronous providers: fundamental/custom-provider.md
+      - Dynamic modules: fundamental/custom-provider.md
+      - Execution context: fundamental/custom-provider.md
+      - Lifecycle events: fundamental/custom-provider.md
+      - Testing: fundamental/custom-provider.md
+  - Security: plugin.md
+  - Graphql:
+      - Quick start: graphql/quick-start.md
+      - Resolvers: graphql/quick-start.md
+      - Mutations: graphql/quick-start.md
+      - Subscription: graphql/quick-start.md
+
+  - Websockets:
+    - Gateways: websocket/gateway.md
+    - Adapters: websocket/gateway.md
+  - Openapi: gateway.md
+  - Cli: gateway.md

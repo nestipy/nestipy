@@ -1,5 +1,6 @@
 from typing import Union, Awaitable, Any, Callable, Type
 
+from nestipy.common.metadata.provider_token import ProviderToken
 from nestipy.core.ioc.nestipy_container import NestipyContainer
 
 
@@ -16,7 +17,7 @@ class ModuleProviderDict:
             token: Union[str, Type],
             value: Any = None,
             factory: Callable[..., Union[Awaitable, Any]] = None,
-            existing:  Union[Type, str] = None,
+            existing: Union[Type, ProviderToken] = None,
             use_class: Type = None,
             inject: list = None
     ):

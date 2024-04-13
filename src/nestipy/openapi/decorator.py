@@ -95,3 +95,4 @@ def ApiSecurity(security: SecurityRequirement):
     return SetMetadata(key='__openapi__security', data=[security], as_list=True)
 
 # TODO : Add more openapi decorator
+
