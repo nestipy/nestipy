@@ -11,14 +11,6 @@ class _NestipyFactoryMeta(type):
         return typing.cast(NestipyFactory, self)
 
 
-class NestipyFastApiApplication:
-    pass
-
-
-class NestipyBlackSheepApplication:
-    pass
-
-
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
