@@ -1,0 +1,154 @@
+@import "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap";
+@import "https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap";
+:root {
+    --md-primary-fg-color: #090909;
+    --md-accent-fg-color: #ed2945;
+    --md-primary-fg-color--dark: #ed2945;
+    --md-primary-fg-color--light: #ed2945;
+    --md-text-font: "Source Sans 3";
+}
+
+:root > * {
+    --md-code-hl-number-color: #ff6e67; /* Red for numbers */
+    --md-code-hl-special-color: #bd93f9; /* Purple for special characters */
+    --md-code-hl-function-color: #50fa7b; /* Green for function names */
+    --md-code-hl-constant-color: #f1fa8c; /* Yellow for constants */
+    --md-code-hl-keyword-color: #ff79c6;
+    --md-code-hl-string-color: #f1fa8c; /* Yellow for strings */
+    --md-code-hl-name-color: #f5f5f5; /* Pink for names */
+    --md-code-hl-operator-color: #8be9fd; /* Cyan for operators */
+    --md-code-hl-punctuation-color: #f8f8f2; /* White for punctuation */
+    --md-code-hl-comment-color: #6272a4; /* Blue for comments */
+    --md-code-hl-generic-color: #bd93f9; /* Purple for generics */
+    --md-code-hl-variable-color: #f8f8f2; /* White for variables */
+    /*--md-code-fg-color: #f8f8f2; !* White for code foreground *!*/
+    --md-code-bg-color: #e9eded; /* Dark background for code */
+    --md-code-hl-color: #44475a; /* Code highlight background */
+}
+
+body {
+    background-color: #fdfdfd;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+    font-weight: 400;
+
+}
+code {
+    font-family: 'Source Code Pro','Source Sans 3', Montserrat, -apple-system, monospace;
+}
+
+.highlight span.filename {
+    background: #151515;
+    color: #f5f5f5;
+    padding: 12px 30px;
+    display: block;
+    min-height: 25px;
+    position: relative;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    overflow: hidden;
+    font-size: 15px;
+    letter-spacing: .3px;
+}
+
+
+.highlight button.md-clipboard {
+    color: #f5f5f5;
+}
+
+.language-bash code, .language-text code {
+    color: #f5f5f5;
+}
+
+.highlight code {
+    background-color: #282a36;
+}
+
+.md-content__inner {
+    font-size: 16px;
+    line-height: 1.8;
+    font-family: 'Source Sans 3', Montserrat, -apple-system, monospace;
+    padding-left: 2.8rem;
+    padding-right: 2.8rem;
+}
+
+.md-content__inner h1 {
+    color: #151515;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.md-content__inner h3, .md-content__inner h2 {
+    color: #151515;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.md-content__inner strong, .md-content__inner strong a {
+    color: var(--md-accent-fg-color);
+}
+
+.md-header--shadow {
+    box-shadow: none;
+    transition: transform .25s cubic-bezier(.1, .7, .1, 1), box-shadow .25s;
+    padding: 8px;
+}
+
+.md-nav__list > .md-nav__item {
+    padding-top: 4px;
+}
+
+.md-nav__list > .md-nav__item {
+    color: #151515;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.md-nav:not([data-md-level="0"]) li {
+    font-size: 14px;
+    font-weight: 400 !important;
+    text-transform: capitalize !important;
+}
+
+.md-nav__item .md-nav__link--active {
+    color: var(--md-accent-fg-color);
+}
+
+.md-nav--primary > .md-nav__title:first-child {
+    display: none;
+    height: 0;
+    padding: 0;
+}
+
+.md-grid {
+    max-width: 100%;
+}
+
+.md-footer-meta__inner {
+    display: flex;
+    justify-content: center;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+.md-footer-meta__inner .md-social__link:hover {
+    color: #ed2945 !important;
+}
+
+
+.md-main__inner {
+    margin-top: 0;
+}
+
+.md-sidebar {
+    background-color: #f5f5f5;
+}
+
+.md-sidebar--primary .md-sidebar__inner {
+    padding-right: 16px;
+    padding-left: 10px;
+}
+
+.md-sidebar__scrollwrap {
+    background-color: #f5f5f5;
+}
