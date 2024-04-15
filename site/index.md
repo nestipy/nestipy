@@ -10,7 +10,7 @@ Notably, **Nestipy** extends its functionality to support **GraphQL** through in
 To get started, you can either scaffold the project with the **Nestipy CLI**.
 ```bash
 
-pip install nestipy
+pip install nestipy-cli
 nestipy new project-name
 ```
 
