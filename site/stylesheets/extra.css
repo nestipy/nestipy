@@ -1,5 +1,5 @@
 @import "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap";
-
+@import "https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap";
 :root {
     --md-primary-fg-color: #090909;
     --md-accent-fg-color: #ed2945;
@@ -32,6 +32,9 @@ body {
     font-size: 16px;
     font-weight: 400;
 
+}
+code {
+    font-family: 'Source Code Pro','Source Sans 3', Montserrat, -apple-system, monospace;
 }
 
 .highlight span.filename {
