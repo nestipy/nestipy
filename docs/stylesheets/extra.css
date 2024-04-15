@@ -68,8 +68,13 @@ code {
     font-size: 16px;
     line-height: 1.8;
     font-family: 'Source Sans 3', Montserrat, -apple-system, monospace;
-    padding-left: 2.8rem;
-    padding-right: 2.8rem;
+}
+
+@media screen and (min-width: 1220px) {
+    .md-content__inner {
+        padding-left: 2.8rem;
+        padding-right: 2.8rem;
+    }
 }
 
 .md-content__inner h1 {
