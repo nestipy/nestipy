@@ -1,8 +1,0 @@
-from nestipy.common import Injectable
-
-
-@Injectable()
-class {{name|capitalize}}Service:
-
-    async def test(self):
-        pass

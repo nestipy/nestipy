@@ -14,13 +14,13 @@
 
 ## Description
 
-<p>Nestipy is a Python framework built on top of Fastapi that follows the modular architecture of NestJS</p>
+<p>Nestipy is a Python framework built on top of FastAPI that follows the modular architecture of NestJS</p>
 <p>Under the hood, Nestipy makes use of <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a>, but also provides compatibility with a wide range of other libraries, like <a href="https://fastapi.tiangolo.com/" target="_blank">Blacksheep</a>, allowing for easy use of the myriad of third-party plugins which are available.</p>
 
 ## Getting started
 
 ```cmd
-    pip install nestipy
+    pip install nestipy-cli
     nestipy new my_app
     cd my_app
     python main.py
