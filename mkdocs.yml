@@ -64,23 +64,23 @@ nav:
       - Exceptions filters: overview/exception-filter.md
       - Guards: overview/guard.md
       - Interceptors: overview/interceptor.md
-      - Custom decorators: overview/custom-decorator.md
+  #      - Custom decorators: overview/custom-decorator.md
   - Fundamentals:
       - Custom providers: fundamental/custom-provider.md
-      - Asynchronous providers: fundamental/custom-provider.md
-      - Dynamic modules: fundamental/custom-provider.md
-      - Execution context: fundamental/custom-provider.md
-      - Lifecycle events: fundamental/custom-provider.md
-      - Testing: fundamental/custom-provider.md
-  - Security: plugin.md
+      - Dynamic modules: fundamental/dynamic-module.md
+#      - Execution context: fundamental/execution-context.md
+#      - Lifecycle events: fundamental/lifecycle-event.md
+      - Testing: fundamental/testing.md
+#  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md
-      - Resolvers: graphql/quick-start.md
-      - Mutations: graphql/quick-start.md
-      - Subscription: graphql/quick-start.md
+#      - Resolvers: graphql/resolver.md
+#      - Mutations: graphql/mutation.md
+#      - Subscription: graphql/subscription.md
 
   - Websockets:
-    - Gateways: websocket/gateway.md
-    - Adapters: websocket/gateway.md
-  - Openapi: gateway.md
-  - Cli: gateway.md
+      - Gateways: websocket/gateway.md
+      - Adapters: websocket/adapter.md
+  - Openapi: openapi/start.md
+  - Cli: cli.md
+  - Utils: util.md

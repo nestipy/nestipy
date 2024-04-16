@@ -20,6 +20,7 @@ class Request:
         self._body = None
         self._json = None
         self._files = None
+        self._user = None
         if scope["type"] == "http":
             self.starlette_request = StarletteRequest(scope, receive, send)
 
@@ -45,6 +46,14 @@ class Request:
         if self._method is None:
             self._method = self.scope.get('method')
         return self._method
+
+    @property
+    def user(self) -> Any:
+        return self._user
+
+    @user.setter
+    def user(self, u: Any):
+        self._user = u
 
     @property
     def host(self) -> str:

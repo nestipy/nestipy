@@ -35,6 +35,7 @@ class MiddlewareConsumer:
 
     def apply(self, middleware: Union[Type, Callable]) -> MiddlewareProxy:
         from nestipy.core.ioc.middleware_container import MiddlewareContainer
+        # for middleware in middlewares:
         proxy = MiddlewareProxy(middleware)
         MiddlewareContainer.get_instance().add_singleton(proxy, self._module)
         return proxy
