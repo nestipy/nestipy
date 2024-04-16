@@ -1,4 +1,5 @@
 Provider is the same for NestJs providers.
+
 ## Services
 
 Let's create a example of service.
@@ -49,14 +50,59 @@ class CatsController:
         return self._service.find_all()
 ```
 
+Register provider in module.
+
+```python
+
+from nestipy.common import Module
+
+
+@Module(
+    providers=[
+        CatsService
+    ],
+    controllers=[
+        CatsController
+    ]
+)
+class CatsModule:
+    pass
+```
+
+Provider can be exported to use by other module.
+
+```python
+
+from nestipy.common import Module
+
+
+@Module(
+    providers=[
+        CatsService
+    ],
+    controllers=[
+        CatsController
+    ],
+    exports=[
+        CatsService
+    ]
+)
+class CatsModule:
+    pass
+```
+
 ## Dependency injection
 
 With Nestipy, dependency work in 2 ways: <br/>
+
 #### Inject dependency via property( for class).<br/>
+
 ```python
 @Controller('cats')
 class CatsController:
     _service: Inject[CatsService]
 ```
+
 #### Inject dependency via class method.<br/>
+
 It work like other dependency method.

@@ -1,4 +1,4 @@
-from nestipy.common.middleware import MiddlewareConsumerNestipy define middleware like NestJs do.
+Nestipy define middleware like NestJs do.
 
 ```python
 from nestipy.common import Injectable, Request, Response
