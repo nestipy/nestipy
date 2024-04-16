@@ -21,10 +21,10 @@ class DynamicModule:
 
 class ConfigurableModuleBuilder(Generic[T]):
     def __init__(self):
-        self.method_name = 'register'
+        self._method_name = 'register'
 
     def set_method(self, name: str):
-        self.method_name = name
+        self._method_name = name
         return self
 
     @classmethod
@@ -47,15 +47,16 @@ class ConfigurableModuleBuilder(Generic[T]):
             )
             return self._create_dynamic_module(cls_, [provider])
 
-        def register_async(cls_: Any, factory: Callable[..., T]) -> DynamicModule:
+        def register_async(cls_: Any, factory: Callable[..., T], inject: list = None) -> DynamicModule:
             provider = ModuleProviderDict(
                 token=MODULE_OPTION_TOKEN,
-                factory=factory
+                factory=factory,
+                inject=inject or []
             )
             return self._create_dynamic_module(cls_, [provider])
 
         cls = type('ConfigurableModuleClass', (object,), {
-            self.method_name: classmethod(register),
-            f"{self.method_name}_async": classmethod(register_async)
+            self._method_name: classmethod(register),
+            f"{self._method_name}_async": classmethod(register_async)
         })
         return cls, MODULE_OPTION_TOKEN
