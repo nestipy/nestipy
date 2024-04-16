@@ -12,7 +12,7 @@
     --md-code-hl-number-color: #ff6e67; /* Red for numbers */
     --md-code-hl-special-color: #bd93f9; /* Purple for special characters */
     --md-code-hl-function-color: #50fa7b; /* Green for function names */
-    --md-code-hl-constant-color: #f1fa8c; /* Yellow for constants */
+    --md-code-hl-constant-color: #8be9fd; /* Yellow for constants */
     --md-code-hl-keyword-color: #ff79c6;
     --md-code-hl-string-color: #f1fa8c; /* Yellow for strings */
     --md-code-hl-name-color: #f5f5f5; /* Pink for names */
@@ -20,7 +20,7 @@
     --md-code-hl-punctuation-color: #f8f8f2; /* White for punctuation */
     --md-code-hl-comment-color: #6272a4; /* Blue for comments */
     --md-code-hl-generic-color: #bd93f9; /* Purple for generics */
-    --md-code-hl-variable-color: #f8f8f2; /* White for variables */
+    --md-code-hl-variable-color: #50fa7b; /* White for variables */
     /*--md-code-fg-color: #f8f8f2; !* White for code foreground *!*/
     --md-code-bg-color: #e9eded; /* Dark background for code */
     --md-code-hl-color: #44475a; /* Code highlight background */

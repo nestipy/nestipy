@@ -161,7 +161,7 @@ class NestipyApplication:
     def set_base_view_dir(self, view_dir: str):
         self._setup_template_engine(view_dir)
 
-    def set_view_engine(self, engine: Union[Literal['minimal-jinja'], TemplateEngine]):
+    def set_view_engine(self, engine: Union[Literal['minijinja'], TemplateEngine]):
         if isinstance(engine, TemplateEngine):
             self._http_adapter.set(TEMPLATE_ENGINE_KEY, engine)
         else:
