@@ -43,7 +43,7 @@ class ConfigModule(ConfigurableModuleClass):
     pass
 ```
 
-So, let's sho ho to use it.
+So, let's view how to use it.
 
 ```python
 from nestipy.common import Module
@@ -120,7 +120,7 @@ class DatabaseModule(ConfigurableModuleClass, NestipyModule):
         pass
 
 
-async def database_config_factory(config: ConfigModule) -> DatabaseConfigOption:
+async def database_config_factory(config: ConfigService) -> DatabaseConfigOption:
     return DatabaseConfigOption(
         host=config.get('DB_HOST'),
         port=int(config.get('DB_PORT')),
@@ -133,7 +133,8 @@ async def database_config_factory(config: ConfigModule) -> DatabaseConfigOption:
     imports=[
         ConfigModule.register(),
         DatabaseModule.for_root_async(
-            factory=database_config_factory
+            factory=database_config_factory,
+            inject=[ConfigService]
         )
     ]
 )
