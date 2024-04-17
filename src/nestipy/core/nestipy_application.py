@@ -11,8 +11,7 @@ from nestipy.common.metadata.module import ModuleMetadata
 from nestipy.common.metadata.reflect import Reflect
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
-from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
-from .adapter.blacksheep_adapter import BlackSheepAdapter
+from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
 from .ioc.middleware_container import MiddlewareContainer
@@ -49,7 +48,7 @@ class NestipyApplication:
     def __init__(self, config: NestipyApplicationConfig = None):
         config = config if config is not None else NestipyApplicationConfig()
         # self._http_adapter: HttpServer = FastAPIAdapter()
-        self._http_adapter: HttpAdapter = config.adapter if config.adapter is not None else BlackSheepAdapter()
+        self._http_adapter: HttpAdapter = config.adapter if config.adapter is not None else FastApiAdapter()
         self._graphql_builder = StrawberryAdapter()
         self._router_proxy = RouterProxy(self._http_adapter)
         self._middleware_container = MiddlewareContainer.get_instance()
@@ -113,6 +112,7 @@ class NestipyApplication:
             if self._http_adapter.get_io_adapter() is not None:
                 IoSocketProxy(self._http_adapter).apply_routes(modules)
             # Register open api catch asynchronously
+            from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
             openapi_register: Callable = Reflect.get_metadata(self, OPENAPI_HANDLER_METADATA, None)
             if openapi_register is not None:
                 openapi_register()

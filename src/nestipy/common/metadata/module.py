@@ -5,3 +5,4 @@ class ModuleMetadata:
     Controllers: str = 'controllers'
     Global: str = '_global_'
     Root: str = '_root_'
+    Module: str = '_is_module_'

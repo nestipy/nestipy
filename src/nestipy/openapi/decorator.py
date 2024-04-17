@@ -1,12 +1,27 @@
-from typing import Union, Optional, Any
+import dataclasses
+from typing import Union, Optional, Any, Type
 
 from openapidocs.v3 import RequestBody, Response, Parameter
 from openapidocs.v3 import SecurityRequirement, MediaType, Schema
+from pydantic import TypeAdapter, BaseModel
 
 from nestipy.common.metadata.decorator import SetMetadata
 
 
-def ApiBody(body: RequestBody):
+def ApiBody(body: Union[BaseModel, Type] = None):
+    content: dict = {}
+    if dataclasses.is_dataclass(body):
+        content: dict = TypeAdapter(body).json_schema()
+    elif isinstance(body, BaseModel):
+        content: dict = body.model_json_schema()
+    body = RequestBody(
+        content={
+            body.__name__ if body is not None else 'Data': MediaType(
+                schema=Schema(**content)
+            )
+        },
+        required=True
+    )
     return SetMetadata(key='__openapi__request_body', data=body)
 
 
@@ -95,4 +110,3 @@ def ApiSecurity(security: SecurityRequirement):
     return SetMetadata(key='__openapi__security', data=[security], as_list=True)
 
 # TODO : Add more openapi decorator
-

@@ -1,6 +1,6 @@
 from blacksheep import Application, Response as BlackSheepResponse
 from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, \
-    WebSocket as BSWebSocket
+    WebSocket as BSWebSocket, StreamedContent
 
 from nestipy.common.http_ import Response
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
@@ -68,6 +68,15 @@ class BlackSheepAdapter(HttpAdapter):
         async def blacksheep_handler() -> BlackSheepResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
+            if result.is_stream():
+                return BlackSheepResponse(
+                    content=StreamedContent(
+                        content_type=result.content_type().encode(),
+                        data_provider=result.get_stream
+                    ),
+                    headers=[(k.encode(), v.encode()) for k, v in result.headers()],
+                    status=result.status_code() or 200
+                )
             return BlackSheepResponse(
                 content=Content(data=result.content(), content_type=result.content_type().encode()),
                 headers=[(k.encode(), v.encode()) for k, v in result.headers()],

@@ -33,7 +33,8 @@ class TemplateRendererProcessor:
         self.template = Reflect.get_metadata(method, TEMPLATE_RENDER_KEY, None)
         self.context = context
         if self.template_engine is None:
-            raise HttpException(HttpStatus.INTERNAL_SERVER_ERROR, 'Template engine not configured')
+            return False
+            # raise HttpException(HttpStatus.INTERNAL_SERVER_ERROR, 'Template engine not configured')
         if self.template is None or not isinstance(context, dict):
             return False
         else:

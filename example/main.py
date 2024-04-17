@@ -27,7 +27,7 @@ app.use_static_assets(os.path.join(os.path.dirname(__file__), 'public'))
 
 # Template rendering
 app.set_base_view_dir(os.path.join(os.path.dirname(__file__), 'views'))
-app.set_view_engine('minimal-jinja')
+app.set_view_engine('minijinja')
 
 
 @Catch()

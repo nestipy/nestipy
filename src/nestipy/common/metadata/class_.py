@@ -22,5 +22,11 @@ class ClassMetadata:
         # Only not a root module need to get import_providers to share
         if not Reflect.get_metadata(self._module, ModuleMetadata.Root, False):
             for im in Reflect.get_metadata(self._module, ModuleMetadata.Imports, []):
-                import_providers = import_providers + Reflect.get_metadata(im, ModuleMetadata.Exports, [])
+                for export in Reflect.get_metadata(im, ModuleMetadata.Exports, []):
+                    # For module re-exporting
+                    is_module: bool = Reflect.get_metadata(export, ModuleMetadata.Module, False)
+                    if is_module:
+                        import_providers = import_providers + Reflect.get_metadata(export, ModuleMetadata.Providers, [])
+                    else:
+                        import_providers = import_providers + [export]
         return providers, import_providers

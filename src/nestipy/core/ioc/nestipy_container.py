@@ -1,6 +1,9 @@
+import dataclasses
 import inspect
 from functools import lru_cache
 from typing import Type, Union, Any, get_args, Optional, ForwardRef, Callable, Awaitable, TYPE_CHECKING
+
+from pydantic import BaseModel
 
 from nestipy.common.metadata.class_ import ClassMetadata
 from nestipy.common.metadata.dependency import CtxDepKey
@@ -86,7 +89,7 @@ class NestipyContainer:
             return annotation, Annotation()
 
     @classmethod
-    def _resolve_context_service(cls, name: str, dep_key: CtxDepKey):
+    def _resolve_context_service(cls, name: str, dep_key: CtxDepKey, annotation: Union[Type, Any]):
         context_container = NestipyContextContainer.get_instance()
         match dep_key:
             case CtxDepKey.Request:
@@ -94,7 +97,12 @@ class NestipyContainer:
             case CtxDepKey.Response:
                 return context_container.get_value(NestipyContainerKey.response)
             case CtxDepKey.Body:
-                return context_container.get_value(NestipyContainerKey.body)
+                data: dict = context_container.get_value(NestipyContainerKey.body)
+                if dataclasses.is_dataclass(annotation) or issubclass(annotation, BaseModel):
+                    return annotation(**data)
+                elif annotation is dict:
+                    return data
+                return None
             case CtxDepKey.Context:
                 return context_container.get_value(NestipyContainerKey.execution_context)
             case CtxDepKey.SocketClient:
@@ -182,7 +190,7 @@ class NestipyContainer:
                     raise ValueError(f"Unknown forward reference: {annotation}")
             if dep_key.metadata in CtxDepKey.to_list():
                 if dep_key.metadata is not CtxDepKey.Service:
-                    dependency = self._resolve_context_service(name, dep_key.metadata)
+                    dependency = self._resolve_context_service(name, dep_key.metadata, annotation)
                     setattr(service, name, dependency)
                 elif annotation in search_scope:
                     dependency = await self.get(annotation, origin=origin)
@@ -204,7 +212,7 @@ class NestipyContainer:
             if name != 'self' and param.annotation is not inspect.Parameter.empty:
                 annotation, dep_key = self._get_type_from_annotation(param.annotation)
                 if dep_key.metadata is not CtxDepKey.Service:
-                    dependency = self._resolve_context_service(name, dep_key.metadata)
+                    dependency = self._resolve_context_service(name, dep_key.metadata, annotation)
                     args[name] = dependency
                 elif annotation in search_scope:
                     dependency = await self.get(annotation, origin=origin)

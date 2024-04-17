@@ -1,8 +1,9 @@
 import uuid
 from dataclasses import dataclass
-from typing import TypeVar, Generic, Optional, Any, Callable
+from typing import TypeVar, Generic, Optional, Any, Callable, Union, Type, Awaitable
 
 from nestipy.common.metadata.module import ModuleMetadata
+from nestipy.common.metadata.provider_token import ProviderToken
 from nestipy.common.metadata.reflect import Reflect
 from nestipy.common.provider import ModuleProviderDict
 
@@ -47,11 +48,21 @@ class ConfigurableModuleBuilder(Generic[T]):
             )
             return self._create_dynamic_module(cls_, [provider])
 
-        def register_async(cls_: Any, factory: Callable[..., T], inject: list = None) -> DynamicModule:
+        def register_async(
+                cls_: Any,
+                value: Any = None,
+                factory: Callable[..., Union[Awaitable, Any]] = None,
+                existing: Union[Type, ProviderToken] = None,
+                use_class: Type = None,
+                inject: list = None
+        ) -> DynamicModule:
             provider = ModuleProviderDict(
                 token=MODULE_OPTION_TOKEN,
                 factory=factory,
-                inject=inject or []
+                inject=inject or [],
+                use_class=use_class,
+                existing=existing,
+                value=value
             )
             return self._create_dynamic_module(cls_, [provider])
 

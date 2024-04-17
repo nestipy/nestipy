@@ -2,6 +2,7 @@ import typing
 
 from fastapi import Response as FResponse, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse as FStreamingResponse
 from starlette.middleware import _MiddlewareClass
 from starlette.types import ASGIApp
 
@@ -76,6 +77,12 @@ class FastApiAdapter(HttpAdapter):
         async def fastapi_handler() -> FResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
+            if result.is_stream():
+                return FStreamingResponse(
+                    content=result.get_stream(),
+                    headers={k: v for k, v in result.headers()},
+                    status_code=result.status_code() or 200
+                )
             return FResponse(
                 content=result.content(),
                 headers={k: v for k, v in result.headers()},
