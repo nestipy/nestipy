@@ -1,5 +1,5 @@
 import os
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, AsyncIterator, Callable
 
 import aiofiles
 import ujson as json
@@ -21,6 +21,7 @@ class Response:
         self._headers = set()
         self._status_code = 200
         self._content = None
+        self._stream_content = None
         self.template_engine = template_engine
 
     async def _start(self) -> None:
@@ -87,17 +88,26 @@ class Response:
             await self._write(content)
         return self
 
+    async def stream(self, callback: Callable[[], AsyncIterator[Union[bytes, str]]]):
+
+        self._stream_content = callback
+        return self
+
     async def stream_file(self, file_path: str, chunk_size: 4096) -> "Response":
         if not os.path.isfile(file_path):
             self.status(404)
             await self._write(b"File not found")
             return self
-        async with aiofiles.open(file_path, "rb") as file:
-            chunk: bytes = await file.read(chunk_size)
-            # no benefit because we don't send response directly
-            while chunk:
-                await self._write(chunk)
+
+        async def get_stream() -> AsyncIterator[bytes]:
+            async with aiofiles.open(file_path, "rb") as file:
                 chunk: bytes = await file.read(chunk_size)
+                # no benefit because we don't send response directly
+                while chunk:
+                    yield chunk
+                    chunk: bytes = await file.read(chunk_size)
+
+        self._stream_content = get_stream
 
         return self
 
@@ -129,3 +139,10 @@ class Response:
 
     def headers(self) -> set[tuple[str, str]]:
         return self._headers
+
+    def is_stream(self) -> bool:
+        return self._stream_content is not None
+
+    async def get_stream(self) -> AsyncIterator[bytes]:
+        if self._stream_content is not None:
+            yield self._stream_content()

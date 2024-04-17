@@ -76,6 +76,10 @@ class RouterProxy:
             context_container.set_value(NestipyContainerKey.params, req.path_params)
             context_container.set_value(NestipyContainerKey.query_params, req.query_params)
             context_container.set_value(NestipyContainerKey.headers, req.headers)
+            json_data = await req.json()
+            context_container.set_value(NestipyContainerKey.body, json_data)
+
+            # TODO: req.files
 
             container = NestipyContainer.get_instance()
             controller_method = getattr(controller, method_name)
@@ -84,8 +88,6 @@ class RouterProxy:
 
             try:
                 # TODO : Refactor
-                # create execution context
-                # Execute Guard
                 guard_processor: GuardProcessor = await NestipyContainer.get_instance().get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context)
                 if not can_activate[0]:
@@ -113,7 +115,7 @@ class RouterProxy:
                 if result is None:
                     raise HttpException(
                         HttpStatus.BAD_REQUEST,
-                        "Handler not called: Invalid Request"
+                        "Handler not called because of interceptor: Invalid Request"
                     )
 
                 # process template rendering

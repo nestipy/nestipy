@@ -75,5 +75,6 @@ class Module:
         Reflect.set_metadata(cls, ModuleMetadata.Imports, self.imports + getattr(cls, ModuleMetadata.Imports, []))
         Reflect.set_metadata(cls, ModuleMetadata.Exports, self.exports + getattr(cls, ModuleMetadata.Exports, []))
         Reflect.set_metadata(cls, ModuleMetadata.Global, self.is_global or getattr(cls, ModuleMetadata.Global, False))
+        Reflect.set_metadata(cls, ModuleMetadata.Module, True)
         self.container.add_singleton(cls)
         return cls

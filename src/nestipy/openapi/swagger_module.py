@@ -1,5 +1,6 @@
 import dataclasses
 import os.path
+from typing import TYPE_CHECKING
 
 import aiofiles
 from openapidocs.common import Serializer
@@ -8,7 +9,9 @@ from openapidocs.v3 import OpenAPI
 from nestipy.common.http_ import Request, Response
 from .constant import OPENAPI_HANDLER_METADATA
 from ..common import Reflect
-from ..core.nestipy_application import NestipyApplication
+
+if TYPE_CHECKING:
+    from ..core.nestipy_application import NestipyApplication
 
 
 @dataclasses.dataclass
@@ -21,7 +24,7 @@ class _Document:
 class SwaggerModule:
 
     @classmethod
-    def _create_document(cls, app: NestipyApplication, config: OpenAPI) -> _Document:
+    def _create_document(cls, app: "NestipyApplication", config: OpenAPI) -> _Document:
         paths = app.get_openapi_paths()
         config.paths = paths
         serializer = Serializer()
@@ -31,7 +34,7 @@ class SwaggerModule:
         return _Document(document_json, document_yml, document_obj)
 
     @classmethod
-    def setup(cls, path: str, app: NestipyApplication, config: OpenAPI):
+    def setup(cls, path: str, app: "NestipyApplication", config: OpenAPI):
         def register_open_api():
             document: _Document = cls._create_document(app, config)
             api_path = f"/{path.strip('/')}"
