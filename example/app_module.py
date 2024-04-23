@@ -1,13 +1,15 @@
 from typing import Union, Awaitable
 
+from nestipy_decorator import Module, Injectable
+from nestipy_ioc import ModuleProviderDict
+
 from app_controller import AppController
 from app_provider import AppProvider
-from nestipy.common import Request, Response, Module, Injectable, CanActivate
-from nestipy.common.dynamic_module.test import ConfigModule
+from nestipy.common import ConfigModule
+from nestipy.common import Request, Response, CanActivate
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.middleware.consumer import MiddlewareConsumer
 from nestipy.common.module import NestipyModule
-from nestipy.common.provider import ModuleProviderDict
 from nestipy.core.constant import AppKey
 from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.graphql import GraphqlModule, GraphqlOption
@@ -40,7 +42,6 @@ class TestMiddleware(NestipyMiddleware):
         UserModule
     ],
     providers=[
-        AppProvider,
         ModuleProviderDict(
             value='Test',
             token='TEST'
@@ -48,7 +49,8 @@ class TestMiddleware(NestipyMiddleware):
         ModuleProviderDict(
             use_class=ModuleGuard,
             token=AppKey.APP_GUARD
-        )
+        ),
+        AppProvider,
     ],
     controllers=[
         AppController

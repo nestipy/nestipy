@@ -5,7 +5,8 @@ Firstly, we need to create a gateway class
 ```python
 from typing import Any
 
-from nestipy.types_.dependency import SocketServer, SocketClient, SocketData
+from nestipy_ioc import SocketServer, SocketClient, SocketData
+
 from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage
 
 
@@ -23,7 +24,7 @@ Now, use gateway as module provider.
 
 ```python
 
-from nestipy.common import Module
+from nestipy_decorator import Module
 
 
 @Module(

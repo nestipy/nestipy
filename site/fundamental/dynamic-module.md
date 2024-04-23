@@ -6,10 +6,9 @@ from os import path, getcwd
 from typing import Union
 
 from dotenv import dotenv_values
-
-from nestipy.common import Module, ProviderToken, Injectable
-from nestipy.common.dynamic_module import ConfigurableModuleBuilder
-from nestipy.types_ import Inject
+from nestipy_decorator import Module, Injectable
+from nestipy_dynamic_module import ConfigurableModuleBuilder
+from nestipy_ioc import Inject
 
 
 @dataclass
@@ -22,7 +21,7 @@ ConfigurableModuleClass, MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[ConfigO
 
 @Injectable()
 class ConfigService:
-    _config: Inject[ProviderToken(MODULE_OPTION_TOKEN)]
+    _config: Inject[MODULE_OPTION_TOKEN]
     _envs: dict = {}
 
     def __init__(self):
@@ -46,7 +45,7 @@ class ConfigModule(ConfigurableModuleClass):
 So, let's view how to use it.
 
 ```python
-from nestipy.common import Module
+from nestipy_decorator import Module
 
 
 @Module(
@@ -63,7 +62,7 @@ class AppModule:
 Now, we can use `ConfigModule` in controller or a service provider by injecting it.
 
 ```python
-from nestipy.common import Controller
+from nestipy_decorator import Controller
 from nestipy.types_ import Inject
 
 
@@ -90,7 +89,7 @@ Using it inside async factory.
 from dataclasses import dataclass
 
 from nestipy.common import Module, ProviderToken
-from nestipy.common.dynamic_module import ConfigurableModuleBuilder
+from nestipy.common.config_module import ConfigurableModuleBuilder
 from nestipy.common.module import NestipyModule
 from nestipy.types_ import Inject
 

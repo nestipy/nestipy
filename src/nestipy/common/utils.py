@@ -2,6 +2,14 @@ def uniq(data: list) -> list:
     return list(set(data))
 
 
+def uniq_list(data: list) -> list:
+    uniq_data = []
+    for d in data:
+        if d not in uniq_data:
+            uniq_data.append(d)
+    return uniq_data
+
+
 def deep_merge(dict_from: dict, dict_to: dict):
     keys1 = dict_to.keys()
     keys2 = dict_from.keys()

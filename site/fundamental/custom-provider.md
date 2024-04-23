@@ -79,16 +79,14 @@ Factory can be an async function to have async provider.
 ### Inject providers
 
 ```python
-from nestipy.common import Controller, ProviderToken
-from nestipy.types_ import Inject
+from nestipy_decorator import Controller
+from nestipy_ioc import Inject
 
 
 @Controller('cats')
 class CatsController:
-    connection: Inject[ProviderToken('CONNECTION')]
+    connection: Inject['CONNECTION']
     cat_service: Inject[CatsService]
 ```
 
-Here, we need to use ProviderToken if token in provider is a string.
-
-Exporting non-class based provider is coming  soon.
+Exporting non-class based provider works perfectly.

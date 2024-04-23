@@ -1,12 +1,13 @@
 import inspect
 from typing import Type, Union, Callable, Any, TYPE_CHECKING
 
+from nestipy_ioc import NestipyContainer
+from nestipy_ioc import NestipyContextContainer
+from nestipy_metadata import NestipyContextProperty, Reflect, ModuleMetadata
+
 from .decorator import GATEWAY_KEY, EVENT_KEY, SUCCESS_EVENT_KEY, ERROR_EVENT_KEY
-from ..common import Reflect, ModuleMetadata
-from ..common.metadata.container import NestipyContainerKey
 from ..core.context.execution_context import ExecutionContext
-from ..core.ioc.nestipy_container import NestipyContainer
-from ..core.ioc.nestipy_context_container import NestipyContextContainer
+
 if TYPE_CHECKING:
     from ..core.adapter.http_adapter import HttpAdapter
 
@@ -54,9 +55,9 @@ class IoSocketProxy:
         async def io_handler(sid: Any, data: Any):
             io_adapter = self.adapter.get_io_adapter()
             context_container = NestipyContextContainer.get_instance()
-            context_container.set_value(NestipyContainerKey.io_client, sid)
-            context_container.set_value(NestipyContainerKey.io_data, data)
-            context_container.set_value(NestipyContainerKey.io_server, io_adapter)
+            context_container.set_value(NestipyContextProperty.io_client, sid)
+            context_container.set_value(NestipyContextProperty.io_data, data)
+            context_container.set_value(NestipyContextProperty.io_server, io_adapter)
 
             container = NestipyContainer.get_instance()
             gateway_method = getattr(gateway, method_name)
@@ -68,7 +69,7 @@ class IoSocketProxy:
                 None,
                 None
             )
-            context_container.set_value(NestipyContainerKey.execution_context, execution_context)
+            context_container.set_value(NestipyContextProperty.execution_context, execution_context)
             try:
                 result = await container.get(gateway, method_name)
                 if result is not None:

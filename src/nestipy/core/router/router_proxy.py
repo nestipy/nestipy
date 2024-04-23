@@ -3,19 +3,19 @@ import traceback
 import typing
 from typing import Type, Union
 
+from nestipy_ioc import NestipyContainer
+from nestipy_ioc import NestipyContextContainer
+from nestipy_metadata import NestipyContextProperty
 from openapidocs.v3 import Operation, PathItem
 from pydantic import BaseModel
 
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.http_ import Request, Response
-from nestipy.common.metadata.container import NestipyContainerKey
 from nestipy.common.utils import snakecase_to_camelcase
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
-from ..ioc.nestipy_container import NestipyContainer
-from ..ioc.nestipy_context_container import NestipyContextContainer
 from ...common.exception.filter import ExceptionFilterHandler
 from ...common.exception.http import HttpException
 from ...common.exception.status import HttpStatus
@@ -71,21 +71,26 @@ class RouterProxy:
 
             context_container = NestipyContextContainer.get_instance()
             # setup container for query params, route params, request, response, session, etc..
-            context_container.set_value(NestipyContainerKey.request, req)
-            context_container.set_value(NestipyContainerKey.response, res)
-            context_container.set_value(NestipyContainerKey.params, req.path_params)
-            context_container.set_value(NestipyContainerKey.query_params, req.query_params)
-            context_container.set_value(NestipyContainerKey.headers, req.headers)
-            json_data = await req.json()
-            context_container.set_value(NestipyContainerKey.body, json_data)
+            context_container.set_value(NestipyContextProperty.request, req)
+            context_container.set_value(NestipyContextProperty.response, res)
+            context_container.set_value(NestipyContextProperty.params, req.path_params)
+            context_container.set_value(NestipyContextProperty.query_params, req.query_params)
+            context_container.set_value(NestipyContextProperty.headers, req.headers)
+            form_data = await req.form()
+            if form_data is not None:
+                context_container.set_value(NestipyContextProperty.body, form_data)
+            else:
+                json_data = await req.json()
+                context_container.set_value(NestipyContextProperty.body, json_data)
 
             # TODO: req.files
 
             container = NestipyContainer.get_instance()
-            controller_method = getattr(controller, method_name)
-            execution_context = ExecutionContext(self.router, module_ref, controller, controller_method, req, res)
-            context_container.set_value(NestipyContainerKey.execution_context, execution_context)
-
+            controller_method_handler = getattr(controller, method_name)
+            execution_context = ExecutionContext(self.router, module_ref, controller, controller_method_handler, req,
+                                                 res)
+            context_container.set_value(NestipyContextProperty.execution_context, execution_context)
+            handler_response: Response
             try:
                 # TODO : Refactor
                 guard_processor: GuardProcessor = await NestipyContainer.get_instance().get(GuardProcessor)
@@ -119,12 +124,11 @@ class RouterProxy:
                     )
 
                 # process template rendering
-                if self._template_processor.can_process(controller_method, result):
+                if self._template_processor.can_process(controller_method_handler, result):
                     result = await res.html(self._template_processor.render())
                 # transform result to response
-                response = await self._ensure_response(res, result)
+                handler_response = await self._ensure_response(res, result)
 
-                return response
             except Exception as e:
                 if not isinstance(e, HttpException):
                     tb = traceback.format_exc()
@@ -134,11 +138,13 @@ class RouterProxy:
                 exception_handler = await container.get(ExceptionFilterHandler)
                 result = await exception_handler.catch(e, execution_context)
                 if result:
-                    return await self._ensure_response(res, result)
-                return await self._ensure_response(res, await next_fn(e))
+                    handler_response = await self._ensure_response(res, result)
+                else:
+                    handler_response = await self._ensure_response(res, await next_fn(e))
             finally:
                 #  reset context container
                 context_container.destroy()
+            return handler_response
 
         return request_handler
 

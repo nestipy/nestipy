@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Type, Union, Callable, TYPE_CHECKING
 
-from nestipy.common import Request, Response
+from nestipy.common.http_ import Request, Response
 
 if TYPE_CHECKING:
     from nestipy.core.adapter.http_adapter import HttpAdapter

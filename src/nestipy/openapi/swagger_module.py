@@ -3,12 +3,12 @@ import os.path
 from typing import TYPE_CHECKING
 
 import aiofiles
+from nestipy_metadata import Reflect
 from openapidocs.common import Serializer
 from openapidocs.v3 import OpenAPI
 
 from nestipy.common.http_ import Request, Response
 from .constant import OPENAPI_HANDLER_METADATA
-from ..common import Reflect
 
 if TYPE_CHECKING:
     from ..core.nestipy_application import NestipyApplication

@@ -1,10 +1,11 @@
 import asyncio
 from typing import AsyncIterator
 
+from nestipy_ioc import Args
+
 from nestipy.common import UseGuards
 from nestipy.graphql import Query, Resolver, Mutation
 from nestipy.graphql.decorator import Subscription
-from nestipy.types_ import Args
 from .user_guards import TestGuard, TestGuardMethod
 
 

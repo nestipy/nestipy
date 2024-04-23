@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Any, Callable, Union, Type
 
-from nestipy.common import Websocket, Reflect
+from nestipy_metadata import SetMetadata, Reflect
+
+from nestipy.common import Websocket
 from nestipy.common.exception.filter import ExceptionFilter
 from nestipy.common.exception.http import HttpException
 from nestipy.common.guards import CanActivate
 from nestipy.common.http_ import Request, Response
 from nestipy.common.interceptor import NestipyInterceptor
-from nestipy.common.metadata.decorator import SetMetadata
 from nestipy.common.template import TEMPLATE_ENGINE_KEY
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter

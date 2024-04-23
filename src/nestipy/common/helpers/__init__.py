@@ -1,6 +1,7 @@
 from typing import Type
 
-from nestipy.common import ModuleMetadata, ModuleProviderDict, Reflect
+from nestipy_ioc import ModuleProviderDict
+from nestipy_metadata import ModuleMetadata, Reflect
 
 
 class SpecialProviderExtractor:

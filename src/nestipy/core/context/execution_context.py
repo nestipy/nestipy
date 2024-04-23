@@ -2,7 +2,7 @@ from typing import Type, Callable, Union
 
 from .argument_host import ArgumentHost
 from .http_argument_host import HttpArgumentHost
-from ...common import Response, Request
+from ...common.http_ import Response, Request
 
 
 class ExecutionContext(ArgumentHost):

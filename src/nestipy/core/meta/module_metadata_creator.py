@@ -1,9 +1,8 @@
 from typing import Type
 
-from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.reflect import Reflect
+from nestipy_metadata import ClassMetadata, ModuleMetadata, Reflect
+
 from .metadata_creator import MetadataCreator
-from ...common.metadata.class_ import ClassMetadata
 
 
 class ModuleMetadataCreator(MetadataCreator):

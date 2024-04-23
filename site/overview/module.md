@@ -5,8 +5,8 @@ For **Nestipy**, module works like **NestJs** module . Only module **re-exportin
 Following is an example of a dynamic module definition for a `DatabaseModule`:
 
 ```python
-from nestipy.common import Module
-from nestipy.common.dynamic_module import DynamicModule
+from nestipy_decorator import Module
+from nestipy_dynamic_module import DynamicModule
 
 
 @Module()
@@ -25,11 +25,12 @@ class DatabaseModule:
 If we want to use params from `@Module()` decorator in dynamic module, we must do like the following example.
 
 ```python
-from nestipy.common import Module, Reflect, ModuleMetadata, ModuleProviderDict
-from nestipy.common.dynamic_module import DynamicModule
-from nestipy.common.metadata.provider_token import ProviderToken
-from nestipy.types_ import Inject
 from dataclasses import dataclass
+
+from nestipy_decorator import Module
+from nestipy_dynamic_module import DynamicModule
+from nestipy_ioc import ModuleProviderDict, Inject
+from nestipy_metadata import Reflect, ModuleMetadata
 
 
 @dataclass
@@ -44,7 +45,7 @@ DATABASE_OPTION = 'DATABASE_OPTION'
     is_global=True
 )
 class DatabaseModule:
-    option: Inject[ProviderToken(DATABASE_OPTION)]  # this will be an instance of DatabaseOption 
+    option: Inject[DATABASE_OPTION]  # this will be an instance of DatabaseOption 
 
     @classmethod
     def register(cls, option: DatabaseOption) -> DynamicModule:
@@ -67,8 +68,8 @@ This is an example.
 ```python
 from dataclasses import dataclass
 
-from nestipy.common.dynamic_module.builder import ConfigurableModuleBuilder
-from nestipy.common.metadata.provider_token import ProviderToken
+from nestipy_dynamic_module import ConfigurableModuleBuilder
+
 from nestipy.types_ import Inject
 
 
@@ -77,11 +78,12 @@ class DatabaseOption:
     option: str = ''
 
 
-ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[DatabaseOption]().set_method('for_root').build()
+ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[DatabaseOption]().set_method(
+    'for_root').build()
 
 
 class DatabaseModule(ConfigurableModuleClass):
-    option: Inject[ProviderToken(DATABASE_MODULE_OPTION_TOKEN)]
+    option: Inject[DATABASE_MODULE_OPTION_TOKEN]
 
 ```
 
@@ -93,8 +95,8 @@ For a lifecycle hooks, we need to extends `NestipyModule`.
 ```python
 from dataclasses import dataclass
 
-from nestipy.common.dynamic_module.builder import ConfigurableModuleBuilder
-from nestipy.common.metadata.provider_token import ProviderToken
+from nestipy_dynamic_module import ConfigurableModuleBuilder
+
 from nestipy.common.module import NestipyModule
 from nestipy.types_ import Inject
 
@@ -109,7 +111,7 @@ ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilde
 
 
 class DatabaseModule(ConfigurableModuleClass, NestipyModule):
-    option: Inject[ProviderToken(DATABASE_MODULE_OPTION_TOKEN)]
+    option: Inject[DATABASE_MODULE_OPTION_TOKEN]
 
     async def on_startup(self):
         pass
@@ -119,5 +121,6 @@ class DatabaseModule(ConfigurableModuleClass, NestipyModule):
 
 
 ```
+
 <br/>
 <br/>

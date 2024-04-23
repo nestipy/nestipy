@@ -5,6 +5,8 @@ import ujson
 from starlette.datastructures import UploadFile
 from starlette.requests import Request as StarletteRequest
 
+from .multipart import parse_content_header, parse_multipart_form, parse_url_encoded_form_data
+
 
 class Request:
     def __init__(self, scope: dict, receive: Callable, send: Callable) -> None:
@@ -21,6 +23,7 @@ class Request:
         self._json = None
         self._files = None
         self._user = None
+        self._form = None
         if scope["type"] == "http":
             self.starlette_request = StarletteRequest(scope, receive, send)
 
@@ -98,5 +101,32 @@ class Request:
     async def json(self) -> dict:
         if self._json is None:
             body = await self.body()
-            self._json = ujson.loads('{}' if body == '' else body)
+            try:
+                self._json = ujson.loads('{}' if body == '' else body)
+            except ujson.JSONDecodeError:
+                self._json = {}
         return self._json
+
+    @property
+    def content_type(self) -> tuple[str, dict[str, str]]:
+        _content_type = self.headers.get("content-type", "")
+        return parse_content_header(
+            _content_type
+        )
+
+    async def form(self) -> dict:
+        if self._form is None:
+            content_type, options = self.content_type
+            if content_type == "multipart/form-data":
+                self._form = parse_multipart_form(
+                    body=(await self.body()).encode(),
+                    boundary=options.get("boundary", "").encode(),
+                    multipart_form_part_limit=1000,
+                )
+            elif content_type == "application/x-www-form-urlencoded":
+                self._form = parse_url_encoded_form_data(
+                    (await self.body()).encode(),
+                )
+            else:
+                self._form = None
+        return self._form

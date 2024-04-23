@@ -1,5 +1,6 @@
+from nestipy_decorator import Module, Injectable
+
 from nestipy.common import Response, Request
-from nestipy.common.decorator import Module, Injectable
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.middleware.consumer import MiddlewareConsumer
 from nestipy.common.module import NestipyModule

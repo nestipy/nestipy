@@ -1,13 +1,16 @@
-from typing import Union, Type, Callable
+from typing import Union, Type, Callable, TYPE_CHECKING
+
+from nestipy_decorator import Injectable
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import ClassMetadata, SetMetadata, Reflect
 
 from .interface import NestipyInterceptor
-from .. import Injectable, Reflect
 from ..helpers import SpecialProviderExtractor
-from ..metadata.decorator import SetMetadata
 from ...core.constant import APP_INTERCEPTOR
 from ...core.context.execution_context import ExecutionContext
-from ...core.ioc.nestipy_container import NestipyContainer
-from ...types_ import NextFn
+
+if TYPE_CHECKING:
+    from ...types_.handler import NextFn
 
 INTERCEPTOR_KEY = '__interceptor__'
 
@@ -28,9 +31,9 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
     def __init__(self):
         self.container = NestipyContainer.get_instance()
 
-    async def intercept(self, context: ExecutionContext, next_fn: NextFn):
+    async def intercept(self, context: ExecutionContext, next_fn: "NextFn"):
         handler_module_class = context.get_module()
-        class_handler = context.get_class()
+        handler_class = context.get_class()
         handler = context.get_handler()
 
         global_interceptors = context.get_adapter().get_global_interceptors()
@@ -39,9 +42,19 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
             NestipyInterceptor,
             APP_INTERCEPTOR
         )
-        class_interceptors = Reflect.get_metadata(class_handler, INTERCEPTOR_KEY, [])
+        class_interceptors = Reflect.get_metadata(handler_class, INTERCEPTOR_KEY, [])
         handler_interceptors = Reflect.get_metadata(handler, INTERCEPTOR_KEY, [])
-        for interceptor in global_interceptors + module_interceptors + class_interceptors + handler_interceptors:
+        all_interceptors = global_interceptors + class_interceptors + handler_interceptors
+        # setup dependency as the same as the container
+        for intercept in all_interceptors:
+            if issubclass(intercept, NestipyInterceptor):
+                # Put dependency
+                services = self.container.get_all_services()
+                Reflect.set_metadata(
+                    intercept, ClassMetadata.Metadata,
+                    ClassMetadata(handler_class, global_providers=services)
+                )
+        for interceptor in all_interceptors:
             instance: NestipyInterceptor = await self.container.get(interceptor)
             result = await instance.intercept(context, next_fn)
             if not result:

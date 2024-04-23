@@ -1,6 +1,6 @@
 import typing
 
-from nestipy.common.metadata.reflect import Reflect
+from nestipy_metadata import Reflect
 
 
 class OpenApiExplorer:
