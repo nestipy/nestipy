@@ -1,5 +1,5 @@
 <p align="center">
-  <a target="_blank"><img src="https://raw.githubusercontent.com/tsiresymila1/nestipy/main/nestipy.png" width="200" alt="Nestipy Logo" /></a></p>
+  <a target="_blank"><img src="https://raw.githubusercontent.com/nestipy/nestipy/release-v1/nestipy.png" width="200" alt="Nestipy Logo" /></a></p>
 <p align="center">
     <a href="https://pypi.org/project/nestipy">
         <img src="https://img.shields.io/pypi/v/nestipy?color=%2334D058&label=pypi%20package" alt="Version">
