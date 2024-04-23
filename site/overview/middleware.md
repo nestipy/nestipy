@@ -1,7 +1,9 @@
 Nestipy define middleware like NestJs do.
 
 ```python
-from nestipy.common import Injectable, Request, Response
+from nestipy_decorator import Injectable
+
+from nestipy.common import Request, Response
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.types_ import NextFn
 
@@ -12,7 +14,9 @@ class LoggerMiddleware(NestipyMiddleware):
         print('Requesting ....')
         await next_fn()
 ```
+
 ### Dependency injection
+
 Nestipy middleware support dependency injection
 
 ### Applying middleware#
@@ -66,6 +70,7 @@ And use it within the AppModule:
 ```python
 consumer.apply(logger).for_route(CatsController).excludes([])
 ```
+
 ## Global middleware
 
 ```python

@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import Union, Type, Any
 
-from nestipy.common.decorator import Injectable
+from nestipy_decorator import Injectable
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import SetMetadata, Reflect, ClassMetadata
+
 from nestipy.common.exception.http import HttpException
 from nestipy.common.helpers import SpecialProviderExtractor
-from nestipy.common.metadata.decorator import SetMetadata
-from nestipy.common.metadata.reflect import Reflect
 from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
-from nestipy.core.ioc.nestipy_container import NestipyContainer
 
 EXCEPTION_FILTER_KEY = '__exception_filter__'
 EXCEPTION_TYPE_KEY = '__exception_filter_type__'
@@ -54,7 +54,17 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         )
         class_filters = Reflect.get_metadata(handler_class, EXCEPTION_FILTER_KEY, [])
         handler_filters = Reflect.get_metadata(handler, EXCEPTION_FILTER_KEY, [])
-        for ex_filter in global_filters + module_filters + class_filters + handler_filters:
+        all_filters = global_filters + module_filters + class_filters + handler_filters
+        # setup dependency as the same as the container
+        for fit in all_filters:
+            if issubclass(fit, ExceptionFilter):
+                # Put dependency
+                services = self.container.get_all_services()
+                Reflect.set_metadata(
+                    fit, ClassMetadata.Metadata,
+                    ClassMetadata(handler_class, global_providers=services)
+                )
+        for ex_filter in all_filters:
             result = await self._recursive_apply_filter(ex_filter, exception)
             if not result:
                 continue

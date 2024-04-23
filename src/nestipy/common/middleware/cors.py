@@ -1,8 +1,9 @@
 from typing import Type
 
+from nestipy_decorator import Injectable
+
 from nestipy.types_ import NextFn
 from .interface import NestipyMiddleware
-from ..decorator import Injectable
 from ..http_ import Request, Response
 
 

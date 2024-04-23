@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Type, Union
 
+from nestipy_dynamic_module import DynamicModule
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import ClassMetadata, ModuleMetadata, Reflect
+
 from nestipy.common.utils import uniq
-from nestipy.common.dynamic_module.builder import DynamicModule
-from nestipy.common.metadata.class_ import ClassMetadata
-from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.reflect import Reflect
-from nestipy.core.ioc.nestipy_container import NestipyContainer
 
 
 class MetadataCreator(ABC):
@@ -79,7 +78,19 @@ class MetadataCreator(ABC):
                     not_global_module.append(im)
                 else:
                     self._type()(im, global_data=self.global_data).create()
-                    self.global_data = self.global_data + Reflect.get_metadata(im, ModuleMetadata.Exports, [])
+                    import_providers_form_exports = []
+                    for export in Reflect.get_metadata(im, ModuleMetadata.Exports, []):
+                        # For module re-exporting
+                        is_module: bool = Reflect.get_metadata(export, ModuleMetadata.Module, False)
+                        if is_module:
+                            import_providers_form_exports = import_providers_form_exports + Reflect.get_metadata(
+                                export,
+                                ModuleMetadata.Providers,
+                                []
+                            )
+                        else:
+                            import_providers_form_exports.append(export)
+                    self.global_data = self.global_data + import_providers_form_exports
 
             # compile non global after
             for im in not_global_module:

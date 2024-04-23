@@ -1,7 +1,10 @@
 import inspect
-from typing import Callable, Type, Union
+from typing import Type, Union
 
-from nestipy.common import Injectable, Reflect
+from nestipy_decorator import Injectable
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import ClassMetadata, Reflect
+
 from nestipy.core.context.execution_context import ExecutionContext
 from .can_activate import CanActivate
 from .meta import GuardMetaKey
@@ -13,7 +16,6 @@ from ...core.constant import APP_GUARD
 class GuardProcessor(SpecialProviderExtractor):
 
     def __init__(self):
-        from nestipy.core.ioc.nestipy_container import NestipyContainer
         self.container = NestipyContainer.get_instance()
 
     async def process(self, context: ExecutionContext) -> tuple[bool, Union[Type, None]]:
@@ -32,10 +34,16 @@ class GuardProcessor(SpecialProviderExtractor):
         handler_guards = Reflect.get_metadata(handler, GuardMetaKey.guards, [])
 
         for g in global_guards + module_guards + handler_class_guards + handler_guards:
-            if issubclass(g, CanActivate):
+            if inspect.isclass(g) and issubclass(g, CanActivate):
+                services = self.container.get_all_services()
+                # Put dependency
+                Reflect.set_metadata(
+                    g, ClassMetadata.Metadata,
+                    ClassMetadata(handler_class, global_providers=services)
+                )
                 #  load instance from container
                 instance: CanActivate = await self.container.get(g)
-                callback: Callable = instance.can_activate
+                callback = instance.can_activate
                 # check if can_activate is coroutine
                 if inspect.iscoroutinefunction(callback):
                     can_activate: bool = await callback(context)

@@ -1,9 +1,9 @@
 from typing import Type, Union
 
-from nestipy.common import Reflect
-from nestipy.common.metadata.class_ import ClassMetadata
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import ClassMetadata, Reflect
+
 from nestipy.common.middleware.consumer import MiddlewareProxy
-from nestipy.core.ioc.nestipy_container import NestipyContainer
 
 
 class MiddlewareContainer:
@@ -22,9 +22,10 @@ class MiddlewareContainer:
 
     def add_singleton(self, proxy, module: Union[Type, object] = None):
         if module is not None:
-            Reflect.set_metadata(proxy.middleware, ClassMetadata.Metadata, ClassMetadata(
-                module=module, global_providers=[]
-            ))
+            for m in list(proxy.middlewares):
+                Reflect.set_metadata(m, ClassMetadata.Metadata, ClassMetadata(
+                    module=module, global_providers=[]
+                ))
         self._middlewares.append(proxy)
 
     def all(self) -> list[MiddlewareProxy]:

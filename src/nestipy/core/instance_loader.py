@@ -2,11 +2,10 @@ import enum
 import typing
 from typing import Type, Any
 
-from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.reflect import Reflect
-from nestipy.common.provider import ModuleProviderDict
-from .ioc.nestipy_container import NestipyContainer
-from ..common.dynamic_module.builder import DynamicModule
+from nestipy_dynamic_module import DynamicModule
+from nestipy_ioc import NestipyContainer, ModuleProviderDict
+from nestipy_metadata import ModuleMetadata, Reflect
+
 from ..common.middleware.consumer import MiddlewareConsumer
 from ..common.module import NestipyModule
 from ..graphql.graphql_module import GraphqlModule

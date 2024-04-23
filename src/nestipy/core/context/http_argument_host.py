@@ -1,5 +1,5 @@
 from .argument_host import ArgumentHost
-from ...common import Response, Request
+from ...common.http_ import Response, Request
 
 
 class HttpArgumentHost(ArgumentHost):

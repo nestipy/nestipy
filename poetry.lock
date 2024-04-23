@@ -421,13 +421,13 @@ full = ["click (>=8.1.3,<8.2.0)", "httpx (<1)", "jinja2 (>=3.1.2,<3.2.0)", "rich
 
 [[package]]
 name = "exceptiongroup"
-version = "1.2.0"
+version = "1.2.1"
 description = "Backport of PEP 654 (exception groups)"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "exceptiongroup-1.2.0-py3-none-any.whl", hash = "sha256:4bfd3996ac73b41e9b9628b04e079f193850720ea5945fc96a08633c66912f14"},
-    {file = "exceptiongroup-1.2.0.tar.gz", hash = "sha256:91f5c769735f051a4290d52edd0858999b57e5876e9f85937691bd4c9fa3ed68"},
+    {file = "exceptiongroup-1.2.1-py3-none-any.whl", hash = "sha256:5258b9ed329c5bbdd31a309f53cbfb0b155341807f6ff7606a1e801a891b29ad"},
+    {file = "exceptiongroup-1.2.1.tar.gz", hash = "sha256:a4785e48b045528f5bfe627b6ad554ff32def154f42372786903b7abcfe1aa16"},
 ]
 
 [package.extras]
@@ -449,13 +449,13 @@ python-dateutil = ">=2.4"
 
 [[package]]
 name = "fastapi"
-version = "0.110.1"
+version = "0.110.2"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "fastapi-0.110.1-py3-none-any.whl", hash = "sha256:5df913203c482f820d31f48e635e022f8cbfe7350e4830ef05a3163925b1addc"},
-    {file = "fastapi-0.110.1.tar.gz", hash = "sha256:6feac43ec359dfe4f45b2c18ec8c94edb8dc2dfc461d417d9e626590c071baad"},
+    {file = "fastapi-0.110.2-py3-none-any.whl", hash = "sha256:239403f2c0a3dda07a9420f95157a7f014ddb2b770acdbc984f9bdf3ead7afdb"},
+    {file = "fastapi-0.110.2.tar.gz", hash = "sha256:b53d673652da3b65e8cd787ad214ec0fe303cad00d2b529b86ce7db13f17518d"},
 ]
 
 [package.dependencies]
@@ -1020,6 +1020,62 @@ files = [
 ]
 
 [[package]]
+name = "nestipy-decorator"
+version = "0.1.3"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "nestipy_decorator-0.1.3-py3-none-any.whl", hash = "sha256:c98b7cfb344f41da710ac69c43cddd31a404e5ecf343a496e54a97baf8816c1b"},
+    {file = "nestipy_decorator-0.1.3.tar.gz", hash = "sha256:6a9fb7e4f1becba8df9302177c0bedf3cb47bfd075b8e886483aa833061015bf"},
+]
+
+[package.dependencies]
+nestipy-ioc = ">=0.1.10,<0.2.0"
+nestipy-metadata = ">=0.1.0,<0.2.0"
+
+[[package]]
+name = "nestipy-dynamic-module"
+version = "0.1.1"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "nestipy_dynamic_module-0.1.1-py3-none-any.whl", hash = "sha256:bc41dc897654d80327649585796c223f17983233e757a6e68d20cea437caf646"},
+    {file = "nestipy_dynamic_module-0.1.1.tar.gz", hash = "sha256:843b6588747b87607c222fb758569230bebb3120183110565741ac7503f3e678"},
+]
+
+[package.dependencies]
+nestipy-ioc = ">=0.1.0,<0.2.0"
+nestipy-metadata = ">=0.1.0,<0.2.0"
+
+[[package]]
+name = "nestipy-ioc"
+version = "0.1.21"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "nestipy_ioc-0.1.21-py3-none-any.whl", hash = "sha256:ab012fa845f5262ea99adb137c22a48217e0de965006570f9c2a7373c6937d21"},
+    {file = "nestipy_ioc-0.1.21.tar.gz", hash = "sha256:5d231703ccabb4921601d9c421bd44cdbd372d2be804951517ae341bc99943e4"},
+]
+
+[package.dependencies]
+nestipy-metadata = ">=0.1.0,<0.2.0"
+pydantic = ">=2.7.0,<3.0.0"
+
+[[package]]
+name = "nestipy-metadata"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "nestipy_metadata-0.1.0-py3-none-any.whl", hash = "sha256:66def338baca9a64ac58d5007778eb52111b22285cd8fc9df4938b36819554d4"},
+    {file = "nestipy_metadata-0.1.0.tar.gz", hash = "sha256:7ffd54e640f621f66c7638f68f1ac55695200ac2ff26e05d62183980833bb910"},
+]
+
+[[package]]
 name = "pastel"
 version = "0.2.1"
 description = "Bring colors to your terminal."
@@ -1046,12 +1102,12 @@ six = "*"
 
 [[package]]
 name = "peewee"
-version = "3.17.1"
+version = "3.17.3"
 description = "a little orm"
 optional = false
 python-versions = "*"
 files = [
-    {file = "peewee-3.17.1.tar.gz", hash = "sha256:e009ac4227c4fdc0058a56e822ad5987684f0a1fbb20fed577200785102581c3"},
+    {file = "peewee-3.17.3.tar.gz", hash = "sha256:ef15f90b628e41a584be8306cdc3243c51f73ce88b06154d9572f6d0284a0169"},
 ]
 
 [[package]]
@@ -2093,4 +2149,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "73664271fb5a877edc23ef2f4d000579b123cd841b9bac2500842eea2b3a3bc2"
+content-hash = "953a92a690cd8f3964ac2961c649e8aaa8bdda987de27bd95ad290223e893458"

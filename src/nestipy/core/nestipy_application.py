@@ -4,31 +4,29 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any
 
+from nestipy_dynamic_module import DynamicModule
+from nestipy_ioc import NestipyContainer, ModuleProviderDict
+from nestipy_metadata import ModuleMetadata, Reflect
 from openapidocs.v3 import PathItem
 
-from nestipy.common.dynamic_module.builder import DynamicModule
-from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.reflect import Reflect
+from nestipy.common import CanActivate
+from nestipy.common.exception.filter import ExceptionFilter
+from nestipy.common.http_ import Response, Request
+from nestipy.common.interceptor import NestipyInterceptor
+from nestipy.common.middleware import NestipyMiddleware
+from nestipy.common.middleware.consumer import MiddlewareProxy
+from nestipy.common.middleware.container import MiddlewareContainer
+from nestipy.common.template import TEMPLATE_ENGINE_KEY
+from nestipy.common.template import TemplateEngine, MinimalJinjaTemplateEngine
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
-from .ioc.middleware_container import MiddlewareContainer
-from .ioc.nestipy_container import NestipyContainer
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
 from .router.router_proxy import RouterProxy
-from ..common import CanActivate, ModuleProviderDict
-from ..common.exception.filter import ExceptionFilter
-from ..common.http_ import Response, Request
-from ..common.interceptor import NestipyInterceptor
-from ..common.metadata.provider_token import ProviderToken
-from ..common.middleware import NestipyMiddleware
-from ..common.middleware.consumer import MiddlewareProxy
-from ..common.template import TEMPLATE_ENGINE_KEY
-from ..common.template import TemplateEngine, MinimalJinjaTemplateEngine
 from ..graphql.graphql_proxy import GraphqlProxy
 from ..types_ import NextFn
 from ..websocket.adapter import IoAdapter
@@ -65,7 +63,7 @@ class NestipyApplication:
         return callback
 
     @classmethod
-    async def get(cls, key: Union[Type, ProviderToken]):
+    async def get(cls, key: Union[Type, str]):
         return NestipyContainer.get_instance().get(key)
 
     def process_config(self, config: NestipyApplicationConfig):
@@ -143,6 +141,7 @@ class NestipyApplication:
             if issubclass(m, NestipyMiddleware) or callable(m):
                 proxy = MiddlewareProxy(m)
                 self._middleware_container.add_singleton(proxy)
+        self._add_root_module_provider(*middleware)
 
     def enable_cors(self):
         self._http_adapter.enable_cors()
@@ -180,12 +179,15 @@ class NestipyApplication:
 
     def use_global_interceptors(self, *interceptors: Union[Type[NestipyInterceptor], NestipyInterceptor]):
         self._http_adapter.add_global_interceptors(*interceptors)
+        self._add_root_module_provider(*interceptors)
 
     def use_global_filters(self, *filters: Union[Type[ExceptionFilter], ExceptionFilter]):
         self._http_adapter.add_global_filters(*filters)
+        self._add_root_module_provider(*filters)
 
-    def use_global_guards(self, *guards: Union[Type[CanActivate], CanActivate]):
+    def use_global_guards(self, *guards: Union[Type, CanActivate]):
         self._http_adapter.add_global_guards(*guards)
+        # self._add_root_module_provider(*guards)
 
     def _add_root_module_provider(self, *providers: Union[ModuleProviderDict, Type]):
         root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])

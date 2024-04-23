@@ -1,7 +1,7 @@
 from inspect import getmembers, isfunction
 from typing import Union, Type
 
-from nestipy.common import ModuleMetadata, Reflect
+from nestipy_metadata import ModuleMetadata, Reflect
 from nestipy.graphql.meta import NestipyGraphqlKey
 
 

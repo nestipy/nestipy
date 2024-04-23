@@ -1,10 +1,9 @@
 import dataclasses
 from typing import Literal
 
-from nestipy.common import Module
-from nestipy.common.dynamic_module.builder import ConfigurableModuleBuilder
-from nestipy.common.metadata.provider_token import ProviderToken
-from nestipy.types_ import Inject
+from nestipy_decorator import Module
+from nestipy_dynamic_module import ConfigurableModuleBuilder
+from nestipy_ioc import Inject
 
 
 @dataclasses.dataclass
@@ -19,4 +18,4 @@ ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[
 
 @Module()
 class GraphqlModule(ConfigurableModuleClass):
-    config: Inject[ProviderToken(CONFIG_MODULE_OPTION_TOKEN)]
+    config: Inject[CONFIG_MODULE_OPTION_TOKEN]

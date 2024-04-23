@@ -1,14 +1,13 @@
 import dataclasses
 from typing import Union, Optional, Any, Type
 
+from nestipy_metadata import SetMetadata
 from openapidocs.v3 import RequestBody, Response, Parameter
 from openapidocs.v3 import SecurityRequirement, MediaType, Schema
 from pydantic import TypeAdapter, BaseModel
 
-from nestipy.common.metadata.decorator import SetMetadata
 
-
-def ApiBody(body: Union[BaseModel, Type] = None):
+def ApiBody(body: Union[BaseModel, Type] = None, consumer: str = 'application/json'):
     content: dict = {}
     if dataclasses.is_dataclass(body):
         content: dict = TypeAdapter(body).json_schema()
@@ -16,7 +15,7 @@ def ApiBody(body: Union[BaseModel, Type] = None):
         content: dict = body.model_json_schema()
     body = RequestBody(
         content={
-            body.__name__ if body is not None else 'Data': MediaType(
+            consumer: MediaType(
                 schema=Schema(**content)
             )
         },

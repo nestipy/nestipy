@@ -1,9 +1,8 @@
-from nestipy.common.decorator import Injectable
-from nestipy.common.metadata.provider_token import ProviderToken
-from nestipy.types_ import Inject
+from nestipy_decorator import Injectable
+from nestipy_ioc import Inject
 
 
 @Injectable()
 class AppProvider:
-    tes: Inject[ProviderToken('TEST')]
+    tes: Inject['TEST']
     pass

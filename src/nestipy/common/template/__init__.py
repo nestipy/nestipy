@@ -1,10 +1,9 @@
 from typing import Union, Callable, Any, TYPE_CHECKING
 
+from nestipy_metadata import Reflect
+
 from .engine import TemplateEngine
 from .minimal_jinja import MinimalJinjaTemplateEngine
-from .. import Reflect
-from ..exception.http import HttpException
-from ..exception.status import HttpStatus
 
 if TYPE_CHECKING:
     from ...core.adapter.http_adapter import HttpAdapter

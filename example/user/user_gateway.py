@@ -1,6 +1,7 @@
 from typing import Any
 
-from nestipy.types_.dependency import SocketServer, SocketClient, SocketData
+from nestipy_ioc import SocketServer, SocketClient, SocketData
+
 from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage
 
 

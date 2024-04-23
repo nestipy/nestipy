@@ -1,15 +1,16 @@
 from typing import Union, Type, Callable
 
+from nestipy_ioc import NestipyContainer
+from nestipy_ioc import NestipyContextContainer
+from nestipy_metadata import NestipyContextProperty
+
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
 from ..common.guards.processor import GuardProcessor
-from ..common.metadata.container import NestipyContainerKey
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
-from ..core.ioc.nestipy_container import NestipyContainer
-from ..core.ioc.nestipy_context_container import NestipyContextContainer
 
 
 class GraphqlProxy:
@@ -42,7 +43,7 @@ class GraphqlProxy:
 
         async def graphql_handler(*_args, **kwargs):
             context_container = NestipyContextContainer.get_instance()
-            context_container.set_value(NestipyContainerKey.args, kwargs)
+            context_container.set_value(NestipyContextProperty.args, kwargs)
             try:
                 # TODO: Refactor with routerProxy
                 # create execution context
@@ -51,10 +52,10 @@ class GraphqlProxy:
                     module_ref,
                     resolver,
                     getattr(resolver, method_name),
-                    context_container.get_value(NestipyContainerKey.request),
-                    context_container.get_value(NestipyContainerKey.response)
+                    context_container.get_value(NestipyContextProperty.request),
+                    context_container.get_value(NestipyContextProperty.response)
                 )
-                context_container.set_value(NestipyContainerKey.execution_context, execution_context)
+                context_container.set_value(NestipyContextProperty.execution_context, execution_context)
                 #  apply guards
                 guard_processor: GuardProcessor = await self.container.get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context)

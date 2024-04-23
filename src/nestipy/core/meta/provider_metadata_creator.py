@@ -1,7 +1,7 @@
 from typing import Type
 
-from nestipy.common.metadata.module import ModuleMetadata
-from nestipy.common.metadata.reflect import Reflect
+from nestipy_metadata import ModuleMetadata, Reflect
+
 from .metadata_creator import MetadataCreator
 
 
