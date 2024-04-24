@@ -7,7 +7,7 @@ Let's create a example of service.
 ```python
 from typing import Any
 
-from nestipy.common.decorator import Injectable
+from nestipy.common import Injectable
 
 
 @Injectable()
@@ -27,8 +27,9 @@ This is how we use it inside controller.
 
 from dataclasses import dataclass
 
+from nestipy_ioc import Inject, Body
+
 from nestipy.common import Controller, Post, Get
-from nestipy.types_ import Inject, Body
 from .cats_service import CatsService
 
 

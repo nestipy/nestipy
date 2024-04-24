@@ -5,7 +5,7 @@ For **Nestipy**, module works like **NestJs** module . Only module **re-exportin
 Following is an example of a dynamic module definition for a `DatabaseModule`:
 
 ```python
-from nestipy.common.decorator import Module
+from nestipy.common import Module
 from nestipy_dynamic_module import DynamicModule
 
 
@@ -27,10 +27,11 @@ If we want to use params from `@Module()` decorator in dynamic module, we must d
 ```python
 from dataclasses import dataclass
 
-from nestipy.common.decorator import Module
 from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import ModuleProviderDict, Inject
+from nestipy_ioc import Inject
 from nestipy_metadata import Reflect, ModuleMetadata
+
+from nestipy.common import Module, ModuleProviderDict
 
 
 @dataclass
@@ -69,8 +70,7 @@ This is an example.
 from dataclasses import dataclass
 
 from nestipy_dynamic_module import ConfigurableModuleBuilder
-
-from nestipy.types_ import Inject
+from nestipy_ioc import Inject
 
 
 @dataclass
@@ -96,9 +96,8 @@ For a lifecycle hooks, we need to extends `NestipyModule`.
 from dataclasses import dataclass
 
 from nestipy_dynamic_module import ConfigurableModuleBuilder
-
 from nestipy_dynamic_module import NestipyModule
-from nestipy.types_ import Inject
+from nestipy_ioc import Inject
 
 
 @dataclass

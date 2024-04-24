@@ -6,7 +6,7 @@ from os import path, getcwd
 from typing import Union
 
 from dotenv import dotenv_values
-from nestipy.common.decorator import Module, Injectable
+from nestipy.common import Module, Injectable
 from nestipy_dynamic_module import ConfigurableModuleBuilder
 from nestipy_ioc import Inject
 
@@ -45,7 +45,7 @@ class ConfigModule(ConfigurableModuleClass):
 So, let's view how to use it.
 
 ```python
-from nestipy.common.decorator import Module
+from nestipy.common import Module
 
 
 @Module(
@@ -62,8 +62,9 @@ class AppModule:
 Now, we can use `ConfigModule` in controller or a service provider by injecting it.
 
 ```python
-from nestipy.common.decorator import Controller
-from nestipy.types_ import Inject
+from nestipy_ioc import Inject
+
+from nestipy.common import Controller
 
 
 @Controller('cats')
@@ -88,10 +89,11 @@ Using it inside async factory.
 ```python
 from dataclasses import dataclass
 
-from nestipy.common import Module, ProviderToken
-from nestipy.common.config_module import ConfigurableModuleBuilder
-from nestipy_dynamic_module import NestipyModule
-from nestipy.types_ import Inject
+from nestipy_dynamic_module import ConfigurableModuleBuilder, NestipyModule
+from nestipy_ioc import Inject
+
+from nestipy.common import ConfigModule, ConfigService
+from nestipy.common import Module
 
 
 @dataclass
@@ -108,7 +110,7 @@ ConfigurableModuleClass, MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[Databas
 
 @Module()
 class DatabaseModule(ConfigurableModuleClass, NestipyModule):
-    option: Inject[ProviderToken(MODULE_OPTION_TOKEN)]
+    option: Inject[MODULE_OPTION_TOKEN]
 
     def on_startup(self):
         # start connection to database by using option

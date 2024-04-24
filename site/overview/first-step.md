@@ -26,7 +26,7 @@ The main.py file contains an instance of application and bootstrapping it with u
 
 ```python
 import uvicorn
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core import NestipyFactory
 
 from app_module import AppModule
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 In essence, Nestipy can function with any ASGI framework once an adapter is developed. It inherently supports two ASGI platforms: <strong>FastAPI</strong> and <strong>BlackSheep</strong>. You have the freedom to select the one that aligns most closely with your requirements.
 By default, Nestipy use FastAPI adapter.  We can specify platform from NestipyFactory.
 ```python
-from nestipy.core.platform import NestipyFastApiApplication
+from nestipy.core import NestipyFastApiApplication
 
 app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
 
@@ -48,7 +48,7 @@ app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
 Or with blacksheep
 
 ```python
-from nestipy.core.platform import NestipyBlackSheepApplication
+from nestipy.core import NestipyBlackSheepApplication
 
 app = NestipyFactory[NestipyBlackSheepApplication].create(AppModule)
 ```
