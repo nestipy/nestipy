@@ -1,6 +1,6 @@
 from typing import Callable
 
-from nestipy.common.http_.request import Request
+from .request import Request
 
 
 class Websocket(Request):

@@ -1,12 +1,11 @@
 from typing import Union
 
-from nestipy_decorator import Controller
-from nestipy_decorator import Get, Post
 from nestipy_ioc import Req, Res, Inject
 
+from nestipy.common import Get, Post, Controller
+from nestipy.common import Request, Response
 from nestipy.common import UseGuards
-from nestipy.common.http_ import Request, Response
-from nestipy.openapi.decorator import ApiTags, ApiOkResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiBearerAuth
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiBearerAuth
 from .user_guards import TestGuard, TestGuardMethod
 from .user_service import UserService
 

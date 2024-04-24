@@ -3,7 +3,7 @@ Nestipy Interceptor must be a class that extends `NestipyInterceptor`.
 
 ```python
 from nestipy.common import Injectable
-from nestipy.common.interceptor import NestipyInterceptor
+from nestipy.core.interceptor import NestipyInterceptor
 from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.types_ import NextFn
 

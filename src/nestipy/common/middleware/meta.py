@@ -1,4 +1,4 @@
-class MiddlewareMetadataKey:
-    route = 'middleware__route__'
-    exclude = 'middleware_excludes'
+class MiddlewareKey:
+    MetaRoute = 'middleware__route__'
+    MetaExclude = 'middleware_excludes'
 

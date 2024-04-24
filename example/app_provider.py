@@ -1,5 +1,6 @@
-from nestipy_decorator import Injectable
 from nestipy_ioc import Inject
+
+from nestipy.common import Injectable
 
 
 @Injectable()

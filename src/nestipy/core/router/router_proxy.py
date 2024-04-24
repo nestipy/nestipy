@@ -9,20 +9,20 @@ from nestipy_metadata import NestipyContextProperty
 from openapidocs.v3 import Operation, PathItem
 from pydantic import BaseModel
 
+from nestipy.common.exception import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
+from nestipy.common.exception.status import HttpStatus
 from nestipy.common.http_ import Request, Response
 from nestipy.common.utils import snakecase_to_camelcase
+from nestipy.core.exception.processor import ExceptionFilterHandler
+from nestipy.core.guards import GuardProcessor
+from nestipy.core.interceptor import RequestInterceptor
+from nestipy.core.middleware import MiddlewareExecutor
+from nestipy.core.template import TemplateRendererProcessor
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
-from ...common.exception.filter import ExceptionFilterHandler
-from ...common.exception.http import HttpException
-from ...common.exception.status import HttpStatus
-from ...common.guards.processor import GuardProcessor
-from ...common.interceptor import RequestInterceptor
-from ...common.middleware.executor import MiddlewareExecutor
-from ...common.template import TemplateRendererProcessor
 
 
 class RouterProxy:
@@ -67,7 +67,7 @@ class RouterProxy:
             method_name: str
     ) -> CallableHandler:
 
-        async def request_handler(req: Request, res: Response, next_fn: NextFn):
+        async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
 
             context_container = NestipyContextContainer.get_instance()
             # setup container for query params, route params, request, response, session, etc..
@@ -149,7 +149,7 @@ class RouterProxy:
         return request_handler
 
     @classmethod
-    async def _ensure_response(cls, res: Response, result: Union[Response, str, dict, list]) -> Response:
+    async def _ensure_response(cls, res: "Response", result: Union["Response", str, dict, list]) -> "Response":
 
         if isinstance(result, (str, int, float)):
             return await res.send(content=str(result), status_code=200)

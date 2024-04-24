@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Literal
 
-from nestipy_decorator import Module
+from nestipy.common.decorator import Module
 from nestipy_dynamic_module import ConfigurableModuleBuilder
 from nestipy_ioc import Inject
 

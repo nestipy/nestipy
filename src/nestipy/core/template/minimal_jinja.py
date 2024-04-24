@@ -2,7 +2,7 @@ import os
 
 from minijinja import Environment
 
-from .engine import TemplateEngine
+from nestipy.common.template import TemplateEngine
 
 
 class MinimalJinjaTemplateEngine(TemplateEngine):

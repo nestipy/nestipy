@@ -3,9 +3,8 @@ This is a example of using exception filter with Nestipy.
 ```python
 from typing import Any
 
-from nestipy.common.exception.filter import ExceptionFilter, Catch
-from nestipy.common.exception.http import HttpException
-from nestipy.core.context.argument_host import ArgumentHost
+from nestipy.common import ExceptionFilter, Catch, HttpException
+from nestipy.core import ArgumentHost
 
 
 @Catch()
@@ -20,11 +19,8 @@ To catch specific exception we need to create class that extends `HttpException`
 import datetime
 from typing import Any
 
-from nestipy.common.exception.filter import ExceptionFilter, Catch
-from nestipy.common.exception.http import HttpException
-from nestipy.common.exception.message import HttpStatusMessages
-from nestipy.common.exception.status import HttpStatus
-from nestipy.core.context.argument_host import ArgumentHost
+from nestipy.common import ExceptionFilter, Catch, HttpStatus, HttpStatusMessages, HttpException,
+from nestipy.core import ArgumentHost
 
 
 class BadRequestException(HttpException):
@@ -52,12 +48,12 @@ Let's tie our new BadRequestExceptionFilter to the CatsController's create() met
 
 ```python
 from nestipy.common import Controller, Post
-from nestipy.common.exception.filter import UseFilters
+from nestipy.common import UseFilters
 
 
 @Controller('cats')
 class CatsController:
-    
+
     @UseFilters(BadRequestExceptionFilter)
     @Post()
     async def create(self):
@@ -65,9 +61,10 @@ class CatsController:
 ```
 
 Apply on controller.
+
 ```python
 from nestipy.common import Controller, Post
-from nestipy.common.exception.filter import UseFilters
+from nestipy.common import UseFilters
 
 
 @UseFilters(BadRequestExceptionFilter)
@@ -88,7 +85,6 @@ app = NestipyFactory.create(AppModule)
 
 app.use_global_filters(BadRequestExceptionFilter)
 ```
-
 
 Using it from provider.
 

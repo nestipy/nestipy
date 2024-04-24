@@ -1,15 +1,15 @@
 import inspect
 from typing import Type, Union
 
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 from nestipy_ioc import NestipyContainer
 from nestipy_metadata import ClassMetadata, Reflect
 
 from nestipy.core.context.execution_context import ExecutionContext
-from .can_activate import CanActivate
-from .meta import GuardMetaKey
-from ..helpers import SpecialProviderExtractor
-from ...core.constant import APP_GUARD
+from nestipy.common.guards.can_activate import CanActivate
+from nestipy.common.guards.meta import GuardKey
+from nestipy.common.helpers import SpecialProviderExtractor
+from nestipy.core.constant import APP_GUARD
 
 
 @Injectable()
@@ -30,8 +30,8 @@ class GuardProcessor(SpecialProviderExtractor):
             CanActivate,
             APP_GUARD
         )
-        handler_class_guards = Reflect.get_metadata(handler_class, GuardMetaKey.guards, [])
-        handler_guards = Reflect.get_metadata(handler, GuardMetaKey.guards, [])
+        handler_class_guards = Reflect.get_metadata(handler_class, GuardKey.Meta, [])
+        handler_guards = Reflect.get_metadata(handler, GuardKey.Meta, [])
 
         for g in global_guards + module_guards + handler_class_guards + handler_guards:
             if inspect.isclass(g) and issubclass(g, CanActivate):

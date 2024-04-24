@@ -6,9 +6,9 @@ from fastapi.responses import StreamingResponse as FStreamingResponse
 from starlette.middleware import _MiddlewareClass
 from starlette.types import ASGIApp
 
+from nestipy.common.http_ import Response
+from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from .http_adapter import HttpAdapter
-from ...common import Response
-from ...types_ import CallableHandler, MountHandler, WebsocketHandler
 
 
 class FastApiAdapter(HttpAdapter):

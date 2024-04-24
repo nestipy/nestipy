@@ -1,8 +1,8 @@
 from typing import Type, Callable, Union
 
+from nestipy.common.http_ import Response, Request
 from .argument_host import ArgumentHost
 from .http_argument_host import HttpArgumentHost
-from ...common.http_ import Response, Request
 
 
 class ExecutionContext(ArgumentHost):

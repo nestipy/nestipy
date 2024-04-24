@@ -1,6 +1,6 @@
 from typing import Type
 
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 from nestipy_metadata import SetMetadata
 
 GATEWAY_KEY = '__GATEWAY__'

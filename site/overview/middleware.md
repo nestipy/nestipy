@@ -1,10 +1,10 @@
 Nestipy define middleware like NestJs do.
 
 ```python
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 from nestipy.common import Request, Response
-from nestipy.common.middleware import NestipyMiddleware
+from nestipy.core.middleware import NestipyMiddleware
 from nestipy.types_ import NextFn
 
 
@@ -25,8 +25,8 @@ Nestipy apply middleware like the way Nestjs use. Modules that include middlewar
 
 ```python title='app_module.py'
 from nestipy.common import Module
-from nestipy.common.middleware import MiddlewareConsumer
-from nestipy.common.module import NestipyModule
+from nestipy.core.middleware import MiddlewareConsumer
+from nestipy_dynamic_module import NestipyModule
 
 
 @Module()
@@ -42,8 +42,8 @@ We can apply middleware for controller and excludes some routes.
 
 ```python title='app_module.py'
 from nestipy.common import Module
-from nestipy.common.middleware import MiddlewareConsumer
-from nestipy.common.module import NestipyModule
+from nestipy.core.middleware import MiddlewareConsumer
+from nestipy_dynamic_module import NestipyModule
 
 
 @Module()

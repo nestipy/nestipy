@@ -8,7 +8,7 @@ from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
-from ..common.guards.processor import GuardProcessor
+from nestipy.core.guards import GuardProcessor
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 

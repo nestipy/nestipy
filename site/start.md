@@ -105,7 +105,7 @@ class AppController:
 `app_service.py`
 
 ```python
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 
 @Injectable()
@@ -300,7 +300,7 @@ nestipy g service example
 `examples_service.py`
 
 ```python
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 
 @Injectable()

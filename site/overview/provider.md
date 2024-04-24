@@ -7,7 +7,7 @@ Let's create a example of service.
 ```python
 from typing import Any
 
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 
 @Injectable()

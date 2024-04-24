@@ -24,7 +24,7 @@ Now, use gateway as module provider.
 
 ```python
 
-from nestipy_decorator import Module
+from nestipy.common.decorator import Module
 
 
 @Module(
