@@ -29,7 +29,8 @@ from nestipy.common import ModuleProviderDict
 ### Non-class-based provider tokens
 
 ```python
-from nestipy.common import ModuleProviderDict, Module
+
+from nestipy.common import Module, ModuleProviderDict
 from .connection import connection
 
 

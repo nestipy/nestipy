@@ -1,10 +1,11 @@
-In simpler terms, Nestipy offers Interceptor functionality, which functions similarly to how Interceptors work in NestJs, allowing you to intercept requests.
+In simpler terms, Nestipy offers Interceptor functionality, which functions similarly to how Interceptors work in
+NestJs, allowing you to intercept requests.
 Nestipy Interceptor must be a class that extends `NestipyInterceptor`.
 
 ```python
 from nestipy.common import Injectable
-from nestipy.core.interceptor import NestipyInterceptor
-from nestipy.core.context.execution_context import ExecutionContext
+from nestipy.common import NestipyInterceptor
+from nestipy.core import ExecutionContext
 from nestipy.types_ import NextFn
 
 
@@ -16,12 +17,15 @@ class TestInterceptor(NestipyInterceptor):
 ```
 
 ### Apply interceptors
-Interceptors can be applied to controllers, specific controller methods, within modules via providers, or even globally across the application.
+
+Interceptors can be applied to controllers, specific controller methods, within modules via providers, or even globally
+across the application.
 
 ```python
 
+
 from nestipy.common import Controller, Post, UseInterceptors, Module, ModuleProviderDict
-from nestipy.core.constant import AppKey
+from nestipy.core import AppKey
 
 
 @UseInterceptors(TestInterceptor)
@@ -50,7 +54,7 @@ class AppModule:
 Globally , it works like.
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 app.use_global_interceptors(TestInterceptor)

@@ -947,7 +947,7 @@ Upon execution, a directory named <code>project-name</code> will be generated, c
 </code></pre></div>
 <p>The main.py file contains an instance of application and bootstrapping it with uvicorn.</p>
 <div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span> <span class="nn">uvicorn</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span> <span class="nn">nestipy.core.nestipy_factory</span> <span class="kn">import</span> <span class="n">NestipyFactory</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span> <span class="nn">nestipy.core</span> <span class="kn">import</span> <span class="n">NestipyFactory</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span> <span class="nn">app_module</span> <span class="kn">import</span> <span class="n">AppModule</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
@@ -959,12 +959,12 @@ Upon execution, a directory named <code>project-name</code> will be generated, c
 <h2 id="platform">Platform</h2>
 <p>In essence, Nestipy can function with any ASGI framework once an adapter is developed. It inherently supports two ASGI platforms: <strong>FastAPI</strong> and <strong>BlackSheep</strong>. You have the freedom to select the one that aligns most closely with your requirements.
 By default, Nestipy use FastAPI adapter.  We can specify platform from NestipyFactory.
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span> <span class="nn">nestipy.core.platform</span> <span class="kn">import</span> <span class="n">NestipyFastApiApplication</span>
+<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span> <span class="nn">nestipy.core</span> <span class="kn">import</span> <span class="n">NestipyFastApiApplication</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">NestipyFactory</span><span class="p">[</span><span class="n">NestipyFastApiApplication</span><span class="p">]</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">AppModule</span><span class="p">)</span>
 </code></pre></div>
 Or with blacksheep</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span> <span class="nn">nestipy.core.platform</span> <span class="kn">import</span> <span class="n">NestipyBlackSheepApplication</span>
+<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span> <span class="nn">nestipy.core</span> <span class="kn">import</span> <span class="n">NestipyBlackSheepApplication</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">NestipyFactory</span><span class="p">[</span><span class="n">NestipyBlackSheepApplication</span><span class="p">]</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">AppModule</span><span class="p">)</span>
 </code></pre></div>

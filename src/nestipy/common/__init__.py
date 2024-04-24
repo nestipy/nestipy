@@ -1,4 +1,6 @@
 # TODO: precise import
+from nestipy_ioc import ModuleProviderDict
+
 from .config_module import ConfigModule, ConfigService
 from .decorator import Module, Controller, Injectable, Route, Get, Post, Patch, Put, Delete
 from .exception import HttpException, HttpStatusMessages, HttpStatus, UseFilters, Catch, ExceptionKey, ExceptionFilter
@@ -38,5 +40,6 @@ __all__ = [
     "cors",
     "NestipyMiddleware",
     "Render",
-    "TemplateEngine"
+    "TemplateEngine",
+    "ModuleProviderDict"
 ]

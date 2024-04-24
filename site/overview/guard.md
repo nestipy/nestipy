@@ -7,10 +7,9 @@ the `CanActivate` interface.
 ```python
 from typing import Awaitable, Union
 
-from nestipy.common.decorator import Injectable
-
 from nestipy.common import CanActivate
-from nestipy.core.context.execution_context import ExecutionContext
+from nestipy.common import Injectable
+from nestipy.core import ExecutionContext
 
 
 @Injectable()
@@ -43,7 +42,7 @@ Use guard globally by provider
 
 ```python
 from nestipy.common import Module, ModuleProviderDict
-from nestipy.core.constant import AppKey
+from nestipy.core import AppKey
 
 
 @Module(
@@ -61,7 +60,7 @@ class AppModule:
 Or use guard globally in `main.py`
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 app.use_global_guards(AuthGuard)
@@ -74,11 +73,11 @@ app.use_global_guards(AuthGuard)
 import typing
 from typing import Union, Awaitable
 
-from nestipy.common.decorator import Controller, Post, Injectable
 from nestipy_metadata import SetMetadata, Reflect
 
 from nestipy.common import CanActivate, UseGuards
-from nestipy.core.context.execution_context import ExecutionContext
+from nestipy.common import Controller, Post, Injectable
+from nestipy.core import ExecutionContext
 
 ROLES = 'ROLES'
 

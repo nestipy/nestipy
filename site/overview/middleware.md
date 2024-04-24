@@ -1,10 +1,10 @@
 Nestipy define middleware like NestJs do.
 
 ```python
-from nestipy.common.decorator import Injectable
+from nestipy.common import Injectable
 
 from nestipy.common import Request, Response
-from nestipy.core.middleware import NestipyMiddleware
+from nestipy.common import NestipyMiddleware
 from nestipy.types_ import NextFn
 
 
@@ -24,9 +24,9 @@ Nestipy middleware support dependency injection
 Nestipy apply middleware like the way Nestjs use. Modules that include middleware have to implement the NestipyModule.
 
 ```python title='app_module.py'
+from nestipy_dynamic_module import NestipyModule, MiddlewareConsumer
+
 from nestipy.common import Module
-from nestipy.core.middleware import MiddlewareConsumer
-from nestipy_dynamic_module import NestipyModule
 
 
 @Module()
@@ -42,8 +42,7 @@ We can apply middleware for controller and excludes some routes.
 
 ```python title='app_module.py'
 from nestipy.common import Module
-from nestipy.core.middleware import MiddlewareConsumer
-from nestipy_dynamic_module import NestipyModule
+from nestipy_dynamic_module import NestipyModule,MiddlewareConsumer
 
 
 @Module()
@@ -74,7 +73,7 @@ consumer.apply(logger).for_route(CatsController).excludes([])
 ## Global middleware
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 app.use(logger)
