@@ -4,12 +4,11 @@ import re
 import traceback
 from typing import Callable, Any
 
-from nestipy.common import Request, Response
-from nestipy.common.middleware.container import MiddlewareContainer
+from nestipy_ioc import MiddlewareContainer, MiddlewareProxy
 
-from .consumer import MiddlewareProxy
-from .interface import NestipyMiddleware
-from ...types_ import HTTPMethod
+from nestipy.common.http_ import Request, Response
+from nestipy.common.middleware import NestipyMiddleware
+from nestipy.types_ import HTTPMethod
 
 
 def uniq_middleware_list(data: list[MiddlewareProxy]) -> list:

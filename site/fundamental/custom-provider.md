@@ -79,7 +79,7 @@ Factory can be an async function to have async provider.
 ### Inject providers
 
 ```python
-from nestipy_decorator import Controller
+from nestipy.common.decorator import Controller
 from nestipy_ioc import Inject
 
 

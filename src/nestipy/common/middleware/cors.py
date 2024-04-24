@@ -1,10 +1,10 @@
 from typing import Type
 
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 from nestipy.types_ import NextFn
-from .interface import NestipyMiddleware
-from ..http_ import Request, Response
+from nestipy.common.middleware.interface import NestipyMiddleware
+from nestipy.common.http_ import Request, Response
 
 
 def cors() -> Type:

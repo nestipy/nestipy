@@ -1,37 +1,15 @@
-from abc import ABC, abstractmethod
 from typing import Union, Type, Any
 
-from nestipy_decorator import Injectable
 from nestipy_ioc import NestipyContainer
-from nestipy_metadata import SetMetadata, Reflect, ClassMetadata
+from nestipy_metadata import Reflect, ClassMetadata
 
+from nestipy.common.decorator import Injectable
 from nestipy.common.exception.http import HttpException
+from nestipy.common.exception.interface import ExceptionFilter
+from nestipy.common.exception.meta import ExceptionKey
 from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
-
-EXCEPTION_FILTER_KEY = '__exception_filter__'
-EXCEPTION_TYPE_KEY = '__exception_filter_type__'
-
-
-def Catch(*exceptions: Union[Type["HttpException"], HttpException]):
-    decorator = SetMetadata(EXCEPTION_TYPE_KEY, list(exceptions), as_list=True)
-
-    def wrapper(cls: Type["ExceptionFilter"]):
-        cls = Injectable()(cls)
-        return decorator(cls)
-
-    return wrapper
-
-
-def UseFilters(*filters: Union[Type["ExceptionFilter"], "ExceptionFilter"]):
-    return SetMetadata(EXCEPTION_FILTER_KEY, list(filters), as_list=True)
-
-
-class ExceptionFilter(ABC):
-    @abstractmethod
-    async def catch(self, exception: HttpException, host: ArgumentHost) -> Any:
-        pass
 
 
 @Injectable()
@@ -52,8 +30,8 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
             ExceptionFilter,
             APP_FILTER
         )
-        class_filters = Reflect.get_metadata(handler_class, EXCEPTION_FILTER_KEY, [])
-        handler_filters = Reflect.get_metadata(handler, EXCEPTION_FILTER_KEY, [])
+        class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
+        handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
         all_filters = global_filters + module_filters + class_filters + handler_filters
         # setup dependency as the same as the container
         for fit in all_filters:
@@ -84,7 +62,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
             exception: HttpException,
     ):
 
-        exceptions_to_catch = Reflect.get_metadata(exception_filter, EXCEPTION_TYPE_KEY, [])
+        exceptions_to_catch = Reflect.get_metadata(exception_filter, ExceptionKey.MetaType, [])
         if len(exceptions_to_catch) == 0:
             return await self._catch(exception_filter, exception)
         else:

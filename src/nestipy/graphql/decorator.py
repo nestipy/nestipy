@@ -13,7 +13,7 @@ class GraphQlDecorator:
 
     def __call__(self, return_type: Type = None, *args, **kwargs):
         def wrapper(class_ref: Union[Type, Callable]):
-            from nestipy_decorator import Injectable
+            from nestipy.common.decorator import Injectable
             if not self.is_method:
                 class_ref = Injectable()(class_ref)
             Reflect.set_metadata(class_ref, self.graphql_type, self.graphql_value)

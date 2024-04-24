@@ -1,9 +1,8 @@
-from nestipy_decorator import Module, Injectable
+from nestipy_dynamic_module import MiddlewareConsumer, NestipyModule
 
+from nestipy.common import Module, Injectable
+from nestipy.common import NestipyMiddleware
 from nestipy.common import Response, Request
-from nestipy.common.middleware import NestipyMiddleware
-from nestipy.common.middleware.consumer import MiddlewareConsumer
-from nestipy.common.module import NestipyModule
 from nestipy.types_ import NextFn
 from .user_controller import UserController
 from .user_gateway import UserGateway

@@ -1020,44 +1020,29 @@ files = [
 ]
 
 [[package]]
-name = "nestipy-decorator"
-version = "0.1.3"
-description = ""
-optional = false
-python-versions = "<4.0,>=3.10"
-files = [
-    {file = "nestipy_decorator-0.1.3-py3-none-any.whl", hash = "sha256:c98b7cfb344f41da710ac69c43cddd31a404e5ecf343a496e54a97baf8816c1b"},
-    {file = "nestipy_decorator-0.1.3.tar.gz", hash = "sha256:6a9fb7e4f1becba8df9302177c0bedf3cb47bfd075b8e886483aa833061015bf"},
-]
-
-[package.dependencies]
-nestipy-ioc = ">=0.1.10,<0.2.0"
-nestipy-metadata = ">=0.1.0,<0.2.0"
-
-[[package]]
 name = "nestipy-dynamic-module"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "nestipy_dynamic_module-0.1.1-py3-none-any.whl", hash = "sha256:bc41dc897654d80327649585796c223f17983233e757a6e68d20cea437caf646"},
-    {file = "nestipy_dynamic_module-0.1.1.tar.gz", hash = "sha256:843b6588747b87607c222fb758569230bebb3120183110565741ac7503f3e678"},
+    {file = "nestipy_dynamic_module-0.1.2-py3-none-any.whl", hash = "sha256:2b0aa9bc09e51d81cd11e5c027ed247815289c6197e015260e5463a918e25711"},
+    {file = "nestipy_dynamic_module-0.1.2.tar.gz", hash = "sha256:56e3c06235bf78139ee003216a08913b24a8ce2a27245ee1fd6120c64e319146"},
 ]
 
 [package.dependencies]
-nestipy-ioc = ">=0.1.0,<0.2.0"
+nestipy-ioc = ">=0.1.23,<0.2.0"
 nestipy-metadata = ">=0.1.0,<0.2.0"
 
 [[package]]
 name = "nestipy-ioc"
-version = "0.1.21"
+version = "0.1.30"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "nestipy_ioc-0.1.21-py3-none-any.whl", hash = "sha256:ab012fa845f5262ea99adb137c22a48217e0de965006570f9c2a7373c6937d21"},
-    {file = "nestipy_ioc-0.1.21.tar.gz", hash = "sha256:5d231703ccabb4921601d9c421bd44cdbd372d2be804951517ae341bc99943e4"},
+    {file = "nestipy_ioc-0.1.30-py3-none-any.whl", hash = "sha256:8a2414f61a4bfc043b0d0f12bc4afe00486f6dc49456321dcdbe6a4db19ba278"},
+    {file = "nestipy_ioc-0.1.30.tar.gz", hash = "sha256:8d0dcdf46fbb1d0a7fd65bdd52dc1829fb0c323b5badb638bf3b81697d4d774e"},
 ]
 
 [package.dependencies]
@@ -2149,4 +2134,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "953a92a690cd8f3964ac2961c649e8aaa8bdda987de27bd95ad290223e893458"
+content-hash = "182c678a1df51f97b41812361a03af4f7116025efbfe218ab6aceda8d852b56c"

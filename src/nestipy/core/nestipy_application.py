@@ -2,22 +2,17 @@ import dataclasses
 import logging
 import os.path
 import traceback
-from typing import Type, Callable, Literal, Union, Any
+from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
 
 from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import NestipyContainer, ModuleProviderDict
+from nestipy_ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
 from nestipy_metadata import ModuleMetadata, Reflect
 from openapidocs.v3 import PathItem
 
-from nestipy.common import CanActivate
-from nestipy.common.exception.filter import ExceptionFilter
 from nestipy.common.http_ import Response, Request
-from nestipy.common.interceptor import NestipyInterceptor
 from nestipy.common.middleware import NestipyMiddleware
-from nestipy.common.middleware.consumer import MiddlewareProxy
-from nestipy.common.middleware.container import MiddlewareContainer
-from nestipy.common.template import TEMPLATE_ENGINE_KEY
-from nestipy.common.template import TemplateEngine, MinimalJinjaTemplateEngine
+from nestipy.common.template import TemplateEngine, TemplateKey
+from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from .adapter.fastapi_adapter import FastApiAdapter
@@ -31,6 +26,11 @@ from ..graphql.graphql_proxy import GraphqlProxy
 from ..types_ import NextFn
 from ..websocket.adapter import IoAdapter
 from ..websocket.proxy import IoSocketProxy
+
+if TYPE_CHECKING:
+    from nestipy.common.exception.interface import ExceptionFilter
+    from nestipy.common.interceptor import NestipyInterceptor
+    from nestipy.common.guards.can_activate import CanActivate
 
 
 @dataclasses.dataclass
@@ -162,30 +162,30 @@ class NestipyApplication:
 
     def set_view_engine(self, engine: Union[Literal['minijinja'], TemplateEngine]):
         if isinstance(engine, TemplateEngine):
-            self._http_adapter.set(TEMPLATE_ENGINE_KEY, engine)
+            self._http_adapter.set(TemplateKey.MetaEngine, engine)
         else:
             # TODO, add more choice template like jinja2
             pass
 
     def _setup_template_engine(self, view_dir):
         engine = MinimalJinjaTemplateEngine(template_dir=view_dir)
-        self._http_adapter.set(TEMPLATE_ENGINE_KEY, engine)
+        self._http_adapter.set(TemplateKey.MetaEngine, engine)
 
     def get_template_engine(self) -> Union[TemplateEngine, None]:
-        engine: Union[TemplateEngine, None] = self._http_adapter.get_state(TEMPLATE_ENGINE_KEY)
+        engine: Union[TemplateEngine, None] = self._http_adapter.get_state(TemplateKey.MetaEngine)
         if engine is None:
             raise Exception('Template engine not configured')
         return engine
 
-    def use_global_interceptors(self, *interceptors: Union[Type[NestipyInterceptor], NestipyInterceptor]):
+    def use_global_interceptors(self, *interceptors: Union[Type["NestipyInterceptor"], "NestipyInterceptor"]):
         self._http_adapter.add_global_interceptors(*interceptors)
         self._add_root_module_provider(*interceptors)
 
-    def use_global_filters(self, *filters: Union[Type[ExceptionFilter], ExceptionFilter]):
+    def use_global_filters(self, *filters: Union[Type['ExceptionFilter'], 'ExceptionFilter']):
         self._http_adapter.add_global_filters(*filters)
         self._add_root_module_provider(*filters)
 
-    def use_global_guards(self, *guards: Union[Type, CanActivate]):
+    def use_global_guards(self, *guards: Union[Type, "CanActivate"]):
         self._http_adapter.add_global_guards(*guards)
         # self._add_root_module_provider(*guards)
 

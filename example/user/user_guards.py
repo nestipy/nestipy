@@ -1,4 +1,4 @@
-from nestipy_decorator import Injectable
+from nestipy.common.decorator import Injectable
 
 from nestipy.common import CanActivate
 from nestipy.core.context.execution_context import ExecutionContext

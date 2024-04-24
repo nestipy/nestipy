@@ -1,5 +1,5 @@
+from nestipy.common.http_ import Response, Request
 from .argument_host import ArgumentHost
-from ...common.http_ import Response, Request
 
 
 class HttpArgumentHost(ArgumentHost):

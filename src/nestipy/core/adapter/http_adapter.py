@@ -1,17 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Any, Callable, Union, Type
+from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 
 from nestipy_metadata import SetMetadata, Reflect
 
-from nestipy.common import Websocket
-from nestipy.common.exception.filter import ExceptionFilter
 from nestipy.common.exception.http import HttpException
-from nestipy.common.guards import CanActivate
-from nestipy.common.http_ import Request, Response
-from nestipy.common.interceptor import NestipyInterceptor
-from nestipy.common.template import TEMPLATE_ENGINE_KEY
+from nestipy.common.http_ import Request, Response, Websocket
+from nestipy.common.template import TemplateKey
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
+
+if TYPE_CHECKING:
+    from nestipy.common.exception.interface import ExceptionFilter
+    from nestipy.common.guards import CanActivate
+    from nestipy.common.interceptor import NestipyInterceptor
 
 
 class HttpAdapter(ABC):
@@ -31,15 +32,15 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def use(self, callback: CallableHandler, metadata: dict) -> None:
+    def use(self, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def get(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def post(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def post(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
@@ -51,27 +52,27 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def put(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def put(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def delete(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def delete(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def patch(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def patch(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def options(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def options(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def head(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def head(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
-    def all(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def all(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
     @abstractmethod
@@ -112,19 +113,19 @@ class HttpAdapter(ABC):
         else:
             return None
 
-    def add_global_interceptors(self, *interceptors: Union[NestipyInterceptor, Type]):
+    def add_global_interceptors(self, *interceptors: Union["NestipyInterceptor", Type]):
         self._global_interceptors = self._global_interceptors + list(interceptors)
 
     def get_global_interceptors(self):
         return self._global_interceptors
 
-    def add_global_filters(self, *filters: Union[ExceptionFilter, Type]):
+    def add_global_filters(self, *filters: Union["ExceptionFilter", Type]):
         self._global_filters = self._global_filters + list(filters)
 
     def get_global_filters(self):
         return self._global_filters
 
-    def add_global_guards(self, *guards: Union[CanActivate, Type]):
+    def add_global_guards(self, *guards: Union["CanActivate", Type]):
         self._global_guards = self._global_guards + list(guards)
 
     def get_global_guards(self):
@@ -155,7 +156,7 @@ class HttpAdapter(ABC):
             self.receive,
             self.send
         )
-        res = Response(template_engine=self.get_state(TEMPLATE_ENGINE_KEY))
+        res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))
 
         async def next_fn(error: HttpException = None):
             #  catch error

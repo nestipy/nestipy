@@ -9,7 +9,7 @@ from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
 
 if TYPE_CHECKING:
-    from nestipy.common.template.engine import TemplateEngine
+    from nestipy.common.template import TemplateEngine
 
 
 class Response:

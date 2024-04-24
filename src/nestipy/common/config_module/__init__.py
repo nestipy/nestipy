@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import Literal
 
-from nestipy_decorator import Module, Injectable
+from nestipy.common.decorator import Module, Injectable
 from nestipy_dynamic_module import ConfigurableModuleBuilder
 from nestipy_ioc import ModuleProviderDict, Inject
 from nestipy_metadata import Reflect

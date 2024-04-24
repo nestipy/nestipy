@@ -6,13 +6,12 @@ Let's view how it works.
 
 import dataclasses
 
+from nestipy_ioc import Req, Res, Body
+
 from nestipy.common import Controller, Post, Get, Render
-from nestipy.common.exception.http import HttpException
-from nestipy.common.exception.message import HttpStatusMessages
-from nestipy.common.exception.status import HttpStatus
-from nestipy.common.http_ import Request, Response
-from nestipy.openapi.decorator import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth
-from nestipy.types_ import Req, Res, Body
+from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
+from nestipy.common import Request, Response
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth
 
 
 @dataclasses.dataclass

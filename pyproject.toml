@@ -32,9 +32,8 @@ strawberry-graphql = "^0.225.0"
 ujson = "^5.9.0"
 aiofile = "^3.8.8"
 nestipy-metadata = "^0.1.0"
-nestipy-decorator = "^0.1.3"
-nestipy-dynamic-module = "^0.1.1"
-nestipy-ioc = "^0.1.21"
+nestipy-dynamic-module = "^0.1.2"
+nestipy-ioc = "^0.1.30"
 
 
 [build-system]
