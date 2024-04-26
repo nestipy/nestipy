@@ -105,3 +105,4 @@ class AppModule:
 
 
 ```
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-exceptions)** for an  example.

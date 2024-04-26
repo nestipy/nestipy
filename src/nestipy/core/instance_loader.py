@@ -24,7 +24,7 @@ class InstanceLoader:
     _module_instances: list = []
     graphql_instance: GraphqlModule = None
 
-    async def create_instances(self, modules: set[Type]) -> GraphqlModule:
+    async def create_instances(self, modules: list[Type]) -> GraphqlModule:
         for module in modules:
             if isinstance(module, DynamicModule):
                 module = module.module

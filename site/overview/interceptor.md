@@ -59,6 +59,7 @@ from nestipy.core import NestipyFactory
 app = NestipyFactory.create(AppModule)
 app.use_global_interceptors(TestInterceptor)
 ```
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-interceptors)** for an  example.
 
 
 

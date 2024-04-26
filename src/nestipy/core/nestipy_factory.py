@@ -1,7 +1,7 @@
 import typing
 from typing import Type
 
-from .adapter.fastapi_adapter import FastApiAdapter
+from .adapter.blacksheep_adapter import BlackSheepAdapter
 from .nestipy_application import NestipyApplication, NestipyApplicationConfig
 
 
@@ -15,9 +15,9 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
     def create(cls, module: Type, config: NestipyApplicationConfig = None) -> NestipyApplication:
-        if getattr(cls, '__generic_type__', None) == 'NestipyFastApiApplication':
+        if getattr(cls, '__generic_type__', None) == 'NestipyBlackSheepApplication':
             if not config:
-                config = NestipyApplicationConfig(adapter=FastApiAdapter())
+                config = NestipyApplicationConfig(adapter=BlackSheepAdapter())
         application = NestipyApplication(config=config)
         application.init(module)
         return application

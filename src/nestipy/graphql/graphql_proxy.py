@@ -1,14 +1,14 @@
 from typing import Union, Type, Callable
 
+from nestipy.core.guards import GuardProcessor
+from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy_ioc import NestipyContainer
 from nestipy_ioc import NestipyContextContainer
 from nestipy_metadata import NestipyContextProperty
 
-from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
-from nestipy.core.guards import GuardProcessor
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 
@@ -20,7 +20,7 @@ class GraphqlProxy:
         self._adapter = adapter
         self.container = NestipyContainer.get_instance()
 
-    def apply_resolvers(self, graphql_module: GraphqlModule, modules: set[Union[Type, object]]):
+    def apply_resolvers(self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]):
 
         for module_ref in modules:
             query, mutation, subscription = GraphqlExplorer.explore(module_ref)
@@ -74,9 +74,10 @@ class GraphqlProxy:
         return method_name, return_type, graphql_handler,
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
+        graphql_path = f"/{option.url.strip('/')}"
         # create graphql handler but using handle of graphql_adapter
         self._adapter.mount(
-            f"/{option.url.strip('/')}",
+            graphql_path,
             self._graphql_server.create_graphql_asgi_app(
                 option=option,
                 schema=self._graphql_server.create_schema()

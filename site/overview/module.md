@@ -1,4 +1,4 @@
-For **Nestipy**, module works like **NestJs** module . Only module **re-exporting** is not yet supported.
+For **Nestipy**, module works like **NestJs** module . It support **re-exporting** as same as <b>NestJs</b>.
 
 ## Dynamic modules
 
@@ -31,7 +31,7 @@ from nestipy_dynamic_module import DynamicModule
 from nestipy_ioc import Inject
 from nestipy_metadata import Reflect, ModuleMetadata
 
-from nestipy.common import Module, ModuleProviderDict
+from nestipy.common import Module, ModuleProviderDict, Injectable
 
 
 @dataclass
@@ -42,19 +42,27 @@ class DatabaseOption:
 DATABASE_OPTION = 'DATABASE_OPTION'
 
 
+@Injectable()
+class DatabaseService:
+    option: Inject[DATABASE_OPTION]
+
+
 @Module(
-    is_global=True
+    is_global=True,
+    providers=[DatabaseService]
 )
 class DatabaseModule:
-    option: Inject[DATABASE_OPTION]  # this will be an instance of DatabaseOption 
+    # this will be an instance of DatabaseOption 
 
     @classmethod
     def register(cls, option: DatabaseOption) -> DynamicModule:
         return DynamicModule(
             module=cls,
-            providers=[ModuleProviderDict(token=DATABASE_OPTION, value=option)] + Reflect.get_metadata(cls,
-                                                                                                       ModuleMetadata.Providers,
-                                                                                                       []),
+            providers=[ModuleProviderDict(token=DATABASE_OPTION, value=option)] + Reflect.get_metadata(
+                cls,
+                ModuleMetadata.Providers,
+                []
+            ),
             controllers=[] + Reflect.get_metadata(cls, ModuleMetadata.Controllers, []),
             imports=[] + Reflect.get_metadata(cls, ModuleMetadata.Imports, []),
             exports=[] + Reflect.get_metadata(cls, ModuleMetadata.Exports, []),
@@ -62,7 +70,7 @@ class DatabaseModule:
         )
 ```
 
-To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class.
+To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class rom `nestipy_dynamic_module`.
 
 This is an example.
 

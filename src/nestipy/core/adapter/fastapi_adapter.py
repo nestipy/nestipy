@@ -3,11 +3,11 @@ import typing
 from fastapi import Response as FResponse, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
+from nestipy.common.http_ import Response
+from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from starlette.middleware import _MiddlewareClass
 from starlette.types import ASGIApp
 
-from nestipy.common.http_ import Response
-from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from .http_adapter import HttpAdapter
 
 
@@ -21,6 +21,9 @@ class FastApiAdapter(HttpAdapter):
 
     def get_instance(self) -> any:
         return self.instance
+
+    def create_wilchard(self, prefix: str = '/', name: str = 'full_path') -> str:
+        return f"/{prefix.strip('/')}" + "/{" + f"{name}:path" + "}"
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:
         # need to transform if we use middleware from here

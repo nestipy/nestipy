@@ -14,12 +14,13 @@ class ModuleMetadataCreator(MetadataCreator):
 
     def create(self) -> None:
         imports = [self.module] + self._extract_import()
+        providers = self.extract_providers()
         for im in imports:
             Reflect.set_metadata(
                 im,
                 ClassMetadata.Metadata,
                 ClassMetadata(
                     im,
-                    global_providers=self.extract_providers()
+                    global_providers=providers
                 )
             )

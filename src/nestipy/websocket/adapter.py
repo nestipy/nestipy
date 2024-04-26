@@ -61,7 +61,7 @@ class SocketIoAdapter(IoAdapter):
 
         return decorator
 
-    def emit(
+    async def emit(
             self,
             event: Any,
             data: Any = None,
@@ -71,7 +71,7 @@ class SocketIoAdapter(IoAdapter):
             namespace: Any = None,
             callback: Any = None,
             ignore_queue: bool = False):
-        return self._io.emit(event, data, to, room, skip_sid, namespace, callback, ignore_queue)
+        return await self._io.emit(event, data, to, room, skip_sid, namespace, callback, ignore_queue)
 
     def broadcast(self, event: Any, data: Any):
         return self._io.emit(event, data, self._connected)

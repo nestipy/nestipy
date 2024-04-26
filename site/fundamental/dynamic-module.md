@@ -144,4 +144,6 @@ class AppModule:
 ```
 
 Note: We can inject service directly inside `Module` if we want to use `DatabaseService` with lifecycle hook
-inside `DatabaseModule`
+inside `DatabaseModule
+
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-dynamic-module)** for an  example.

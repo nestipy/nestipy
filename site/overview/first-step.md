@@ -60,6 +60,7 @@ After installation, simply run this command in your OS terminal to start the app
 ```bash
 python main.py
 ```
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app)** for an  example.
 
 <br/>
 

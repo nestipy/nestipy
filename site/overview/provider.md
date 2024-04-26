@@ -107,3 +107,6 @@ class CatsController:
 #### Inject dependency via class method.<br/>
 
 It work like other dependency method.
+
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-providers)** for an  example.
+
