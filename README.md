@@ -41,7 +41,7 @@
 
 ## Documentation
 
-View full documentation from [here](https://nestipy.github.io/nestipy).
+View full documentation from [here](https://nestipy.vercel.app).
 
 ## Support
 
