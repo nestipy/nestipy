@@ -1,9 +1,6 @@
-from .platform import PlatformAdapter
-from .platform_litestar import PlatformLitestar
-from .platform_fastapi import PlatformFastAPI
+class NestipyFastApiApplication:
+    pass
 
-__all__ = [
-    'PlatformAdapter',
-    'PlatformLitestar',
-    'PlatformFastAPI'
-]
+
+class NestipyBlackSheepApplication:
+    pass

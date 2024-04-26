@@ -1,6 +1,0 @@
-from nestipy.plugins.strawberry_module.decorator import Input
-
-
-@Input()
-class {{name|capitalize}}Input:
-    test: str
