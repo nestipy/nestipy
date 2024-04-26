@@ -14,13 +14,13 @@
 
 ## Description
 
-<p>Nestipy is a Python framework built on top of Litestar that follows the modular architecture of NestJS</p>
-<p>Under the hood, Nestipy makes use of <a href="https://litestar.dev/" target="_blank">Litestar</a>, but also provides compatibility with a wide range of other libraries, like <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a>, allowing for easy use of the myriad of third-party plugins which are available.</p>
+<p>Nestipy is a Python framework built on top of FastAPI that follows the modular architecture of NestJS</p>
+<p>Under the hood, Nestipy makes use of <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a>, but also provides compatibility with a wide range of other libraries, like <a href="https://fastapi.tiangolo.com/" target="_blank">Blacksheep</a>, allowing for easy use of the myriad of third-party plugins which are available.</p>
 
 ## Getting started
 
 ```cmd
-    pip install nestipy
+    pip install nestipy-cli
     nestipy new my_app
     cd my_app
     python main.py
@@ -39,12 +39,9 @@
        
 ```
 
-## [Documentation](https://tsiresymila1.github.io/nestipy)
+## Documentation
 
-## Issues
-
-Please make sure to read the [Issue Reporting Checklist](https://github.com/tsiresymila1/nestipy) before opening an
-issue. Issues not conforming to the guidelines may be closed immediately.
+View full documentation from [here](https://nestipy.github.io/nestipy).
 
 ## Support
 
