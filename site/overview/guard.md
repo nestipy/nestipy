@@ -106,3 +106,5 @@ class CatsController:
         pass
 ```
 
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-guards)** for an  example.
+

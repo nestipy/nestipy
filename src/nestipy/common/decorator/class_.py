@@ -1,6 +1,7 @@
 import enum
 from typing import Type, Callable, Union
 
+from nestipy_dynamic_module import DynamicModule
 from nestipy_ioc import NestipyContainer, ModuleProviderDict
 from nestipy_metadata import ModuleMetadata, Reflect, RouteKey
 
@@ -46,7 +47,7 @@ class Controller:
 class Module:
     providers: list[Union[Type, ModuleProviderDict]] = []
     controllers: list[Type] = []
-    imports: list[Type] = []
+    imports: list[Union[Type, Callable, ModuleProviderDict, DynamicModule]] = []
     exports: list[Union[Type, Callable, str]] = []
     is_global: bool = False
 
@@ -54,7 +55,7 @@ class Module:
             self,
             providers: list[Callable | ModuleProviderDict] = None,
             controllers: list[Callable] = None,
-            imports: list[Callable | ModuleProviderDict] = None,
+            imports: list[Union[Type, Callable, ModuleProviderDict, DynamicModule]] = None,
             exports: list[Union[Type, Callable, str]] = None,
             is_global: bool = False
     ):

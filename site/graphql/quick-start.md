@@ -73,3 +73,5 @@ from strawberry import type, input, interface, scalar, etc
 
 ...
 ```
+
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-graphql)** for an example.

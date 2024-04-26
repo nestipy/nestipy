@@ -30,7 +30,7 @@ class RouterProxy:
         self.router = router
         self._template_processor = TemplateRendererProcessor(router)
 
-    def apply_routes(self, modules: set[Union[Type, object]]):
+    def apply_routes(self, modules: list[Union[Type, object]]):
         json_paths = {}
         for module_ref in modules:
             routes = RouteExplorer.explore(module_ref)

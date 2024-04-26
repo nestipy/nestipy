@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 
-from nestipy_metadata import SetMetadata, Reflect
-
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
+from nestipy_metadata import SetMetadata, Reflect
 
 if TYPE_CHECKING:
     from nestipy.common.exception.interface import ExceptionFilter
@@ -29,6 +28,10 @@ class HttpAdapter(ABC):
 
     @abstractmethod
     def get_instance(self) -> any:
+        pass
+
+    @abstractmethod
+    def create_wilchard(self, prefix: str = '/') -> str:
         pass
 
     @abstractmethod

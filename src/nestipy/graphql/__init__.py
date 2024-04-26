@@ -1,5 +1,6 @@
 from .decorator import Resolver, Query, Mutation, Subscription
 from .graphql_module import GraphqlModule, GraphqlOption
+from .pubsub import PubSub
 
 __all__ = [
     "Resolver",
@@ -7,5 +8,6 @@ __all__ = [
     "Mutation",
     "Subscription",
     "GraphqlModule",
-    "GraphqlOption"
+    "GraphqlOption",
+    "PubSub"
 ]

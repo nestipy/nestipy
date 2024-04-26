@@ -4,17 +4,18 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
 
+from nestipy.common.http_ import Response, Request
+from nestipy.common.middleware import NestipyMiddleware
+from nestipy.common.template import TemplateEngine, TemplateKey
+from nestipy.common.utils import uniq_list
+from nestipy.core.template import MinimalJinjaTemplateEngine
+from nestipy.graphql.graphql_adapter import GraphqlAdapter
+from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from nestipy_dynamic_module import DynamicModule
 from nestipy_ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
 from nestipy_metadata import ModuleMetadata, Reflect
 from openapidocs.v3 import PathItem
 
-from nestipy.common.http_ import Response, Request
-from nestipy.common.middleware import NestipyMiddleware
-from nestipy.common.template import TemplateEngine, TemplateKey
-from nestipy.core.template import MinimalJinjaTemplateEngine
-from nestipy.graphql.graphql_adapter import GraphqlAdapter
-from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
@@ -71,15 +72,14 @@ class NestipyApplication:
             self._http_adapter.enable_cors()
 
     @classmethod
-    def _get_modules(cls, module: Type) -> set[Type]:
-        modules: set[Type] = set()
-        modules.add(module)
+    def _get_modules(cls, module: Type) -> list[Type]:
+        modules: list[Type] = [module]
         for m in Reflect.get_metadata(module, ModuleMetadata.Imports, []):
             if isinstance(m, DynamicModule):
-                modules.add(m.module)
+                modules.append(m.module)
             else:
-                modules.add(m)
-        return modules
+                modules.append(m)
+        return uniq_list(modules)
 
     def init(self, root_module: Type):
 
@@ -155,7 +155,8 @@ class NestipyApplication:
                 attachment=False
             )
 
-        self._http_adapter.get(f'/{url.strip("/")}/*', render_asset_file, {})
+        static_path = self._http_adapter.create_wilchard(f'/{url.strip("/")}')
+        self._http_adapter.get(static_path, render_asset_file, {})
 
     def set_base_view_dir(self, view_dir: str):
         self._setup_template_engine(view_dir)
@@ -177,7 +178,7 @@ class NestipyApplication:
             raise Exception('Template engine not configured')
         return engine
 
-    def use_global_interceptors(self, *interceptors: Union[Type["NestipyInterceptor"], "NestipyInterceptor"]):
+    def use_global_interceptors(self, *interceptors: Union[Type, "NestipyInterceptor"]):
         self._http_adapter.add_global_interceptors(*interceptors)
         self._add_root_module_provider(*interceptors)
 

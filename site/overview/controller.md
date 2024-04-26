@@ -87,6 +87,5 @@ from .cats_controller import CatsController
 class AppModule:
     pass
 ```
-
-<br/>
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-request-params)** for an  example.
 <br/>

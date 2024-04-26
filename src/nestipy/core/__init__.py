@@ -1,6 +1,7 @@
 from .adapter.http_adapter import HttpAdapter
 from .constant import AppKey
 from .context.execution_context import ExecutionContext, ArgumentHost, HttpArgumentHost
+from .middleware import MiddlewareConsumer
 from .nestipy_application import NestipyApplication, NestipyApplicationConfig
 from .nestipy_factory import NestipyFactory
 from .platform import NestipyFastApiApplication, NestipyBlackSheepApplication
@@ -17,5 +18,6 @@ __all__ = [
     "NestipyFastApiApplication",
     "NestipyBlackSheepApplication",
     "MinimalJinjaTemplateEngine",
-    "AppKey"
+    "AppKey",
+    "MiddlewareConsumer"
 ]

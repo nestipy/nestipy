@@ -11,7 +11,7 @@ from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage
 
 
 @Gateway()
-class UserGateway:
+class AppGateway:
     server: SocketServer[IoAdapter]
 
     @SubscribeMessage('user')
@@ -29,7 +29,7 @@ from nestipy.common.decorator import Module
 
 @Module(
     providers=[
-        UserGateway
+        AppGateway
     ]
 )
 class AppModule:
@@ -53,3 +53,5 @@ app.use_io_adapter(SocketIoAdapter(sio))
 
 Gateway is marked as Injectable, it means you can inject it into controllers or other services within the same module.
 You can also inject it everywhere if it's defined as a provider in the root module.
+
+A working example can be found **[here](https://github.com/nestipy/sample/tree/main/sample-app-socket-io)**.

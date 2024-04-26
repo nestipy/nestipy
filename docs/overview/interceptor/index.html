@@ -917,11 +917,12 @@ across the application.</p>
 <a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="k">pass</span>
 </code></pre></div>
 <p>Globally , it works like.</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">nestipy.core</span> <span class="kn">import</span> <span class="n">NestipyFactory</span>
+<p><div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">nestipy.core</span> <span class="kn">import</span> <span class="n">NestipyFactory</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">NestipyFactory</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">AppModule</span><span class="p">)</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">app</span><span class="o">.</span><span class="n">use_global_interceptors</span><span class="p">(</span><span class="n">TestInterceptor</span><span class="p">)</span>
 </code></pre></div>
+Take a look <strong><a href="https://github.com/nestipy/sample/tree/main/sample-app-interceptors">here</a></strong> for an  example.</p>
 
 
 

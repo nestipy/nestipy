@@ -1,7 +1,4 @@
-from typing import Union, Type, Any
-
-from nestipy_ioc import NestipyContainer
-from nestipy_metadata import Reflect, ClassMetadata
+from typing import Union, Any, Callable
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.exception.http import HttpException
@@ -10,6 +7,8 @@ from nestipy.common.exception.meta import ExceptionKey
 from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
+from nestipy_ioc import NestipyContainer
+from nestipy_metadata import Reflect, ClassMetadata
 
 
 @Injectable()
@@ -32,7 +31,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         )
         class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
         handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
-        all_filters = global_filters + module_filters + class_filters + handler_filters
+        all_filters = global_filters + module_filters + class_filters
         # setup dependency as the same as the container
         for fit in all_filters:
             if issubclass(fit, ExceptionFilter):
@@ -42,35 +41,53 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
                     fit, ClassMetadata.Metadata,
                     ClassMetadata(handler_class, global_providers=services)
                 )
-        for ex_filter in all_filters:
-            result = await self._recursive_apply_filter(ex_filter, exception)
-            if not result:
-                continue
-            else:
-                return result
-        return None
+        return await self._apply_exception_filter(exception, 0, all_filters, None)
 
-    async def _catch(self, _filter: Union[Type["ExceptionFilter"], "ExceptionFilter"], exception: HttpException):
-        instance = await self.container.get(_filter) if not isinstance(
-            _filter,
-            ExceptionFilter) else _filter
-        return await instance.catch(exception, self.context)
-
-    async def _recursive_apply_filter(
-            self,
-            exception_filter: Union[Type["ExceptionFilter"], "ExceptionFilter"],
-            exception: HttpException,
-    ):
-
-        exceptions_to_catch = Reflect.get_metadata(exception_filter, ExceptionKey.MetaType, [])
-        if len(exceptions_to_catch) == 0:
-            return await self._catch(exception_filter, exception)
+    async def _apply_exception_filter(self, exception: "HttpException", index: int, all_filters: list, result: Any):
+        if len(all_filters) > index:
+            exception_filter = all_filters[index]
+            all_exception_to_catch = Reflect.get_metadata(exception_filter, ExceptionKey.MetaType, [])
+            new_result = await self._apply_exception_filter_for_exception(
+                exception_filter,
+                exception,
+                0,
+                all_exception_to_catch,
+                result
+            )
+            return await self._apply_exception_filter(
+                exception,
+                index + 1,
+                all_filters,
+                new_result if new_result is not None else result
+            )
         else:
-            for _ex_type in exceptions_to_catch:
-                if isinstance(exception, _ex_type):
-                    result = await self._catch(exception_filter, exception)
-                    if result is None:
-                        continue
-                    else:
-                        return result
-        return None
+            return result
+
+    async def _apply_exception_filter_for_exception(
+            self,
+            exception_filter: Union[Callable, "ExceptionFilter"],
+            exception: "HttpException",
+            index: int,
+            all_exception_to_catch: list,
+            result: Any
+    ):
+        if len(all_exception_to_catch) > index:
+            exception_to_catch = all_exception_to_catch[index]
+            if isinstance(exception, exception_to_catch):
+                new_result = await self._catch_exception(exception_filter, exception)
+                return await self._apply_exception_filter_for_exception(
+                    exception_filter,
+                    exception,
+                    index + 1,
+                    all_exception_to_catch,
+                    new_result if new_result is not None else result
+                )
+            return result
+        else:
+            return await self._catch_exception(exception_filter, exception)
+
+    async def _catch_exception(self, exception_filter: Union[Callable, "ExceptionFilter"], exception: "HttpException"):
+        instance = await self.container.get(exception_filter) if not isinstance(
+            exception_filter,
+            ExceptionFilter) else exception_filter
+        return await instance.catch(exception, self.context)

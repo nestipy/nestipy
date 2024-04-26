@@ -16,7 +16,7 @@ class IoSocketProxy:
     def __init__(self, adapter: "HttpAdapter"):
         self.adapter = adapter
 
-    def apply_routes(self, modules: set[Union[Type, object]]):
+    def apply_routes(self, modules: list[Union[Type, object]]):
         io_adapter = self.adapter.get_io_adapter()
         for module_ref in modules:
             gateways = self._get_module_provider_gateway(module_ref)
@@ -43,6 +43,13 @@ class IoSocketProxy:
             if Reflect.get_metadata(getattr(gateway, method_name), EVENT_KEY, None) is not None:
                 methods.append(method_name)
         return methods
+
+    @classmethod
+    async def call_handler(cls, handler: Callable, params: dict):
+        if inspect.iscoroutinefunction(handler):
+            return await handler(**params)
+        else:
+            return handler(**params)
 
     def _create_io_handler(
             self,
@@ -76,21 +83,21 @@ class IoSocketProxy:
                     # get success event from handler
                     success_event = Reflect.get_metadata(gateway, SUCCESS_EVENT_KEY, None)
                     # send response to websocket
-                    io_adapter.emit(
-                        event=success_event or event_name,
-                        data=result,
-                        namespace=namespace,
-                        to=sid
-                    )
+                    await self.call_handler(io_adapter.emit, {
+                        'event': success_event or event_name,
+                        'data': result,
+                        'namespace': namespace,
+                        "to": sid
+                    })
             except Exception as e:
                 error_event = Reflect.get_metadata(gateway, ERROR_EVENT_KEY, None)
                 if error_event is not None:
-                    io_adapter.emit(
-                        event=error_event,
-                        data=str(e),
-                        namespace=namespace,
-                        to=sid
-                    )
+                    await self.call_handler(io_adapter.emit, {
+                        'event': error_event,
+                        'data': str(e),
+                        'namespace': namespace,
+                        "to": sid
+                    })
                 # create exception handler
             finally:
                 context_container.destroy()

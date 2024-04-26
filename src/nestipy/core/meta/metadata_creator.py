@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Type, Union
 
+from nestipy.common.utils import uniq_list
 from nestipy_dynamic_module import DynamicModule
 from nestipy_ioc import NestipyContainer
 from nestipy_metadata import ClassMetadata, ModuleMetadata, Reflect
-
-from nestipy.common.utils import uniq
 
 
 class MetadataCreator(ABC):
@@ -24,7 +23,7 @@ class MetadataCreator(ABC):
         pass
 
     def extract_providers(self) -> list:
-        return uniq(Reflect.get_metadata(self.module, ModuleMetadata.Providers, []))
+        return uniq_list(Reflect.get_metadata(self.module, ModuleMetadata.Providers, []))
 
     def _put_dependency_metadata(self) -> None:
         data = self._extract()
@@ -46,7 +45,7 @@ class MetadataCreator(ABC):
         Extract module imported in Module
         :return: list
         """
-        return uniq(
+        return uniq_list(
             [self._dynamic_module_to_module(m) for m in Reflect.get_metadata(self.module, ModuleMetadata.Imports, [])])
 
     @classmethod
