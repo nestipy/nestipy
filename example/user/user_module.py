@@ -1,9 +1,10 @@
 from nestipy_dynamic_module import NestipyModule
+from nestipy_ioc import Inject
 
 from nestipy.common import Module, Injectable
 from nestipy.common import NestipyMiddleware
 from nestipy.common import Response, Request
-from nestipy.core import MiddlewareConsumer
+from nestipy.core import MiddlewareConsumer, DiscoverService
 from nestipy.types_ import NextFn
 from .user_controller import UserController
 from .user_gateway import UserGateway
@@ -31,5 +32,7 @@ class TestMiddleware2(NestipyMiddleware):
     ]
 )
 class UserModule(NestipyModule):
+    discover: Inject[DiscoverService]
+
     def configure(self, consumer: MiddlewareConsumer):
         consumer.apply(TestMiddleware2).for_route(UserController)

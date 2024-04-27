@@ -6,6 +6,8 @@ from nestipy_dynamic_module import DynamicModule, MiddlewareConsumer, NestipyMod
 from nestipy_ioc import NestipyContainer, ModuleProviderDict
 from nestipy_metadata import ModuleMetadata, Reflect
 
+from .discover import DiscoverService
+from .on_init import OnInit
 from ..graphql.graphql_module import GraphqlModule
 
 
@@ -23,34 +25,44 @@ class InstanceLoader:
     _is_controller: bool = False
     _module_instances: list = []
     graphql_instance: GraphqlModule = None
+    discover: DiscoverService
 
     async def create_instances(self, modules: list[Type]) -> GraphqlModule:
+        self.discover = await NestipyContainer.get_instance().get(DiscoverService)
         for module in modules:
             if isinstance(module, DynamicModule):
                 module = module.module
             if module in self._module_instances:
                 continue
-            await self._create_providers(module)
+            providers = await self._create_providers(module)
+            self.discover.add_provider(*providers)
             self._is_controller = True
-            await self._create_controllers(module)
+            controllers = await self._create_controllers(module)
+            self.discover.add_controller(*controllers)
             self._is_controller = False
             instance = await self.create_instance(module)
-            self._module_instances.append(module)
+            self.discover.add_module(instance)
             if isinstance(instance, GraphqlModule):
                 self.graphql_instance = instance
             imports = Reflect.get_metadata(module, ModuleMetadata.Imports, [])
             await self.create_instances(imports)
         return self.graphql_instance
 
-    async def _create_providers(self, module: Type) -> None:
+    async def _create_providers(self, module: Type) -> list:
+        provider_instance = []
         for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
             if isinstance(provider, ModuleProviderDict):
                 continue
-            await self.create_instance(provider)
+            ins = await self.create_instance(provider)
+            provider_instance.append(ins)
+        return provider_instance
 
-    async def _create_controllers(self, module: Type) -> None:
+    async def _create_controllers(self, module: Type) -> list:
+        controller_instance = []
         for controller in Reflect.get_metadata(module, ModuleMetadata.Controllers, []):
-            await self.create_instance(controller)
+            ins = await self.create_instance(controller)
+            controller_instance.append(ins)
+        return controller_instance
 
     async def create_instance(self, class_ref: Type) -> object:
         instance = await NestipyContainer.get_instance().get(class_ref)
@@ -64,9 +76,20 @@ class InstanceLoader:
             consumer = MiddlewareConsumer(module=class_ref)
             module = typing.cast(NestipyModule, instance)
             module.configure(consumer)
-            await module.on_startup()
+            # await module.on_startup()
+        elif issubclass(class_ref, OnInit):
+            ins = typing.cast(OnInit, instance)
+            await ins.on_startup()
 
     async def destroy(self):
-        for module in self._module_instances:
+        for module in self.discover.get_all_module():
             if isinstance(module, NestipyModule):
                 await module.on_shutdown()
+
+        for provider in self.discover.get_all_provider():
+            if isinstance(provider, OnInit):
+                await provider.on_shutdown()
+
+        for controller in self.discover.get_all_controller():
+            if isinstance(controller, OnInit):
+                await controller.on_shutdown()
