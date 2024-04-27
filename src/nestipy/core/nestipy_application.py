@@ -4,6 +4,11 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
 
+from nestipy_dynamic_module import DynamicModule
+from nestipy_ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
+from nestipy_metadata import ModuleMetadata, Reflect
+from openapidocs.v3 import PathItem
+
 from nestipy.common.http_ import Response, Request
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
@@ -11,13 +16,9 @@ from nestipy.common.utils import uniq_list
 from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
-from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
-from nestipy_metadata import ModuleMetadata, Reflect
-from openapidocs.v3 import PathItem
-
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
+from .discover import DiscoverService
 from .instance_loader import InstanceLoader
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
@@ -82,18 +83,20 @@ class NestipyApplication:
         return uniq_list(modules)
 
     def init(self, root_module: Type):
+        self._root_module = root_module
+        self._add_root_module_provider(DiscoverService, _init=False)
+        self._set_metadata()
 
-        provider_metadata_maker = ProviderMetadataCreator(root_module, is_root=True)
+    def _set_metadata(self):
+        provider_metadata_maker = ProviderMetadataCreator(self._root_module, is_root=True)
         provider_metadata_maker.create()
 
-        controller_metadata_maker = ControllerMetadataCreator(root_module, is_root=True)
+        controller_metadata_maker = ControllerMetadataCreator(self._root_module, is_root=True)
         controller_metadata_maker.create()
 
         # optional
-        module_metadata_maker = ModuleMetadataCreator(root_module)
+        module_metadata_maker = ModuleMetadataCreator(self._root_module)
         module_metadata_maker.create()
-
-        self._root_module = root_module
 
     async def _setup(self):
         try:
@@ -190,12 +193,13 @@ class NestipyApplication:
         self._http_adapter.add_global_guards(*guards)
         # self._add_root_module_provider(*guards)
 
-    def _add_root_module_provider(self, *providers: Union[ModuleProviderDict, Type]):
+    def _add_root_module_provider(self, *providers: Union[ModuleProviderDict, Type], _init: bool = True):
         root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])
         root_providers = root_providers + list(providers)
         Reflect.set_metadata(self._root_module, ModuleMetadata.Providers, root_providers)
         #  re init setting metadata
-        self.init(self._root_module)
+        if _init:
+            self._set_metadata()
 
     def use_io_adapter(self, io_adapter: IoAdapter):
         # edit root module provider
