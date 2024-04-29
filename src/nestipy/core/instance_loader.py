@@ -25,8 +25,10 @@ class InstanceLoader:
     """
     _is_controller: bool = False
     _module_instances: list = []
+    _controller_instances: list = []
+    _provider_instances: list = []
     graphql_instance: GraphqlModule = None
-    discover: DiscoverService
+    discover: DiscoverService = DiscoverService()
 
     async def create_instances(self, modules: list[Type]) -> GraphqlModule:
         self.discover = await NestipyContainer.get_instance().get(DiscoverService)
@@ -37,11 +39,14 @@ class InstanceLoader:
                 continue
             providers = await self._create_providers(module)
             self.discover.add_provider(*providers)
+            self._provider_instances.append(*providers)
             self._is_controller = True
             controllers = await self._create_controllers(module)
             self.discover.add_controller(*controllers)
+            self._controller_instances.append(*controllers)
             self._is_controller = False
             instance = await self.create_instance(module)
+            self._module_instances.append(module)
             self.discover.add_module(instance)
             if isinstance(instance, GraphqlModule):
                 self.graphql_instance = instance
