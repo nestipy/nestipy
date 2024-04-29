@@ -475,13 +475,13 @@ files = [
 
 [[package]]
 name = "nestipy-dynamic-module"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "nestipy_dynamic_module-0.1.5-py3-none-any.whl", hash = "sha256:a183aa6e3427348c03459c44b2ea1dbb49841cf8454dc9183c346830031db370"},
-    {file = "nestipy_dynamic_module-0.1.5.tar.gz", hash = "sha256:8c4a9a246b7df76298dd278d2a70d4fc502c55f8c55abeed76cead0a05e42542"},
+    {file = "nestipy_dynamic_module-0.1.6-py3-none-any.whl", hash = "sha256:ff653d53ebd5db458563710add4dc2fb55cb8e47c973e66653c44b69392340a5"},
+    {file = "nestipy_dynamic_module-0.1.6.tar.gz", hash = "sha256:14af2161fb4de9f2e4b1d56413b44baf0889198d6c89cda27e38bd5959994744"},
 ]
 
 [package.dependencies]
@@ -1220,4 +1220,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ef7ac24acf66bdbbdb504310bf445c53c98195b52ed518efd9879613fe2cb436"
+content-hash = "d33e961fc9e610867702a2888024644f0492744d9c7d4bf7ddb18eee55465f93"

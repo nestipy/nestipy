@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.2.3"
+version = "0.2.4"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -19,8 +19,8 @@ strawberry-graphql = "^0.225.0"
 ujson = "^5.9.0"
 nestipy-ioc = "^0.1.30"
 nestipy-metadata = "^0.1.1"
-nestipy-dynamic-module = "^0.1.3"
 minijinja = "^2.0.1"
+nestipy-dynamic-module = "^0.1.6"
 
 
 [build-system]
