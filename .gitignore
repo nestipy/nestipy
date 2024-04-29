@@ -4,3 +4,4 @@ venv
 .venv
 *.cpyth
 .idea
+dist
