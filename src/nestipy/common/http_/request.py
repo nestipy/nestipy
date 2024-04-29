@@ -1,11 +1,24 @@
 from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
-
+from http import cookies as http_cookies
 import ujson
 from starlette.datastructures import UploadFile
 from starlette.requests import Request as StarletteRequest
 
 from .multipart import parse_content_header, parse_multipart_form, parse_url_encoded_form_data
+
+
+def cookie_parser(cookie_string: str) -> dict[str, str]:
+    cookie_dict: dict[str, str] = {}
+    for chunk in cookie_string.split(";"):
+        if "=" in chunk:
+            key, val = chunk.split("=", 1)
+        else:
+            key, val = "", chunk
+        key, val = key.strip(), val.strip()
+        if key or val:
+            cookie_dict[key] = http_cookies._unquote(val)
+    return cookie_dict
 
 
 class Request:
@@ -24,6 +37,8 @@ class Request:
         self._files = None
         self._user = None
         self._form = None
+        self._session = None
+        self._cookies = None
         if scope["type"] == "http":
             self.starlette_request = StarletteRequest(scope, receive, send)
 
@@ -130,3 +145,14 @@ class Request:
             else:
                 self._form = None
         return self._form
+
+    @property
+    def cookies(self) -> dict[str, str]:
+        if not hasattr(self, "_cookies"):
+            cookies: dict[str, str] = {}
+            cookie_header = self.headers.get("cookie")
+
+            if cookie_header:
+                cookies = cookie_parser(cookie_header)
+            self._cookies = cookies
+        return self._cookies

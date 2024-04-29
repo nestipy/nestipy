@@ -35,13 +35,13 @@ class Http2ExceptionFilter(ExceptionFilter):
 @Injectable()
 class TestInterceptor(NestipyInterceptor):
     async def intercept(self, context: ExecutionContext, next_fn: NextFn):
-        pass
+        return await next_fn()
 
 
 @Injectable()
 class TestMethodInterceptor(NestipyInterceptor):
     async def intercept(self, context: ExecutionContext, next_fn: NextFn):
-        pass
+        return await next_fn()
 
 
 @Controller()
