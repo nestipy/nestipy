@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Type, Union
 
 from nestipy.common.utils import uniq_list
-from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import NestipyContainer
-from nestipy_metadata import ClassMetadata, ModuleMetadata, Reflect
+from nestipy.dynamic_module import DynamicModule
+from nestipy.ioc import NestipyContainer
+from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflect
 
 
 class MetadataCreator(ABC):

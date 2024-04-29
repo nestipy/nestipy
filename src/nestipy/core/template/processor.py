@@ -1,6 +1,6 @@
 from typing import Union, Callable, Any, TYPE_CHECKING
 
-from nestipy_metadata import Reflect
+from nestipy.metadata import Reflect
 
 from nestipy.common.template import TemplateEngine, TemplateKey
 from .minimal_jinja import MinimalJinjaTemplateEngine

@@ -2,8 +2,8 @@ import dataclasses
 from typing import Literal
 
 from nestipy.common.decorator import Module
-from nestipy_dynamic_module import ConfigurableModuleBuilder
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.ioc import Inject
 
 
 @dataclasses.dataclass

@@ -1,7 +1,7 @@
 from typing import Type
 
 from nestipy.common.decorator import Injectable
-from nestipy_metadata import SetMetadata
+from nestipy.metadata import SetMetadata
 
 GATEWAY_KEY = '__GATEWAY__'
 EVENT_KEY = '__GATEWAY_EVENT__'

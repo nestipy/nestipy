@@ -2,9 +2,9 @@ import enum
 import typing
 from typing import Type, Any
 
-from nestipy_dynamic_module import DynamicModule, MiddlewareConsumer, NestipyModule
-from nestipy_ioc import NestipyContainer, ModuleProviderDict
-from nestipy_metadata import ModuleMetadata, Reflect
+from nestipy.dynamic_module import DynamicModule, MiddlewareConsumer, NestipyModule
+from nestipy.ioc import NestipyContainer, ModuleProviderDict
+from nestipy.metadata import ModuleMetadata, Reflect
 
 from .discover import DiscoverService
 from .on_destroy import OnDestroy

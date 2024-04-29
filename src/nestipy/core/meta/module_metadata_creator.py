@@ -1,6 +1,6 @@
 from typing import Type
 
-from nestipy_metadata import ClassMetadata, ModuleMetadata, Reflect
+from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflect
 
 from .metadata_creator import MetadataCreator
 

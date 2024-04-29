@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Union, Optional, Any, Type
 
-from nestipy_metadata import SetMetadata
+from nestipy.metadata import SetMetadata
 from openapidocs.v3 import RequestBody, Response, Parameter
 from openapidocs.v3 import SecurityRequirement, MediaType, Schema
 from pydantic import TypeAdapter, BaseModel

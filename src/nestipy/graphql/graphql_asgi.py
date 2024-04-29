@@ -2,8 +2,8 @@ import os
 from abc import abstractmethod
 
 import aiofiles
-from nestipy_ioc import NestipyContextContainer
-from nestipy_metadata import NestipyContextProperty
+from nestipy.ioc import NestipyContextContainer
+from nestipy.metadata import NestipyContextProperty
 
 from nestipy.common.http_ import Request
 from nestipy.graphql.graphql_module import GraphqlOption

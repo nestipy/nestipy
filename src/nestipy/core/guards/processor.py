@@ -7,8 +7,8 @@ from nestipy.common.guards.meta import GuardKey
 from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.core.constant import APP_GUARD
 from nestipy.core.context.execution_context import ExecutionContext
-from nestipy_ioc import NestipyContainer
-from nestipy_metadata import ClassMetadata, Reflect
+from nestipy.ioc import NestipyContainer
+from nestipy.metadata import ClassMetadata, Reflect
 
 
 @Injectable()

@@ -27,7 +27,7 @@ This is how we use it inside controller.
 
 from dataclasses import dataclass
 
-from nestipy_ioc import Inject, Body
+from nestipy.ioc import Inject, Body
 
 from nestipy.common import Controller, Post, Get
 from .cats_service import CatsService

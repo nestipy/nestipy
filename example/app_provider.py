@@ -1,4 +1,4 @@
-from nestipy_ioc import Inject
+from nestipy.ioc import Inject
 
 from nestipy.common import Injectable
 

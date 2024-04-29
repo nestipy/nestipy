@@ -1,6 +1,6 @@
 from typing import Type, Union
 
-from nestipy_metadata import SetMetadata
+from nestipy.metadata import SetMetadata
 
 from .can_activate import CanActivate
 from .meta import GuardKey

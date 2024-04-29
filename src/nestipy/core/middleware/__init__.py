@@ -1,4 +1,4 @@
-from nestipy_dynamic_module import MiddlewareConsumer
+from nestipy.dynamic_module import MiddlewareConsumer
 
 from .executor import MiddlewareExecutor
 

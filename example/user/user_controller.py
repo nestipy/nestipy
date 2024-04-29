@@ -1,6 +1,6 @@
 from typing import Union
 
-from nestipy_ioc import Req, Res, Inject
+from nestipy.ioc import Req, Res, Inject
 
 from nestipy.common import Get, Post, Controller
 from nestipy.common import Request, Response

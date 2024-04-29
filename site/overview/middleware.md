@@ -24,7 +24,7 @@ Nestipy middleware support dependency injection
 Nestipy apply middleware like the way Nestjs use. Modules that include middleware have to implement the NestipyModule.
 
 ```python title='app_module.py'
-from nestipy_dynamic_module import NestipyModule
+from nestipy.dynamic_module import NestipyModule
 
 from nestipy.common import Module
 from nestipy.core import MiddlewareConsumer
@@ -42,7 +42,7 @@ class AppModule(NestipyModule):
 We can apply middleware for controller and excludes some routes.
 
 ```python title='app_module.py'
-from nestipy_dynamic_module import NestipyModule
+from nestipy.dynamic_module import NestipyModule
 
 from nestipy.common import Module
 from nestipy.core import MiddlewareConsumer

@@ -4,9 +4,9 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
 
-from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
-from nestipy_metadata import ModuleMetadata, Reflect
+from nestipy.dynamic_module import DynamicModule
+from nestipy.ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
+from nestipy.metadata import ModuleMetadata, Reflect
 from openapidocs.v3 import PathItem
 
 from nestipy.common.http_ import Response, Request

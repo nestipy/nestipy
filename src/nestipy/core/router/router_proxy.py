@@ -3,9 +3,9 @@ import traceback
 import typing
 from typing import Type, Union
 
-from nestipy_ioc import NestipyContainer
-from nestipy_ioc import NestipyContextContainer
-from nestipy_metadata import NestipyContextProperty
+from nestipy.ioc import NestipyContainer
+from nestipy.ioc import NestipyContextContainer
+from nestipy.metadata import NestipyContextProperty
 from openapidocs.v3 import Operation, PathItem
 from pydantic import BaseModel
 

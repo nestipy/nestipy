@@ -1,9 +1,9 @@
 import inspect
 from typing import Type, Union, Callable, Any, TYPE_CHECKING
 
-from nestipy_ioc import NestipyContainer
-from nestipy_ioc import NestipyContextContainer
-from nestipy_metadata import NestipyContextProperty, Reflect, ModuleMetadata
+from nestipy.ioc import NestipyContainer
+from nestipy.ioc import NestipyContextContainer
+from nestipy.metadata import NestipyContextProperty, Reflect, ModuleMetadata
 
 from .decorator import GATEWAY_KEY, EVENT_KEY, SUCCESS_EVENT_KEY, ERROR_EVENT_KEY
 from ..core.context.execution_context import ExecutionContext

@@ -1,6 +1,6 @@
 from typing import Callable, Literal
 
-from nestipy_metadata import Reflect, RouteKey
+from nestipy.metadata import Reflect, RouteKey
 
 HTTPMethod = Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'ALL', 'ANY']
 

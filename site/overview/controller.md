@@ -16,7 +16,7 @@ class CatsController:
 We can access Request and Response object from handler bu using annotation type Req and Res respectively.
 
 ```python
-from nestipy_ioc import Req, Res
+from nestipy.ioc import Req, Res
 
 from nestipy.common import Controller, Get, Response, Request
 
@@ -35,7 +35,7 @@ Below is a sample illustrating how different decorators are employed to create a
 ```python
 from dataclasses import dataclass
 
-from nestipy_ioc import Body, Query, Params, Session
+from nestipy.ioc import Body, Query, Params, Session
 
 from nestipy.common import Controller, Get, Put, Post, Delete
 

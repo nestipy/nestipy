@@ -6,7 +6,7 @@ Let's view how it works.
 
 import dataclasses
 
-from nestipy_ioc import Req, Res, Body
+from nestipy.ioc import Req, Res, Body
 
 from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus

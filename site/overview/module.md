@@ -6,7 +6,7 @@ Following is an example of a dynamic module definition for a `DatabaseModule`:
 
 ```python
 from nestipy.common import Module
-from nestipy_dynamic_module import DynamicModule
+from nestipy.dynamic_module import DynamicModule
 
 
 @Module()
@@ -27,9 +27,9 @@ If we want to use params from `@Module()` decorator in dynamic module, we must d
 ```python
 from dataclasses import dataclass
 
-from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import Inject
-from nestipy_metadata import Reflect, ModuleMetadata
+from nestipy.dynamic_module import DynamicModule
+from nestipy.ioc import Inject
+from nestipy.metadata import Reflect, ModuleMetadata
 
 from nestipy.common import Module, ModuleProviderDict, Injectable
 
@@ -70,15 +70,15 @@ class DatabaseModule:
         )
 ```
 
-To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class rom `nestipy_dynamic_module`.
+To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class rom `nestipy.dynamic_module`.
 
 This is an example.
 
 ```python
 from dataclasses import dataclass
 
-from nestipy_dynamic_module import ConfigurableModuleBuilder
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.ioc import Inject
 
 
 @dataclass
@@ -103,9 +103,9 @@ For a lifecycle hooks, we need to extends `NestipyModule`.
 ```python
 from dataclasses import dataclass
 
-from nestipy_dynamic_module import ConfigurableModuleBuilder
-from nestipy_dynamic_module import NestipyModule
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.dynamic_module import NestipyModule
+from nestipy.ioc import Inject
 
 
 @dataclass

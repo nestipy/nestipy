@@ -1,6 +1,6 @@
 from typing import Union, Type, TYPE_CHECKING
 
-from nestipy_metadata import SetMetadata
+from nestipy.metadata import SetMetadata
 
 from nestipy.common.decorator import Injectable
 from .meta import ExceptionKey

@@ -81,7 +81,7 @@ Factory can be an async function to have async provider.
 
 ```python
 from nestipy.common.decorator import Controller
-from nestipy_ioc import Inject
+from nestipy.ioc import Inject
 
 
 @Controller('cats')
