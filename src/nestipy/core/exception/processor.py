@@ -7,8 +7,8 @@ from nestipy.common.exception.meta import ExceptionKey
 from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
-from nestipy_ioc import NestipyContainer
-from nestipy_metadata import Reflect, ClassMetadata
+from nestipy.ioc import NestipyContainer
+from nestipy.metadata import Reflect, ClassMetadata
 
 
 @Injectable()

@@ -3,7 +3,7 @@ import os.path
 from typing import TYPE_CHECKING
 
 import aiofiles
-from nestipy_metadata import Reflect
+from nestipy.metadata import Reflect
 from openapidocs.common import Serializer
 from openapidocs.v3 import OpenAPI
 

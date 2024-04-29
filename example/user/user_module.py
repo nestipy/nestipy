@@ -1,5 +1,5 @@
-from nestipy_dynamic_module import NestipyModule
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import NestipyModule
+from nestipy.ioc import Inject
 
 from nestipy.common import Module, Injectable
 from nestipy.common import NestipyMiddleware

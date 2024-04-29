@@ -5,8 +5,8 @@ from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.common.interceptor import NestipyInterceptor, InterceptorKey
 from nestipy.core.constant import APP_INTERCEPTOR
 from nestipy.core.context.execution_context import ExecutionContext
-from nestipy_ioc import NestipyContainer
-from nestipy_metadata import ClassMetadata, Reflect
+from nestipy.ioc import NestipyContainer
+from nestipy.metadata import ClassMetadata, Reflect
 
 if TYPE_CHECKING:
     from nestipy.types_.handler import NextFn

@@ -474,47 +474,6 @@ files = [
 ]
 
 [[package]]
-name = "nestipy-dynamic-module"
-version = "0.1.7"
-description = ""
-optional = false
-python-versions = "<4.0,>=3.10"
-files = [
-    {file = "nestipy_dynamic_module-0.1.7-py3-none-any.whl", hash = "sha256:afd3cd8275dc46b8ee3e2532c59136f3933a0e22b1e81e16ffed90c181736587"},
-    {file = "nestipy_dynamic_module-0.1.7.tar.gz", hash = "sha256:739e783a16a70bd0533be27b9334ff1616f2c6f1b9c58e44f194ebeeca0a3e54"},
-]
-
-[package.dependencies]
-nestipy-ioc = ">=0.1.30,<0.2.0"
-nestipy-metadata = ">=0.1.1,<0.2.0"
-
-[[package]]
-name = "nestipy-ioc"
-version = "0.1.31"
-description = ""
-optional = false
-python-versions = "<4.0,>=3.10"
-files = [
-    {file = "nestipy_ioc-0.1.31-py3-none-any.whl", hash = "sha256:75a58514ce2f0c57a26deaf440ccb7bf6ac056fa90bfd4a9238c483b802b12e3"},
-    {file = "nestipy_ioc-0.1.31.tar.gz", hash = "sha256:c064568d7907f322f58a97cf6b0fd757612b559952833ded0743272dccd77e6e"},
-]
-
-[package.dependencies]
-nestipy-metadata = "0.1.1"
-pydantic = ">=2.7.0,<3.0.0"
-
-[[package]]
-name = "nestipy-metadata"
-version = "0.1.1"
-description = ""
-optional = false
-python-versions = "<4.0,>=3.10"
-files = [
-    {file = "nestipy_metadata-0.1.1-py3-none-any.whl", hash = "sha256:4aa626b6135e41a48b00d02439b68df113d9f2cd93d7556e82b091d8fc311517"},
-    {file = "nestipy_metadata-0.1.1.tar.gz", hash = "sha256:e48d8a4ddb65c39e36b24852776a722d499efaf4dd3ff1cda3eb8fa0e3a6729b"},
-]
-
-[[package]]
 name = "pydantic"
 version = "2.7.1"
 description = "Data validation using Python type hints"
@@ -1220,4 +1179,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "6b8fbaca8157c2f28b67ec961b7de6713ae26fb0011a3905df9518900e1a8b1b"
+content-hash = "f34bc26f0ad9917bb01be5c47b39c279f3f2a82a6c0e52676ecd7e5a762551d8"

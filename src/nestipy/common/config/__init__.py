@@ -2,9 +2,9 @@ from dataclasses import asdict
 from typing import Literal
 
 from nestipy.common.decorator import Module, Injectable
-from nestipy_dynamic_module import ConfigurableModuleBuilder
-from nestipy_ioc import ModuleProviderDict, Inject
-from nestipy_metadata import Reflect
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.ioc import ModuleProviderDict, Inject
+from nestipy.metadata import Reflect
 
 Config = dict[Literal['folder'], str]
 ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[Config]().set_method('for_root').build()

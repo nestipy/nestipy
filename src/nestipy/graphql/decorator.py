@@ -1,6 +1,6 @@
 from typing import Type, Union, Callable, Any
 
-from nestipy_metadata import Reflect
+from nestipy.metadata import Reflect
 
 from nestipy.graphql.meta import NestipyGraphqlKey
 

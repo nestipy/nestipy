@@ -1,7 +1,7 @@
 import asyncio
 from typing import AsyncIterator
 
-from nestipy_ioc import Args
+from nestipy.ioc import Args
 
 from nestipy.common import UseGuards
 from nestipy.graphql import Query, Resolver, Mutation

@@ -73,7 +73,7 @@ app.use_global_guards(AuthGuard)
 import typing
 from typing import Union, Awaitable
 
-from nestipy_metadata import SetMetadata, Reflect
+from nestipy.metadata import SetMetadata, Reflect
 
 from nestipy.common import CanActivate, UseGuards
 from nestipy.common import Controller, Post, Injectable

@@ -4,7 +4,7 @@ import re
 import traceback
 from typing import Callable, Any
 
-from nestipy_ioc import MiddlewareContainer, MiddlewareProxy
+from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
 
 from nestipy.common.http_ import Request, Response
 from nestipy.common.middleware import NestipyMiddleware

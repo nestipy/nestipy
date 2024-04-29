@@ -1,5 +1,5 @@
 # TODO: precise import
-from nestipy_ioc import ModuleProviderDict
+from nestipy.ioc import ModuleProviderDict
 
 from .config import ConfigModule, ConfigService
 from .decorator import Module, Controller, Injectable, Route, Get, Post, Patch, Put, Delete

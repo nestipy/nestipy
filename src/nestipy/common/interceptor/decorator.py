@@ -1,7 +1,7 @@
 from typing import Union, Type, Callable
 
 from nestipy.common.decorator import Injectable
-from nestipy_metadata import SetMetadata
+from nestipy.metadata import SetMetadata
 
 from .interface import NestipyInterceptor
 from .meta import InterceptorKey

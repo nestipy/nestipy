@@ -1,9 +1,9 @@
 import enum
 from typing import Type, Callable, Union
 
-from nestipy_dynamic_module import DynamicModule
-from nestipy_ioc import NestipyContainer, ModuleProviderDict
-from nestipy_metadata import ModuleMetadata, Reflect, RouteKey
+from nestipy.dynamic_module import DynamicModule
+from nestipy.ioc import NestipyContainer, ModuleProviderDict
+from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 
 
 class Scope(enum.Enum):

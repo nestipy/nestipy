@@ -1,6 +1,6 @@
 from typing import Union, Awaitable
 
-from nestipy_dynamic_module import NestipyModule
+from nestipy.dynamic_module import NestipyModule
 
 from app_controller import AppController
 from app_provider import AppProvider

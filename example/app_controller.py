@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Any
 
-from nestipy_ioc import Inject, Req, Res, Body
+from nestipy.ioc import Inject, Req, Res, Body
 
 from app_provider import AppProvider
 from nestipy.common import Controller, Injectable, Post, Get

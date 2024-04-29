@@ -1,8 +1,8 @@
 from inspect import isfunction, getmembers
 from typing import List, Type, Union
 
-from nestipy_ioc import MiddlewareContainer
-from nestipy_metadata import ModuleMetadata, Reflect, RouteKey
+from nestipy.ioc import MiddlewareContainer
+from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from openapidocs.v3 import Parameter, ParameterLocation
 
 from nestipy.common.utils import deep_merge

@@ -2,9 +2,9 @@ from typing import Union, Type, Callable
 
 from nestipy.core.guards import GuardProcessor
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
-from nestipy_ioc import NestipyContainer
-from nestipy_ioc import NestipyContextContainer
-from nestipy_metadata import NestipyContextProperty
+from nestipy.ioc import NestipyContainer
+from nestipy.ioc import NestipyContextContainer
+from nestipy.metadata import NestipyContextProperty
 
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption

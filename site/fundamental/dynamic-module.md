@@ -7,8 +7,8 @@ from typing import Union
 
 from dotenv import dotenv_values
 from nestipy.common import Module, Injectable
-from nestipy_dynamic_module import ConfigurableModuleBuilder
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.ioc import Inject
 
 
 @dataclass
@@ -62,7 +62,7 @@ class AppModule:
 Now, we can use `ConfigModule` in controller or a service provider by injecting it.
 
 ```python
-from nestipy_ioc import Inject
+from nestipy.ioc import Inject
 
 from nestipy.common import Controller
 
@@ -89,8 +89,8 @@ Using it inside async factory.
 ```python
 from dataclasses import dataclass
 
-from nestipy_dynamic_module import ConfigurableModuleBuilder, NestipyModule
-from nestipy_ioc import Inject
+from nestipy.dynamic_module import ConfigurableModuleBuilder, NestipyModule
+from nestipy.ioc import Inject
 
 from nestipy.common import ConfigModule, ConfigService
 from nestipy.common import Module
