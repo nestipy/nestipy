@@ -7,6 +7,7 @@ from nestipy_ioc import NestipyContainer, ModuleProviderDict
 from nestipy_metadata import ModuleMetadata, Reflect
 
 from .discover import DiscoverService
+from .on_destroy import OnDestroy
 from .on_init import OnInit
 from ..graphql.graphql_module import GraphqlModule
 
@@ -76,7 +77,7 @@ class InstanceLoader:
             consumer = MiddlewareConsumer(module=class_ref)
             module = typing.cast(NestipyModule, instance)
             module.configure(consumer)
-            # await module.on_startup()
+            await module.on_startup()
         elif issubclass(class_ref, OnInit):
             ins = typing.cast(OnInit, instance)
             await ins.on_startup()
@@ -87,9 +88,9 @@ class InstanceLoader:
                 await module.on_shutdown()
 
         for provider in self.discover.get_all_provider():
-            if isinstance(provider, OnInit):
+            if isinstance(provider, OnDestroy):
                 await provider.on_shutdown()
 
         for controller in self.discover.get_all_controller():
-            if isinstance(controller, OnInit):
+            if isinstance(controller, OnDestroy):
                 await controller.on_shutdown()
