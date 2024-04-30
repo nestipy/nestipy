@@ -827,26 +827,24 @@
 <li>[x] First create gateway provider <br/>
     <code>nestipy g provider EventGateway</code><br/>
     <code>event_gateway.py</code><br/>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">nestipy.common</span> <span class="kn">import</span> <span class="n">Gateway</span><span class="p">,</span> <span class="n">GATEWAY_SERVER</span><span class="p">,</span> <span class="n">SubscribeMessage</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span> <span class="nn">socketio</span> <span class="kn">import</span> <span class="n">AsyncServer</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nd">@Gateway</span><span class="p">()</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">class</span> <span class="nc">EventGateway</span><span class="p">:</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">server</span><span class="p">:</span> <span class="n">AsyncServer</span> <span class="o">=</span> <span class="n">Inject</span><span class="p">(</span><span class="n">GATEWAY_SERVER</span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">SubscribeMessage</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sid</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">sid</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sid</span><span class="p">)</span>
-</code></pre></div></li>
+<pre class="highlight"><code class="language-python">from nestipy.common import Gateway, GATEWAY_SERVER, SubscribeMessage
+from socketio import AsyncServer
+
+@Gateway()
+class EventGateway:
+    server: AsyncServer = Inject(GATEWAY_SERVER)
+
+    SubscribeMessage('message')
+    def on_message(self, sid, data):
+        print(sid, data)
+        self.server.emit('message', data, sid)</code></pre></li>
 <li>[x] Register EventGateway in app_module providers</li>
 <li>[x] Modify <code>main.py</code> by adding: <br/>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span> <span class="nn">socketio</span> 
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="o">...</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">sio</span> <span class="o">=</span> <span class="n">socketio</span><span class="o">.</span><span class="n">AsyncServer</span><span class="p">(</span><span class="n">async_mode</span><span class="o">=</span><span class="s1">&#39;asgi&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">app</span><span class="o">.</span><span class="n">useSocketIo</span><span class="p">(</span><span class="n">sio</span><span class="p">)</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="o">...</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">import socketio 
+...
+sio = socketio.AsyncServer(async_mode='asgi')
+app.useSocketIo(sio)
+...</code></pre>
 4.[x] Everything will be ok <br/></li>
 <li>[x] When socketIo in register in main, GATEWAY_SERVER provider will be available every where by injecting it.</li>
 </ol>

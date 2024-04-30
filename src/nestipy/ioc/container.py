@@ -3,10 +3,10 @@ import inspect
 from functools import lru_cache
 from typing import Type, Union, Any, Optional, ForwardRef, Callable, Awaitable, TYPE_CHECKING
 
-from nestipy.metadata import ClassMetadata, CtxDepKey, ModuleMetadata, ProviderToken, Reflect, NestipyContextProperty
 from pydantic import BaseModel
 
-from .context_container import NestipyContextContainer
+from nestipy.metadata import ClassMetadata, CtxDepKey, ModuleMetadata, ProviderToken, Reflect, NestipyContextProperty
+from .context_container import RequestContextContainer
 from .meta import ContainerHelper
 from .utils import uniq
 
@@ -78,8 +78,16 @@ class NestipyContainer:
         # raise ValueError(f"Dependency Metadata not found  for {service.__name__} service ")
         return []
 
+    @classmethod
+    def _data_to_typed(cls, annotation: Union[Type, Any], data: Union[dict, list, str, int, tuple, set, Any]):
+        if dataclasses.is_dataclass(annotation) or issubclass(annotation, BaseModel):
+            return annotation(**data)
+        elif annotation in (dict, list, str, int, tuple, set, Any):
+            return data
+        return None
+
     def _resolve_context_service(self, name: str, dep_key: CtxDepKey, annotation: Union[Type, Any]):
-        context_container = NestipyContextContainer.get_instance()
+        context_container = RequestContextContainer.get_instance()
         match dep_key:
             case CtxDepKey.Request:
                 return context_container.get_value(NestipyContextProperty.request)
@@ -87,27 +95,54 @@ class NestipyContainer:
                 return context_container.get_value(NestipyContextProperty.response)
             case CtxDepKey.Body:
                 data: dict = context_container.get_value(NestipyContextProperty.body)
-                if dataclasses.is_dataclass(annotation) or issubclass(annotation, BaseModel):
-                    return annotation(**data)
-                elif annotation is dict:
-                    return data
-                return None
+                return self._data_to_typed(annotation, data)
             case CtxDepKey.Context:
                 return context_container.get_value(NestipyContextProperty.execution_context)
             case CtxDepKey.SocketClient:
                 return context_container.get_value(NestipyContextProperty.io_client)
             case CtxDepKey.SocketData:
-                return context_container.get_value(NestipyContextProperty.io_data)
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.io_data))
             case CtxDepKey.Session:
-                return self.helper.get_value_from_dict(context_container.get_value(NestipyContextProperty.session),
-                                                       name)
+                return self.helper.get_value_from_dict(
+                    context_container.get_value(NestipyContextProperty.session),
+                    name
+                )
+
+            case CtxDepKey.Sessions:
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.session))
+            case CtxDepKey.Param:
+                return self.helper.get_value_from_dict(
+                    context_container.get_value(NestipyContextProperty.params),
+                    name
+                )
             case CtxDepKey.Params:
-                return self.helper.get_value_from_dict(context_container.get_value(NestipyContextProperty.params), name)
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.params))
             case CtxDepKey.Query:
-                return self.helper.get_value_from_dict(context_container.get_value(NestipyContextProperty.query_params),
-                                                       name)
-            case CtxDepKey.Args:
+                return self.helper.get_value_from_dict(
+                    context_container.get_value(NestipyContextProperty.query_params),
+                    name
+                )
+            case CtxDepKey.Queries:
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.query_params))
+            case CtxDepKey.Cookie:
+                return self.helper.get_value_from_dict(
+                    context_container.get_value(NestipyContextProperty.cookies),
+                    name
+                )
+            case CtxDepKey.Cookies:
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.cookies))
+            case CtxDepKey.Arg:
                 return self.helper.get_value_from_dict(context_container.get_value(NestipyContextProperty.args), name)
+            case CtxDepKey.Args:
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.args))
+            case CtxDepKey.Header:
+                return self.helper.get_value_from_dict(
+                    context_container.get_value(NestipyContextProperty.headers),
+                    name
+                )
+            case CtxDepKey.Headers:
+                return self._data_to_typed(annotation, context_container.get_value(NestipyContextProperty.headers))
+
             case CtxDepKey.Files:
                 return self.helper.get_value_from_dict(context_container.get_value(NestipyContextProperty.files), name)
             case _:

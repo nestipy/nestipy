@@ -1,10 +1,9 @@
 from typing import Union
 
-from nestipy.ioc import Req, Res, Inject
-
 from nestipy.common import Get, Post, Controller
 from nestipy.common import Request, Response
 from nestipy.common import UseGuards
+from nestipy.ioc import Req, Res, Inject, Headers
 from nestipy.openapi import ApiTags, ApiOkResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiBearerAuth
 from .user_guards import TestGuard, TestGuardMethod
 from .user_service import UserService
@@ -21,7 +20,8 @@ class UserController:
     @Get()
     @ApiOkResponse()
     @UseGuards(TestGuardMethod)
-    async def get_user(self, res: Res[Response], req: Req[Request]) -> Union[Response | dict]:
+    async def get_user(self, res: Res[Response], req: Req[Request], headers: Headers[dict]) -> Union[Response | dict,]:
+        print(headers)
         return await res.json({'user': 'Me'})
         # return {'user': 'Me'}
 

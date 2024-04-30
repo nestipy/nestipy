@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 class Response:
     _status_code: int = 200
     _headers: set[tuple[str, str]] = set()
+    _cookies: set[tuple[str, str]] = set()
     _content: Union[bytes, None]
 
     def __init__(self, template_engine: "TemplateEngine" = None) -> None:
@@ -48,6 +49,11 @@ class Response:
     def header(self, name: str, value: str) -> "Response":
         self._headers = set([(k, v) for k, v in self._headers if k.lower() != name.lower])
         self._headers.add((name, value))
+        return self
+
+    def cookie(self, name: str, value: str) -> "Response":
+        self._cookies = set([(k, v) for k, v in self._cookies if k.lower() != name.lower])
+        self._cookies.add((name, value))
         return self
 
     async def send(self, content: str, status_code: int = 200) -> "Response":
@@ -139,6 +145,9 @@ class Response:
 
     def headers(self) -> set[tuple[str, str]]:
         return self._headers
+
+    def cookies(self) -> set[tuple[str, str]]:
+        return self._cookies
 
     def is_stream(self) -> bool:
         return self._stream_content is not None

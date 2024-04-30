@@ -2,7 +2,7 @@ import inspect
 from typing import Type, Union, Callable, Any, TYPE_CHECKING
 
 from nestipy.ioc import NestipyContainer
-from nestipy.ioc import NestipyContextContainer
+from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import NestipyContextProperty, Reflect, ModuleMetadata
 
 from .decorator import GATEWAY_KEY, EVENT_KEY, SUCCESS_EVENT_KEY, ERROR_EVENT_KEY
@@ -61,7 +61,7 @@ class IoSocketProxy:
     ) -> Callable[..., Any]:
         async def io_handler(sid: Any, data: Any):
             io_adapter = self.adapter.get_io_adapter()
-            context_container = NestipyContextContainer.get_instance()
+            context_container = RequestContextContainer.get_instance()
             context_container.set_value(NestipyContextProperty.io_client, sid)
             context_container.set_value(NestipyContextProperty.io_data, data)
             context_container.set_value(NestipyContextProperty.io_server, io_adapter)

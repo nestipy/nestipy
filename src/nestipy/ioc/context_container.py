@@ -3,13 +3,14 @@ from typing import Union, Any
 from nestipy.metadata import NestipyContextProperty
 
 
-class NestipyContextContainer:
-    _instance: Union["NestipyContextContainer", None] = None
+class RequestContextContainer:
+    _instance: Union["RequestContextContainer", None] = None
     _request = None
     _response = None
     _query_params = {}
     _params = {}
     _session = {}
+    _cookies = {}
     _headers = {}
     _body = {}
     _args = {}
@@ -21,7 +22,7 @@ class NestipyContextContainer:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(NestipyContextContainer, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(RequestContextContainer, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     @classmethod
@@ -36,7 +37,7 @@ class NestipyContextContainer:
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
-        return NestipyContextContainer(*args, **kwargs)
+        return RequestContextContainer(*args, **kwargs)
 
     def destroy(self):
         self._request = None
@@ -47,6 +48,7 @@ class NestipyContextContainer:
         self._headers = {}
         self._body = {}
         self._args = {}
+        self._cookies = {}
         self._execution_context = None
         self._websocket_sever = None
         self._instance = None

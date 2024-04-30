@@ -1,4 +1,5 @@
-Nestipy use openapidocs.v3 packages used by **Blacksheep**.
+Nestipy use openapi_docs.v3 cloned from  **Blacksheep** openapidocs.
+It's available via `from nestipy.openapi.openapi_docs.v3 import Parameter`.<br/>
 
 Let's view how it works.
 
@@ -6,12 +7,12 @@ Let's view how it works.
 
 import dataclasses
 
-from nestipy.ioc import Req, Res, Body
-
+# from nestipy.openapi.openapi_docs.v3 import Parameter
 from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import Request, Response
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth
+from nestipy.ioc import Req, Res, Body
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody
 
 
 @dataclasses.dataclass
@@ -32,6 +33,8 @@ class AppController:
         # return await res.render('index.html', {'title': 'Hello'})
 
     @Post()
+    @ApiBody(TestBody)
+    # @ApiBody(TestBody, 'application/json')
     @ApiBearerAuth()  # Enable security bearer
     @ApiCreatedResponse()
     async def post(self, res: Res[Response], body: Body[TestBody]):

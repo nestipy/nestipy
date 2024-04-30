@@ -3,7 +3,7 @@ from typing import Union, Type, Callable
 from nestipy.core.guards import GuardProcessor
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.ioc import NestipyContainer
-from nestipy.ioc import NestipyContextContainer
+from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import NestipyContextProperty
 
 from .graphql_explorer import GraphqlExplorer
@@ -42,7 +42,7 @@ class GraphqlProxy:
         method = getattr(resolver, method_name)
 
         async def graphql_handler(*_args, **kwargs):
-            context_container = NestipyContextContainer.get_instance()
+            context_container = RequestContextContainer.get_instance()
             context_container.set_value(NestipyContextProperty.args, kwargs)
             try:
                 # TODO: Refactor with routerProxy

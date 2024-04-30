@@ -1,6 +1,7 @@
+from http import cookies as http_cookies
 from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
-from http import cookies as http_cookies
+
 import ujson
 from starlette.datastructures import UploadFile
 from starlette.requests import Request as StarletteRequest
@@ -95,6 +96,16 @@ class Request:
             self._client = self.scope.get("client", ())
         return self._client
 
+    @property
+    def session(self) -> dict:
+        if self._session is None:
+            self._session = {}
+        return self._session
+
+    @session.setter
+    def session(self, session: dict):
+        self._session = session
+
     def set_body(self, body: str):
         self._body = body
 
@@ -148,10 +159,9 @@ class Request:
 
     @property
     def cookies(self) -> dict[str, str]:
-        if not hasattr(self, "_cookies"):
+        if self._cookies is None:
             cookies: dict[str, str] = {}
             cookie_header = self.headers.get("cookie")
-
             if cookie_header:
                 cookies = cookie_parser(cookie_header)
             self._cookies = cookies

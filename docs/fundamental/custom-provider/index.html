@@ -947,75 +947,73 @@
 
 <p>We will learn to have same way how NestJs create and use providers.</p>
 <h3 id="standard-providers">Standard providers</h3>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">controllers</span><span class="o">=</span><span class="p">[</span><span class="n">CatsController</span><span class="p">],</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="n">CatsService</span><span class="p">],</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">@Module(
+    controllers=[CatsController],
+    providers=[CatsService],
+)</code></pre>
 <h3 id="value-providers">Value providers</h3>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">nestipy.common</span> <span class="kn">import</span> <span class="n">ModuleProviderDict</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">controllers</span><span class="o">=</span><span class="p">[</span><span class="n">CatsController</span><span class="p">],</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">providers</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="n">ModuleProviderDict</span><span class="p">(</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>            <span class="n">token</span><span class="o">=</span><span class="n">CatsService</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>            <span class="n">value</span><span class="o">=</span><span class="n">CatsService</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="p">],</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">from nestipy.common import ModuleProviderDict
+
+
+@Module(
+    controllers=[CatsController],
+    providers=[
+        ModuleProviderDict(
+            token=CatsService,
+            value=CatsService
+        )
+    ],
+)</code></pre>
 <h3 id="non-class-based-provider-tokens">Non-class-based provider tokens</h3>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">nestipy.common</span> <span class="kn">import</span> <span class="n">Module</span><span class="p">,</span> <span class="n">ModuleProviderDict</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span> <span class="nn">.connection</span> <span class="kn">import</span> <span class="n">connection</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">controllers</span><span class="o">=</span><span class="p">[</span><span class="n">CatsController</span><span class="p">],</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">providers</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">ModuleProviderDict</span><span class="p">(</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>            <span class="n">token</span><span class="o">=</span><span class="s1">&#39;CONNECTION&#39;</span><span class="p">,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>            <span class="n">value</span><span class="o">=</span><span class="n">connection</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="p">)</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="p">],</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">:</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="k">pass</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">
+from nestipy.common import Module, ModuleProviderDict
+from .connection import connection
+
+
+@Module(
+    controllers=[CatsController],
+    providers=[
+        ModuleProviderDict(
+            token='CONNECTION',
+            value=connection
+        )
+    ],
+)
+class AppModule:
+    pass</code></pre>
 <p>For, use_class and use_existing, it's the same as NestJs.</p>
 <h3 id="factory-provider">Factory provider</h3>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span> <span class="nn">nestipy.common</span> <span class="kn">import</span> <span class="n">ModuleProviderDict</span><span class="p">,</span> <span class="n">Module</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span> <span class="nn">.connection</span> <span class="kn">import</span> <span class="n">connection</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">def</span> <span class="nf">factory_value</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="k">return</span> <span class="n">connection</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">controllers</span><span class="o">=</span><span class="p">[</span><span class="n">CatsController</span><span class="p">],</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">providers</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="n">ModuleProviderDict</span><span class="p">(</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>            <span class="n">token</span><span class="o">=</span><span class="s1">&#39;CONNECTION&#39;</span><span class="p">,</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>            <span class="n">factory</span><span class="o">=</span><span class="n">factory_value</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>        <span class="p">)</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="p">],</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="p">)</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">:</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="k">pass</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">
+from nestipy.common import ModuleProviderDict, Module
+from .connection import connection
+
+
+def factory_value() -&gt; str:
+    return connection
+
+
+@Module(
+    controllers=[CatsController],
+    providers=[
+        ModuleProviderDict(
+            token='CONNECTION',
+            factory=factory_value
+        )
+    ],
+)
+class AppModule:
+    pass
+</code></pre>
 <p>Factory can be an async function to have async provider.</p>
 <h3 id="inject-providers">Inject providers</h3>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span> <span class="nn">nestipy.common.decorator</span> <span class="kn">import</span> <span class="n">Controller</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span> <span class="nn">nestipy.ioc</span> <span class="kn">import</span> <span class="n">Inject</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nd">@Controller</span><span class="p">(</span><span class="s1">&#39;cats&#39;</span><span class="p">)</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">class</span> <span class="nc">CatsController</span><span class="p">:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">connection</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="s1">&#39;CONNECTION&#39;</span><span class="p">]</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">cat_service</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">CatsService</span><span class="p">]</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">from nestipy.common.decorator import Controller
+from nestipy.ioc import Inject
+
+
+@Controller('cats')
+class CatsController:
+    connection: Inject['CONNECTION']
+    cat_service: Inject[CatsService]</code></pre>
 <p>Exporting non-class based provider works perfectly.</p>
 
 

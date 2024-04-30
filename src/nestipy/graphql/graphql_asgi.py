@@ -2,7 +2,7 @@ import os
 from abc import abstractmethod
 
 import aiofiles
-from nestipy.ioc import NestipyContextContainer
+from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import NestipyContextProperty
 
 from nestipy.common.http_ import Request
@@ -33,5 +33,5 @@ class GraphqlAsgi:
     @classmethod
     def _setup_request(cls, scope: dict, receive, send):
         req = Request(scope, receive, send)
-        NestipyContextContainer.get_instance().set_value(NestipyContextProperty.request, req)
+        RequestContextContainer.get_instance().set_value(NestipyContextProperty.request, req)
         pass

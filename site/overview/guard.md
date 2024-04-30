@@ -1,5 +1,4 @@
-from typing import Unionfrom nestipy.core.context.execution_context import ExecutionContextfrom typing import Awaitable
-from typing import UnionA guard is a class annotated with the `@Injectable()` decorator, which implements
+A guard is a class annotated with the `@Injectable()` decorator, which implements
 the `CanActivate` interface.
 
 ### Authorization guard
