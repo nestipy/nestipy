@@ -5,7 +5,7 @@ import socketio
 import uvicorn
 
 from app_module import AppModule
-from nestipy.common import HttpException, ExceptionFilter, Catch
+from nestipy.common import HttpException, ExceptionFilter, Catch, logger
 from nestipy.common import session
 from nestipy.core import ArgumentHost, NestipyFactory, NestipyFastApiApplication
 from nestipy.openapi import SwaggerModule, DocumentBuilder
@@ -50,7 +50,7 @@ app.use(session())
 
 @app.on_startup
 async def startup():
-    print('Starting up ...')
+    logger.info('Starting up ...')
 
 
 if __name__ == '__main__':

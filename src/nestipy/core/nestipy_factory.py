@@ -1,3 +1,4 @@
+import logging
 import typing
 from typing import Type
 
@@ -15,6 +16,11 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
     def create(cls, module: Type, config: NestipyApplicationConfig = None) -> NestipyApplication:
+        logging.addLevelName(logging.INFO, "[NESTIPY] INFO")
+        logging.addLevelName(logging.ERROR, "[NESTIPY] ERROR")
+        logging.addLevelName(logging.WARNING, "[NESTIPY] WARNING")
+        logging.addLevelName(logging.WARN, "[NESTIPY] WARN")
+        logging.addLevelName(logging.CRITICAL, "[NESTIPY] CRITICAL")
         if getattr(cls, '__generic_type__', None) == 'NestipyBlackSheepApplication':
             if not config:
                 config = NestipyApplicationConfig(adapter=BlackSheepAdapter())
