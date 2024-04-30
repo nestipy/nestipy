@@ -1,10 +1,11 @@
 import dataclasses
 from typing import Union, Optional, Any, Type
 
-from nestipy.metadata import SetMetadata
-from openapidocs.v3 import RequestBody, Response, Parameter
-from openapidocs.v3 import SecurityRequirement, MediaType, Schema
 from pydantic import TypeAdapter, BaseModel
+
+from nestipy.metadata import SetMetadata
+from .openapi_docs.v3 import RequestBody, Response, Parameter
+from .openapi_docs.v3 import SecurityRequirement, MediaType, Schema
 
 
 def ApiBody(body: Union[BaseModel, Type] = None, consumer: str = 'application/json'):

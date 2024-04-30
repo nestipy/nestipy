@@ -1,4 +1,4 @@
-from openapidocs.v3 import Info, OpenAPI, Components, SecurityScheme, HTTPSecurity
+from .openapi_docs.v3 import Info, OpenAPI, Components, SecurityScheme, HTTPSecurity
 
 
 class DocumentBuilder:

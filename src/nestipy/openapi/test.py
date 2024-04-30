@@ -1,10 +1,7 @@
-import json
-
-from openapidocs.v3 import OpenAPI, Info, Response, Components, Schema, SecuritySchemeType
-from openapidocs.v3 import PathItem, Operation, SecurityRequirement, ValueType, SecurityScheme
-from openapidocs.v3 import Tag, HTTPSecurity, APIKeySecurity, ParameterLocation, Parameter
-from openapidocs.common import Serializer
-from dataclasses import asdict
+from .openapi_docs.common import Serializer
+from .openapi_docs.v3 import OpenAPI, Info, Response, Components, Schema, SecuritySchemeType
+from .openapi_docs.v3 import PathItem, Operation, SecurityRequirement, ValueType
+from .openapi_docs.v3 import Tag, HTTPSecurity, APIKeySecurity, ParameterLocation, Parameter
 
 open_api = OpenAPI(
     info=Info(
