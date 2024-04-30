@@ -2,7 +2,11 @@ from .openapi_docs.v3 import Info, OpenAPI, Components, SecurityScheme, HTTPSecu
 
 
 class DocumentBuilder:
-    _info: dict = {}
+    _info: dict = {
+        'title': 'Nestipy',
+        'description': '',
+        'version': '1.0'
+    }
     _security_schemes: dict = {}
     _schemas: dict = {}
     _instance: "DocumentBuilder" = None

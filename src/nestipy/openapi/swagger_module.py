@@ -3,6 +3,7 @@ import os.path
 from typing import TYPE_CHECKING
 
 import aiofiles
+import ujson
 
 from nestipy.common.http_ import Request, Response
 from nestipy.metadata import Reflect
@@ -24,11 +25,20 @@ class _Document:
 class SwaggerModule:
 
     @classmethod
+    def remove_null(cls, json_data):
+        if isinstance(json_data, dict):
+            return {key: cls.remove_null(value) for key, value in json_data.items() if value is not None}
+        elif isinstance(json_data, list):
+            return [cls.remove_null(item) for item in json_data if item is not None]
+        else:
+            return json_data
+
+    @classmethod
     def _create_document(cls, app: "NestipyApplication", config: OpenAPI) -> _Document:
         paths = app.get_openapi_paths()
         config.paths = paths
         serializer = Serializer()
-        document_json = serializer.to_json(config)
+        document_json = ujson.dumps(cls.remove_null(ujson.loads(serializer.to_json(config))), allow_nan=False, indent=4)
         document_yml = serializer.to_yaml(config)
         document_obj = serializer.to_obj(config)
         return _Document(document_json, document_yml, document_obj)
