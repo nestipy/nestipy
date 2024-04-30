@@ -7,7 +7,7 @@ from .exception import HttpException, HttpStatusMessages, HttpStatus, UseFilters
 from .guards import CanActivate, UseGuards
 from .http_ import Request, Response, Websocket, UploadFile
 from .interceptor import NestipyInterceptor, UseInterceptors
-from .middleware import cors, NestipyMiddleware
+from .middleware import cors, NestipyMiddleware, session, SessionOption
 from .template import Render, TemplateEngine
 
 __all__ = [
@@ -41,5 +41,7 @@ __all__ = [
     "NestipyMiddleware",
     "Render",
     "TemplateEngine",
-    "ModuleProviderDict"
+    "ModuleProviderDict",
+    "session",
+    "SessionOption"
 ]

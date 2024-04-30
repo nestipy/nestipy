@@ -6,6 +6,7 @@ import uvicorn
 
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch
+from nestipy.common import session
 from nestipy.core import ArgumentHost, NestipyFactory, NestipyFastApiApplication
 from nestipy.openapi import SwaggerModule, DocumentBuilder
 from nestipy.websocket import SocketIoAdapter
@@ -43,6 +44,8 @@ app.use_global_filters(TestGlobalFilter)
 # socket io
 sio = socketio.AsyncServer(async_mode='asgi')
 app.use_io_adapter(SocketIoAdapter(sio))
+
+app.use(session())
 
 
 @app.on_startup

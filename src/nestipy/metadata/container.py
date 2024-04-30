@@ -7,6 +7,7 @@ class NestipyContextProperty(enum.Enum):
     query_params: str = '_query_params'
     params: str = '_params'
     session: str = '_session'
+    cookies: str = '_cookies'
     body: str = '_body'
     headers: str = '_headers'
     args: str = '_args'

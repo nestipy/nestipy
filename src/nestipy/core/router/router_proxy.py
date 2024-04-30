@@ -1,11 +1,9 @@
 import dataclasses
+import logging
 import traceback
 import typing
 from typing import Type, Union
 
-from nestipy.ioc import NestipyContainer
-from nestipy.ioc import NestipyContextContainer
-from nestipy.metadata import NestipyContextProperty
 from openapidocs.v3 import Operation, PathItem
 from pydantic import BaseModel
 
@@ -19,6 +17,9 @@ from nestipy.core.guards import GuardProcessor
 from nestipy.core.interceptor import RequestInterceptor
 from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
+from nestipy.ioc import NestipyContainer
+from nestipy.ioc import RequestContextContainer
+from nestipy.metadata import NestipyContextProperty
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
@@ -60,6 +61,22 @@ class RouterProxy:
             paths[path] = PathItem(**op)
         return paths
 
+    @classmethod
+    async def setup_context_data(cls, context_container: RequestContextContainer, req: "Request", res: "Response"):
+        context_container.set_value(NestipyContextProperty.request, req)
+        context_container.set_value(NestipyContextProperty.response, res)
+        context_container.set_value(NestipyContextProperty.params, req.path_params)
+        context_container.set_value(NestipyContextProperty.query_params, req.query_params)
+        context_container.set_value(NestipyContextProperty.headers, req.headers)
+        context_container.set_value(NestipyContextProperty.session, req.session)
+        context_container.set_value(NestipyContextProperty.cookies, req.cookies)
+        form_data = await req.form()
+        if form_data is not None:
+            context_container.set_value(NestipyContextProperty.body, form_data)
+        else:
+            json_data = await req.json()
+            context_container.set_value(NestipyContextProperty.body, json_data)
+
     def create_request_handler(
             self,
             module_ref: Type,
@@ -69,20 +86,9 @@ class RouterProxy:
 
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
 
-            context_container = NestipyContextContainer.get_instance()
+            context_container = RequestContextContainer.get_instance()
             # setup container for query params, route params, request, response, session, etc..
-            context_container.set_value(NestipyContextProperty.request, req)
-            context_container.set_value(NestipyContextProperty.response, res)
-            context_container.set_value(NestipyContextProperty.params, req.path_params)
-            context_container.set_value(NestipyContextProperty.query_params, req.query_params)
-            context_container.set_value(NestipyContextProperty.headers, req.headers)
-            form_data = await req.form()
-            if form_data is not None:
-                context_container.set_value(NestipyContextProperty.body, form_data)
-            else:
-                json_data = await req.json()
-                context_container.set_value(NestipyContextProperty.body, json_data)
-
+            await self.setup_context_data(context_container, req, res)
             # TODO: req.files
 
             container = NestipyContainer.get_instance()
@@ -136,6 +142,7 @@ class RouterProxy:
                 handler_response = await self._ensure_response(res, result)
 
             except Exception as e:
+                logging.error(e)
                 if not isinstance(e, HttpException):
                     tb = traceback.format_exc()
                     e = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))
@@ -148,7 +155,7 @@ class RouterProxy:
                 else:
                     handler_response = await self._ensure_response(res, await next_fn(e))
             finally:
-                #  reset context container
+                #  reset request context container
                 context_container.destroy()
             return handler_response
 

@@ -877,146 +877,143 @@
 <h3 id="strawberry-module">Strawberry module</h3>
 <p>Usage: register Strawberry module in <code>app_module.py</code> to use it <br/> 
  <code>app_module.py</code></p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="o">...</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.strawberry_module.strawberry_module</span> <span class="kn">import</span> <span class="n">StrawberryModule</span><span class="p">,</span> <span class="n">StrawberryOption</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="o">...</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">imports</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="o">...</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="n">StrawberryModule</span><span class="o">.</span><span class="n">for_root</span><span class="p">(</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="n">UserModule</span><span class="p">],</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="n">option</span><span class="o">=</span><span class="n">StrawberryOption</span><span class="p">(</span><span class="n">graphql_ide</span><span class="o">=</span><span class="s1">&#39;graphiql&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="p">),</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="o">...</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="p">],</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">)</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">:</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="k">pass</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">...
+from nestipy.plugins.strawberry_module.strawberry_module import StrawberryModule, StrawberryOption
+
+...
+
+
+@Module(
+    imports=[
+        ...
+        StrawberryModule.for_root(
+            resolvers=[UserModule],
+            option=StrawberryOption(graphql_ide='graphiql')
+        ),
+        ...
+    ],
+)
+class AppModule:
+    pass</code></pre>
 <p>In <b>resolvers</b> import all modules that you have defined your <strong>resolvers</strong>.</p>
 <h3 id="config-module">Config module</h3>
 <p>Usage: register Config module in <code>app_module.py</code> to use it <br/>
  <code>app_module.py</code></p>
-<p><div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="o">...</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.config_module.config_module</span> <span class="kn">import</span> <span class="n">ConfigModule</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="o">...</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">imports</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="o">...</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="n">ConfigModule</span><span class="o">.</span><span class="n">for_root</span><span class="p">(),</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="o">...</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="p">],</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">)</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">(</span><span class="n">NestipyModule</span><span class="p">):</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>   <span class="k">pass</span>
-</code></pre></div>
+<p><pre class="highlight"><code class="language-python">...
+from nestipy.plugins.config_module.config_module import ConfigModule
+...
+
+
+@Module(
+    imports=[
+        ...
+        ConfigModule.for_root(),
+        ...
+    ],
+
+)
+class AppModule(NestipyModule):
+   pass
+</code></pre>
 <code>ConfigModule.for_root()</code> can receive a parameter of .env file</p>
 <p><code>ConfigModule</code> is a global module, so <code>ConfigService</code> can be injected in any Controller, Resolver, or Service.
 You can use method <code>get('key')</code> of <code>ConfigService</code> to get value by key from your <code>.env</code> file.</p>
 <h3 id="peewee-module">Peewee module</h3>
 <p>Usage: register Peewee module in <code>app_module.py</code> to use it <br/> </p>
 <p><code>app_module.py</code></p>
-<p><div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="o">...</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.peewee_module.peewee_module</span> <span class="kn">import</span> <span class="n">PeeweeModule</span><span class="p">,</span><span class="n">PeeweeDatabaseConfig</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.config_module.config_module</span> <span class="kn">import</span> <span class="n">ConfigModule</span><span class="p">,</span> <span class="n">ConfigService</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="o">...</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">peewee_mysql_factory</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">ConfigService</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PeeweeDatabaseConfig</span><span class="p">:</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">return</span> <span class="n">PeeweeDatabaseConfig</span><span class="p">(</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mysql&#39;</span><span class="p">,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">database</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_DATABASE&quot;</span><span class="p">),</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_HOST&quot;</span><span class="p">),</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">port</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_PORT&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">),</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">user</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_USER&quot;</span><span class="p">),</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="n">password</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_PASSWORD&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="p">)</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="n">imports</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>        <span class="o">...</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>        <span class="n">ConfigModule</span><span class="o">.</span><span class="n">for_root</span><span class="p">(),</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>         <span class="n">PeeweeModule</span><span class="o">.</span><span class="n">for_root_async</span><span class="p">(</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>            <span class="n">use_factory</span><span class="o">=</span><span class="n">peewee_mysql_factory</span><span class="p">,</span>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>            <span class="n">inject</span><span class="o">=</span><span class="p">[</span><span class="n">ConfigService</span><span class="p">]</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>        <span class="p">),</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>        <span class="o">...</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>    <span class="p">],</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="p">)</span>
-<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">(</span><span class="n">NestipyModule</span><span class="p">):</span>
-<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>   <span class="k">pass</span>
-</code></pre></div>
+<p><pre class="highlight"><code class="language-python">...
+from nestipy.plugins.peewee_module.peewee_module import PeeweeModule,PeeweeDatabaseConfig
+from nestipy.plugins.config_module.config_module import ConfigModule, ConfigService
+...
+
+
+async def peewee_mysql_factory(config: ConfigService) -&gt; PeeweeDatabaseConfig:
+    return PeeweeDatabaseConfig(
+        driver='mysql',
+        database=config.get("DB_DATABASE"),
+        host=config.get("DB_HOST"),
+        port=int(f'{config.get("DB_PORT")}'),
+        user=config.get("DB_USER"),
+        password=config.get("DB_PASSWORD") or ''
+    )
+
+@Module(
+    imports=[
+        ...
+        ConfigModule.for_root(),
+         PeeweeModule.for_root_async(
+            use_factory=peewee_mysql_factory,
+            inject=[ConfigService]
+        ),
+        ...
+    ],
+
+)
+class AppModule(NestipyModule):
+   pass
+</code></pre>
 In this example, we show the dependency between module. So , in this case, <code>ConfigModule</code> must be registered in top of <code>PeeweeModule</code>. 
 <code>ConfigService</code> is a provider exported by <code>ConfigModule</code></p>
 <p>To register a model in peewee, model must decorate with <code>@Model</code> from <code>peewee_module</code> and must be register by calling <code>PeeweeModule.for_feature([MyModel])</code> in imports of Module. </p>
 <h3 id="masonite-orm-module">Masonite orm module</h3>
 <p>Usage: register Masonite orm module in <code>app_module.py</code> to use it <br/> </p>
 <p><code>app_module.py</code></p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="o">...</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.masonite_orm_module.masonite_orm_module</span> <span class="kn">import</span> <span class="n">MasoniteOrmModule</span><span class="p">,</span> <span class="n">MasoniteDatabaseConfig</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="o">...</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">masonite_factory</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">ConfigService</span><span class="p">):</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.4</span><span class="p">)</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="k">return</span> <span class="p">{</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;mysql&#39;</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="s1">&#39;mysql&#39;</span><span class="p">:</span> <span class="n">MasoniteDatabaseConfig</span><span class="p">(</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>            <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mysql&#39;</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>            <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_HOST&quot;</span><span class="p">),</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>            <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_PORT&quot;</span><span class="p">),</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>            <span class="n">user</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_USER&quot;</span><span class="p">),</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>            <span class="n">password</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_PASSWORD&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>            <span class="n">database</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_DATABASE&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>        <span class="p">)</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="p">}</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="n">imports</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>        <span class="o">...</span><span class="p">,</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        <span class="n">ConfigModule</span><span class="o">.</span><span class="n">for_root</span><span class="p">(),</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="n">MasoniteOrmModule</span><span class="o">.</span><span class="n">for_root_async</span><span class="p">(</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>            <span class="n">factory</span><span class="o">=</span><span class="n">masonite_factory</span><span class="p">,</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>            <span class="n">inject</span><span class="o">=</span><span class="p">[</span><span class="n">ConfigService</span><span class="p">]</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="p">),</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>        <span class="o">...</span>
-<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>    <span class="p">]</span>
-<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="p">)</span>
-<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">:</span>
-<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>    <span class="k">pass</span>
-</code></pre></div>
+<pre class="highlight"><code class="language-python">...
+from nestipy.plugins.masonite_orm_module.masonite_orm_module import MasoniteOrmModule, MasoniteDatabaseConfig
+...
+async def masonite_factory(config: ConfigService):
+    await asyncio.sleep(0.4)
+    return {
+        'default': 'mysql',
+        'mysql': MasoniteDatabaseConfig(
+            driver='mysql',
+            host=config.get("DB_HOST"),
+            port=config.get("DB_PORT"),
+            user=config.get("DB_USER"),
+            password=config.get("DB_PASSWORD") or '',
+            database=config.get("DB_DATABASE")
+        )
+    }
+@Module(
+    imports=[
+        ...,
+        ConfigModule.for_root(),
+        MasoniteOrmModule.for_root_async(
+            factory=masonite_factory,
+            inject=[ConfigService]
+        ),
+        ...
+    ]
+)
+class AppModule:
+    pass</code></pre>
 <h3 id="beanie-mongo-module">Beanie mongo module</h3>
 <p>Usage: register Beanie mongo module in <code>app_module.py</code> to use it <br/> </p>
 <p><code>app_module.py</code></p>
-<p><div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="o">..</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span> <span class="nn">nestipy.plugins.beanie_module.beanie_module</span> <span class="kn">import</span> <span class="n">BeanieModule</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="o">...</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">beanie_factory</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">ConfigService</span><span class="p">):</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;MONGODB_URL&#39;</span><span class="p">)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nd">@Module</span><span class="p">(</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">imports</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="o">...</span><span class="p">,</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="n">ConfigModule</span><span class="o">.</span><span class="n">for_root</span><span class="p">(),</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="n">BeanieModule</span><span class="o">.</span><span class="n">for_root_async</span><span class="p">(</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>            <span class="n">use_factory</span><span class="o">=</span><span class="n">beanie_factory</span><span class="p">,</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>            <span class="n">inject</span><span class="o">=</span><span class="p">[</span><span class="n">ConfigService</span><span class="p">],</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>            <span class="n">documents</span><span class="o">=</span> <span class="p">[</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>                <span class="c1">#Register document here or use BeanieModule.for_feature([MyDocument])</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>            <span class="p">]</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="p">),</span>
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="o">...</span>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="p">]</span>
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="p">)</span>
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="k">class</span> <span class="nc">AppModule</span><span class="p">:</span>
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>    <span class="k">pass</span>
-</code></pre></div>
+<p><pre class="highlight"><code class="language-python">..
+from nestipy.plugins.beanie_module.beanie_module import BeanieModule
+...
+
+async def beanie_factory(config: ConfigService):
+    return config.get('MONGODB_URL')
+
+
+@Module(
+    imports=[
+        ...,
+        ConfigModule.for_root(),
+        BeanieModule.for_root_async(
+            use_factory=beanie_factory,
+            inject=[ConfigService],
+            documents= [
+                #Register document here or use BeanieModule.for_feature([MyDocument])
+            ]
+        ),
+        ...
+    ]
+)
+class AppModule:
+    pass</code></pre>
 You must call <code>BeanieModule.for_feature([MyDocument])</code> inside module imports to register a document.</p>
 
 

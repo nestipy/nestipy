@@ -3,7 +3,7 @@ By default, Nestipy use socketio as a Gateway. However, we can create our own ad
 Firstly, we need to create a gateway class
 
 ```python
-from typing import Any
+
 
 from nestipy.ioc import SocketServer, SocketClient, SocketData
 
@@ -15,7 +15,7 @@ class AppGateway:
     server: SocketServer[IoAdapter]
 
     @SubscribeMessage('user')
-    async def on_user(self, sid: SocketClient[str], data: SocketData[Any]):
+    async def on_user(self, sid: SocketClient[str], data: SocketData[str]):
         print(sid, data)
         await self.server.emit('user', data, sid)
 ```

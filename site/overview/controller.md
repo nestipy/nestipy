@@ -35,9 +35,8 @@ Below is a sample illustrating how different decorators are employed to create a
 ```python
 from dataclasses import dataclass
 
-from nestipy.ioc import Body, Query, Params, Session
-
 from nestipy.common import Controller, Get, Put, Post, Delete
+from nestipy.ioc import Body, Query, Param, Session, Headers
 
 
 @dataclass
@@ -53,19 +52,19 @@ class CatsController:
         return 'This action adds a new cat'
 
     @Get()
-    async def find_all(self, limit: Query[int]) -> str:
+    async def find_all(self, limit: Query[int], headers: Headers[dict]) -> str:
         return f"This action returns all cats (limit: {limit} items"
 
     @Get('/{cat_id}')
-    async def find_one(self, cat_id: Params[str]):
+    async def find_one(self, cat_id: Param[str]):
         return f"This action returns a #{cat_id} cat"
 
     @Put('/{cat_id}')
-    async def update(self, cat_id: Params[str], data: Body[CreateCat]):
+    async def update(self, cat_id: Param[str], data: Body[CreateCat]):
         return f"This action updates a #{cat_id} cat"
 
     @Delete('/{cat_id}')
-    async def remove(self, cat_id: Params[str], user_id: Session[int, None]):
+    async def remove(self, cat_id: Param[str], user_id: Session[int, None]):
         return f"This action removes a #{cat_id} cat"
 
 

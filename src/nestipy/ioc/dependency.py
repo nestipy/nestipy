@@ -1,7 +1,6 @@
 from typing import Union, TypeVar, Tuple, Any, Annotated
 
 from nestipy.metadata import CtxDepKey, ProviderToken
-
 from .annotation import Annotation
 
 T = TypeVar('T')
@@ -35,12 +34,20 @@ Inject = _TypedDependency(CtxDepKey.Service)
 Req = _TypedDependency(CtxDepKey.Request)
 Res = _TypedDependency(CtxDepKey.Response)
 Session = _TypedDependency(CtxDepKey.Session)
+Sessions = _TypedDependency(CtxDepKey.Sessions)
+Cookie = _TypedDependency(CtxDepKey.Cookie)
+Cookies = _TypedDependency(CtxDepKey.Cookies)
 Query = _TypedDependency(CtxDepKey.Query)
+Queries = _TypedDependency(CtxDepKey.Queries)
 Body = _TypedDependency(CtxDepKey.Body)
+Param = _TypedDependency(CtxDepKey.Param)
 Params = _TypedDependency(CtxDepKey.Params)
 Args = _TypedDependency(CtxDepKey.Args)
+Arg = _TypedDependency(CtxDepKey.Arg)
 Context = _TypedDependency(CtxDepKey.Context)
 Files = _TypedDependency(CtxDepKey.Files)
 SocketServer = _TypedDependency(CtxDepKey.Service)
 SocketClient = _TypedDependency(CtxDepKey.SocketClient)
 SocketData = _TypedDependency(CtxDepKey.SocketData)
+Header = _TypedDependency(CtxDepKey.Header)
+Headers = _TypedDependency(CtxDepKey.Headers)

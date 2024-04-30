@@ -1,15 +1,15 @@
 from .annotation import Annotation
 from .container import NestipyContainer
-from .context_container import NestipyContextContainer
+from .context_container import RequestContextContainer
 from .dependency import Inject, Res, Req, Session, Query, Body, Args, Context, Files, SocketServer, SocketClient, \
-    SocketData, Params
+    SocketData, Params, Arg, Sessions, Queries, Param, Header, Headers, Cookies, Cookie
 from .middleware import MiddlewareProxy, MiddlewareRouteConfig, MiddlewareContainer
 from .provider import ModuleProviderDict
 
 __all__ = [
     "Annotation",
     "NestipyContainer",
-    "NestipyContextContainer",
+    "RequestContextContainer",
     "ModuleProviderDict",
     "Inject",
     "Res",
@@ -26,5 +26,13 @@ __all__ = [
     "Params",
     "MiddlewareProxy",
     "MiddlewareRouteConfig",
-    "MiddlewareContainer"
+    "MiddlewareContainer",
+    "Arg",
+    "Sessions",
+    "Queries",
+    "Param",
+    "Header",
+    "Headers",
+    "Cookies",
+    "Cookie"
 ]

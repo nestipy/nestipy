@@ -3,7 +3,8 @@
 ```python
 import os
 
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core import NestipyFactory
+from nestipy.common import session
 
 app = NestipyFactory.create(AppModule)
 
@@ -19,6 +20,8 @@ app.set_view_engine('minijinja')  # minijinja as template engine.
 
 template_engine = app.get_template_engine()  # get template engine
 
+# use session
+app.use(session())
 
 # LIFECYCLE HOOKS 
 
