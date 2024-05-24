@@ -70,12 +70,13 @@ jobs:
 
 
       - name: Create release
+        uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.check-version.outputs.tag }}
-        run: |
-          gh release create "$tag" \
-            --repo="$GITHUB_REPOSITORY" \
-            --title="$tag" \
-            --generate-notes
+        with:
+          tag_name: ${{ steps.check-version.outputs.tag }}
+          release_name: Version ${{ steps.check-version.outputs.tag }}
+          draft: false
+          prerelease: false
     
