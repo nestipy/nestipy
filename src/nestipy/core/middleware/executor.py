@@ -1,11 +1,11 @@
 import inspect
-import logging
 import re
 import traceback
 from typing import Callable, Any
 
 from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
 
+from nestipy.common.logger import logger
 from nestipy.common.http_ import Request, Response
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.types_ import HTTPMethod
@@ -64,8 +64,8 @@ class MiddlewareExecutor:
                 return getattr(instance, 'use')
             except Exception as e:
                 tb = traceback.format_exc()
-                logging.error(e)
-                logging.error(tb)
+                logger.error(e)
+                logger.error(tb)
                 return None
         elif inspect.isfunction(proxy.middleware):
             return proxy.middleware

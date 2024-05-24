@@ -26,7 +26,7 @@ This is how we use it inside controller.
 ```python
 
 from dataclasses import dataclass
-
+from typing import Annotated
 from nestipy.ioc import Inject, Body
 
 from nestipy.common import Controller, Post, Get
@@ -40,7 +40,7 @@ class CreateCat:
 
 @Controller('cats')
 class CatsController:
-    _service: Inject[CatsService]
+    _service: Annotated[CatsService, Inject()]
 
     @Post()
     async def create(self, data: Body[CreateCat]):
@@ -101,7 +101,7 @@ With Nestipy, dependency work in 2 ways: <br/>
 ```python
 @Controller('cats')
 class CatsController:
-    _service: Inject[CatsService]
+    _service: Annotated[CatsService, Inject()]
 ```
 
 #### Inject dependency via class method.<br/>

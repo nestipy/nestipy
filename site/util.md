@@ -38,15 +38,16 @@ async def on_shutdown_callback():
 Render template
 
 ```python
+from typing import Annotated
 from nestipy.common import Get, Response, Request, Render
-from nestipy.types_ import Req, Res
+from nestipy.ioc import Req, Res
 
 
 class AppController:
 
     @Render('index.html')
     @Get()
-    async def test(self, req: Req[Request], res: Res[Response]):
+    async def test(self, req: Annotated[Request, Req()], res: Annotated[Response, Res()]):
         return {'title': 'Hello'}
         # return await res.render('index.html', {'title': 'Hello'})
 ```

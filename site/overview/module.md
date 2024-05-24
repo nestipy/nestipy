@@ -76,7 +76,7 @@ This is an example.
 
 ```python
 from dataclasses import dataclass
-
+from typing import Annotated
 from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.ioc import Inject
 
@@ -102,7 +102,7 @@ For a lifecycle hooks, we need to extends `NestipyModule`.
 
 ```python
 from dataclasses import dataclass
-
+from typing import Annotated
 from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.dynamic_module import NestipyModule
 from nestipy.ioc import Inject
@@ -118,7 +118,7 @@ ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilde
 
 
 class DatabaseModule(ConfigurableModuleClass, NestipyModule):
-    option: Inject[DATABASE_MODULE_OPTION_TOKEN]
+    option: Annotated[DatabaseOption, Inject(DATABASE_MODULE_OPTION_TOKEN)]
 
     async def on_startup(self):
         pass

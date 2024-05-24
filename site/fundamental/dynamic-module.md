@@ -3,7 +3,7 @@ Let's start directly with and example. We are going to create `ConfigModule` lik
 ```python
 from dataclasses import dataclass
 from os import path, getcwd
-from typing import Union
+from typing import Union, Annotated
 
 from dotenv import dotenv_values
 from nestipy.common import Module, Injectable
@@ -21,7 +21,7 @@ ConfigurableModuleClass, MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[ConfigO
 
 @Injectable()
 class ConfigService:
-    _config: Inject[MODULE_OPTION_TOKEN]
+    _config: Annotated[ConfigOption, Inject(MODULE_OPTION_TOKEN)]
     _envs: dict = {}
 
     def __init__(self):
@@ -63,31 +63,33 @@ Now, we can use `ConfigModule` in controller or a service provider by injecting 
 
 ```python
 from nestipy.ioc import Inject
-
+from typing import Annotated
 from nestipy.common import Controller
 
 
 @Controller('cats')
 class CatsController:
-    config_service: Inject[ConfigService]
+    config_service: Annotated[ConfigService, Inject()]
 ```
 
 Inside service,
 
 ```python
+from typing import Annotated
 from nestipy.common import Injectable
-from nestipy.types_ import Inject
+from nestipy.ioc import Inject
 
 
 @Injectable()
 class CatsService:
-    config_service: Inject[ConfigService]
+    config_service: Annotated[ConfigService, Inject()]
 ```
 
 Using it inside async factory.
 
 ```python
 from dataclasses import dataclass
+from typing import Annotated
 
 from nestipy.dynamic_module import ConfigurableModuleBuilder, NestipyModule
 from nestipy.ioc import Inject
@@ -110,7 +112,7 @@ ConfigurableModuleClass, MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[Databas
 
 @Module()
 class DatabaseModule(ConfigurableModuleClass, NestipyModule):
-    option: Inject[MODULE_OPTION_TOKEN]
+    option: Annotated[DatabaseConfigOption, Inject(MODULE_OPTION_TOKEN)]
 
     def on_startup(self):
         # start connection to database by using option

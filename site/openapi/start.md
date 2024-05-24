@@ -6,7 +6,7 @@ Let's view how it works.
 ```python
 
 import dataclasses
-
+from typing import Annotated
 # from nestipy.openapi.openapi_docs.v3 import Parameter
 from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
@@ -28,7 +28,7 @@ class AppController:
 
     @Render('index.html')
     @Get()
-    async def test(self, req: Req[Request], res: Res[Response]):
+    async def test(self, req: Annotated[Request, Req()], res: Annotated[Response, Res()]):
         return {'title': 'Hello'}
         # return await res.render('index.html', {'title': 'Hello'})
 
@@ -37,7 +37,7 @@ class AppController:
     # @ApiBody(TestBody, 'application/json')
     @ApiBearerAuth()  # Enable security bearer
     @ApiCreatedResponse()
-    async def post(self, res: Res[Response], body: Body[TestBody]):
+    async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body()]):
         raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
 ```
 

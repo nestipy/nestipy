@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from nestipy.dynamic_module import NestipyModule
 from nestipy.ioc import Inject
 
@@ -32,7 +34,7 @@ class TestMiddleware2(NestipyMiddleware):
     ]
 )
 class UserModule(NestipyModule):
-    discover: Inject[DiscoverService]
+    discover: Annotated[DiscoverService, Inject()]
 
     def configure(self, consumer: MiddlewareConsumer):
         consumer.apply(TestMiddleware2).for_route(UserController)

@@ -1,21 +1,21 @@
 import dataclasses
-import logging
 import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
 
-from nestipy.dynamic_module import DynamicModule
-from nestipy.ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
-from nestipy.metadata import ModuleMetadata, Reflect
 from openapidocs.v3 import PathItem
 
 from nestipy.common.http_ import Response, Request
+from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.common.utils import uniq_list
 from nestipy.core.template import MinimalJinjaTemplateEngine
+from nestipy.dynamic_module import DynamicModule
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
+from nestipy.ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
+from nestipy.metadata import ModuleMetadata, Reflect
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .discover import DiscoverService
@@ -119,8 +119,8 @@ class NestipyApplication:
                 openapi_register()
         except Exception as e:
             tb = traceback.format_exc()
-            logging.error(e)
-            logging.error(tb)
+            logger.error(e)
+            logger.error(tb)
 
     async def _destroy(self):
         await self.instance_loader.destroy()

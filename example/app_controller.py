@@ -1,15 +1,14 @@
 import dataclasses
-import logging
-from typing import Any
+from typing import Any, Annotated
 
 from app_provider import AppProvider
-from nestipy.common import Controller, Injectable, Post, Get
+from nestipy.common import Controller, Injectable, Post, Get, logger
 from nestipy.common import ExceptionFilter, Catch, UseFilters
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import NestipyInterceptor, UseInterceptors, Render
 from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
-from nestipy.ioc import Inject, Req, Res, Body, Cookies, Session, Headers, Sessions
+from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header
 from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse
 from nestipy.types_ import NextFn
 
@@ -51,15 +50,22 @@ class TestMethodInterceptor(NestipyInterceptor):
 @UseInterceptors(TestInterceptor)
 @UseFilters(Http2ExceptionFilter)
 class AppController:
-    provider: Inject[AppProvider]
+    provider: Annotated[AppProvider, Inject()]
 
     @Render('index.html')
     @Get()
-    async def test(self, req: Req[Request], res: Res[Response], headers: Headers[dict], cookies: Cookies[dict],
-                   user_id: Session[str], sessions: Sessions[dict]):
+    async def test(
+            self,
+            req: Annotated[Request, Req()],
+            res: Annotated[Response, Res()],
+            headers: Annotated[dict, Header()],
+            cookies: Annotated[dict, Cookie()],
+            user_id: Annotated[str, Session('user_id')],
+            sessions: Annotated[dict, Session()]
+    ):
         # req.session['user_id'] = 2
         # res.cookie('test', 'test-cookie')
-        logging.error(sessions)
+        logger.info(sessions)
         return {'title': 'Hello'}
         # return await res.render('index.html', {'title': 'Hello'})
 
@@ -67,5 +73,5 @@ class AppController:
     @ApiCreatedResponse()
     @UseInterceptors(TestMethodInterceptor)
     @UseFilters(HttpExceptionFilter)
-    async def post(self, res: Res[Response], body: Body[TestBody]):
+    async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body()]):
         raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
