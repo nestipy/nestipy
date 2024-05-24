@@ -45,15 +45,15 @@ jobs:
         if: steps.check-parent-commit.outputs.sha
         uses: salsify/action-detect-and-tag-new-version@v2.0.1
         with:
-         version-command: |
-           bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
+          version-command: |
+            bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
 
       - name: Bump version for release
         if: "! steps.check-version.outputs.tag"
         run: |
-         poetry version patch &&
-         version=$(poetry version | awk '{ print $2 }') &&
-         poetry version $version
+          poetry version patch &&
+          version=$(poetry version | awk '{ print $2 }') &&
+          poetry version $version
 
       - name: Build package
         run: |
@@ -69,10 +69,13 @@ jobs:
           verbose: true
 
 
-      - name: Publish the release notes
-        uses: release-drafter/release-drafter@v5.20.0
-        with:
-          publish: ${{ steps.check-version.outputs.tag != '' }}
-          tag: ${{ steps.check-version.outputs.tag }}
+      - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.check-version.outputs.tag }}
+        run: |
+          gh release create "$tag" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="$tag" \
+            --generate-notes
+    
