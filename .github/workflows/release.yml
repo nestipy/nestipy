@@ -64,7 +64,6 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          repository-url: https://pypi.org/p/tsiresymila
           verify-metadata: false
           skip-existing: true
           verbose: true
