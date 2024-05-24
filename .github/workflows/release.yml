@@ -21,9 +21,9 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: '0'
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -73,20 +73,23 @@ jobs:
           skip-existing: true
           verbose: true
 
-      - uses: rickstaa/action-create-tag@v1
-        id: tag_create
-        with:
-          tag: ${{ steps.check-version.outputs.tag }}
-          tag_exists_error: false
-          message: Latest ${{ steps.check-version.outputs.tag }}
-
-      - name: Create  release
-        uses: actions/create-release@latest
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: false
+          PRERELEASE: false
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
         with:
-          tag_name: ${{ steps.check-version.outputs.tag }}
-          release_name: Version ${{ steps.check-version.outputs.tag }}
-          draft: false
-          prerelease: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
     
