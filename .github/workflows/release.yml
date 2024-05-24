@@ -40,21 +40,7 @@ jobs:
           pip install --constraint=.github/workflows/constraints.txt poetry
           poetry --version
 
-      - name: Check if there is a parent commit
-        id: check-parent-commit
-        run: |
-          echo "::set-output name=sha::$(git rev-parse --verify --quiet HEAD^)"
-
-      - name: Detect and tag new version
-        id: check-version
-        if: steps.check-parent-commit.outputs.sha
-        uses: salsify/action-detect-and-tag-new-version@v2.0.1
-        with:
-          version-command: |
-            bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
-
       - name: Bump version for release
-        if: "! steps.check-version.outputs.tag"
         run: |
           poetry version patch &&
           version=$(poetry version | awk '{ print $2 }') &&
@@ -64,6 +50,12 @@ jobs:
         run: |
           poetry build --ansi
 
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish package on PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -72,12 +64,6 @@ jobs:
           verify-metadata: false
           skip-existing: true
           verbose: true
-
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create a GitHub release
         uses: ncipollo/release-action@v1
