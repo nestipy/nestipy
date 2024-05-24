@@ -1,5 +1,6 @@
 from typing import Union, TypeVar, Any, Callable, Type, Optional, TYPE_CHECKING
-
+from dataclasses import is_dataclass
+from pydantic import BaseModel
 from nestipy.metadata import CtxDepKey
 from .context_container import RequestContextContainer
 from .annotation import ParamAnnotation, TypeAnnotatedCallable
@@ -43,33 +44,41 @@ async def body_callback(token: Optional[str], _type_ref: Type, _request_context:
         return await req.json()
 
 
-def _get_request_param_value(key: str, _request_context: RequestContextContainer, token: Optional[str] = None):
+def _get_request_param_value(
+        key: str,
+        _type_ref: Type, _request_context: RequestContextContainer,
+        token: Optional[str] = None
+):
     req = _request_context.execution_context.get_request()
     value: dict = getattr(req, key)
     if token:
         return value.get(token)
     else:
+        if is_dataclass(_type_ref):
+            return _type_ref(**value)
+        elif issubclass(_type_ref, BaseModel):
+            return _type_ref.model_validate(value)
         return value
 
 
 def session_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    return _get_request_param_value('session', _request_context, token)
+    return _get_request_param_value('session', _type_ref, _request_context, token)
 
 
 def cookie_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    return _get_request_param_value('cookies', _request_context, token)
+    return _get_request_param_value('cookies', _type_ref, _request_context, token)
 
 
 def query_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    return _get_request_param_value('query_params', _request_context, token)
+    return _get_request_param_value('query_params', _type_ref, _request_context, token)
 
 
 def params_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    return _get_request_param_value('path_params', _request_context, token)
+    return _get_request_param_value('path_params', _type_ref, _request_context, token)
 
 
 def headers_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    return _get_request_param_value('headers', _request_context, token)
+    return _get_request_param_value('headers', _type_ref, _request_context, token)
 
 
 def args_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
