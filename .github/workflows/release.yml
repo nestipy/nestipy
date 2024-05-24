@@ -73,30 +73,20 @@ jobs:
           skip-existing: true
           verbose: true
 
-      - name: Tag and prepare release
-        id: tag_and_prepare_release
-        uses: K-Phoen/semver-release-action@v1.3.1
+      - uses: rickstaa/action-create-tag@v1
+        id: tag_create
         with:
-          release_branch: master
-          release_strategy: tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.check-version.outputs.tag }}
+          tag_exists_error: false
+          message: Latest ${{ steps.check-version.outputs.tag }}
 
-      - name: Upload release notes
-        if: steps.tag_and_prepare_release.outputs.tag
-        uses: Roang-zero1/github-create-release-action@v3
-        with:
-          created_tag: ${{ steps.tag_and_prepare_release.outputs.tag }}
+      - name: Create  release
+        uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#      - name: Create tag and release
-#        uses: actions/create-release@latest
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          tag: ${{ steps.check-version.outputs.tag }}
-#        with:
-#          tag_name: ${{ github.ref }}
-#          release_name: Version ${{ github.ref }}
-#          draft: false
-#          prerelease: false
+        with:
+          tag_name: ${{ steps.check-version.outputs.tag }}
+          release_name: Version ${{ steps.check-version.outputs.tag }}
+          draft: false
+          prerelease: false
     
