@@ -9,6 +9,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Check out the repository
         uses: actions/checkout@v3
@@ -43,12 +45,12 @@ jobs:
          version-command: |
            bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
 
-      - name: Bump version for developmental release
+      - name: Bump version for release
         if: "! steps.check-version.outputs.tag"
         run: |
          poetry version patch &&
          version=$(poetry version | awk '{ print $2 }') &&
-         poetry version $version.dev.$(date +%s)
+         poetry version $version
 
       - name: Build package
         run: |
@@ -56,9 +58,11 @@ jobs:
 
       - name: Publish package on PyPI
         uses: pypa/gh-action-pypi-publish@v1.5.0
+
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
+          repository-url: https://pypi.org/p/tsiresymila
 
       - name: Publish the release notes
         uses: release-drafter/release-drafter@v5.20.0
