@@ -75,8 +75,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.check-version.outputs.tag }}
         with:
-          tag_name: ${{ steps.check-version.outputs.tag }}
-          release_name: Version ${{ steps.check-version.outputs.tag }}
+          tag_name: ${{ github.ref }}
+          release_name: Version ${{ github.ref }}
           draft: false
           prerelease: false
     
