@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Literal
+from typing import Literal, Annotated
 
 from nestipy.common.decorator import Module
 from nestipy.dynamic_module import ConfigurableModuleBuilder
@@ -18,4 +18,4 @@ ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[
 
 @Module()
 class GraphqlModule(ConfigurableModuleClass):
-    config: Inject[CONFIG_MODULE_OPTION_TOKEN]
+    config: Annotated[GraphqlOption, Inject(CONFIG_MODULE_OPTION_TOKEN)]

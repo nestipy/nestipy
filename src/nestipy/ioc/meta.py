@@ -1,25 +1,19 @@
-from typing import get_args, Any
+from typing import get_args, Any, Type, cast
 
 from nestipy.metadata import ProviderToken
 
-from .annotation import Annotation
+from .dependency import TypeAnnotated, ParamAnnotation, Instance
 
 
 class ContainerHelper:
 
     @classmethod
-    def get_type_from_annotation(cls, annotation: Any) -> tuple[Any, Annotation]:
+    def get_type_from_annotation(cls, annotation: Any) -> tuple[Type, TypeAnnotated]:
         args: tuple = get_args(annotation)
-        # check if key is from provide(ModuleProviderDict)
         if len(args) == 2:
-            arg1, annot = args
-            if isinstance(arg1, ProviderToken):
-                return args[0].key, args[1]
-            return args[0], args[1]
+            return cast(tuple[Type, TypeAnnotated], args)
         else:
-            if isinstance(annotation, ProviderToken):
-                return annotation.key, Annotation()
-            return annotation, Annotation()
+            return annotation, Instance()
 
     @classmethod
     def get_value_from_dict(cls, values: dict, key: str, default=None):

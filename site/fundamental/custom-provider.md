@@ -80,14 +80,15 @@ Factory can be an async function to have async provider.
 ### Inject providers
 
 ```python
+from typing import Annotated
 from nestipy.common.decorator import Controller
 from nestipy.ioc import Inject
 
 
 @Controller('cats')
 class CatsController:
-    connection: Inject['CONNECTION']
-    cat_service: Inject[CatsService]
+    connection: Annotated[str,Inject('CONNECTION')]
+    cat_service: Annotated[CatsService, Inject()]
 ```
 
 Exporting non-class based provider works perfectly.

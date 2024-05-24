@@ -29,17 +29,17 @@ So, `CatsResolver` will be like.
 
 ```python
 import asyncio
-from typing import AsyncIterator
+from typing import AsyncIterator, Annotated
 
 from nestipy.graphql import Resolver, Query, Mutation, Subscription
-from nestipy.types_ import Args
+from nestipy.ioc import Arg
 
 
 @Resolver()
 class CatsResolver:
     @Query()
     @UseGuards(TestGuardMethod)
-    def test_query(self, test: Args[str]) -> str:
+    def test_query(self, test: Annotated[str, Arg('test')]) -> str:
         return "Query"
 
     @Mutation()
@@ -47,7 +47,7 @@ class CatsResolver:
         return 'Mutation'
 
     @Subscription()
-    async def test_subscription(self, count: Args[int] = 1000) -> AsyncIterator[int]:
+    async def test_subscription(self, count: Annotated[int, Arg('count')] = 1000) -> AsyncIterator[int]:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)

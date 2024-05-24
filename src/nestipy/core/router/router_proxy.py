@@ -1,5 +1,4 @@
 import dataclasses
-import logging
 import traceback
 import typing
 from typing import Type, Union
@@ -11,6 +10,7 @@ from nestipy.common.exception import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
 from nestipy.common.http_ import Request, Response
+from nestipy.common.logger import logger
 from nestipy.common.utils import snakecase_to_camelcase
 from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards import GuardProcessor
@@ -19,7 +19,6 @@ from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
-from nestipy.metadata import NestipyContextProperty
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
@@ -61,22 +60,6 @@ class RouterProxy:
             paths[path] = PathItem(**op)
         return paths
 
-    @classmethod
-    async def setup_context_data(cls, context_container: RequestContextContainer, req: "Request", res: "Response"):
-        context_container.set_value(NestipyContextProperty.request, req)
-        context_container.set_value(NestipyContextProperty.response, res)
-        context_container.set_value(NestipyContextProperty.params, req.path_params)
-        context_container.set_value(NestipyContextProperty.query_params, req.query_params)
-        context_container.set_value(NestipyContextProperty.headers, req.headers)
-        context_container.set_value(NestipyContextProperty.session, req.session)
-        context_container.set_value(NestipyContextProperty.cookies, req.cookies)
-        form_data = await req.form()
-        if form_data is not None:
-            context_container.set_value(NestipyContextProperty.body, form_data)
-        else:
-            json_data = await req.json()
-            context_container.set_value(NestipyContextProperty.body, json_data)
-
     def create_request_handler(
             self,
             module_ref: Type,
@@ -88,7 +71,8 @@ class RouterProxy:
 
             context_container = RequestContextContainer.get_instance()
             # setup container for query params, route params, request, response, session, etc..
-            await self.setup_context_data(context_container, req, res)
+            # await self.setup_context_data(context_container, req, res)
+
             # TODO: req.files
 
             container = NestipyContainer.get_instance()
@@ -101,7 +85,8 @@ class RouterProxy:
                 req,
                 res
             )
-            context_container.set_value(NestipyContextProperty.execution_context, execution_context)
+            context_container.set_container(container)
+            context_container.set_execution_context(execution_context)
             handler_response: Response
             try:
                 # TODO : Refactor
@@ -142,9 +127,10 @@ class RouterProxy:
                 handler_response = await self._ensure_response(res, result)
 
             except Exception as e:
-                logging.error(e)
+                tb = traceback.format_exc()
+                logger.error(e)
+                logger.error(tb)
                 if not isinstance(e, HttpException):
-                    tb = traceback.format_exc()
                     e = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))
 
                 # Call exception catch

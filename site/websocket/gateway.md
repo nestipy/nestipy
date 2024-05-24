@@ -4,7 +4,7 @@ Firstly, we need to create a gateway class
 
 ```python
 
-
+from typing import Annotated
 from nestipy.ioc import SocketServer, SocketClient, SocketData
 
 from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage
@@ -12,10 +12,10 @@ from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage
 
 @Gateway()
 class AppGateway:
-    server: SocketServer[IoAdapter]
+    server: Annotated[IoAdapter, SocketServer()]
 
     @SubscribeMessage('user')
-    async def on_user(self, sid: SocketClient[str], data: SocketData[str]):
+    async def on_user(self, sid: Annotated[str, SocketClient()], data: Annotated[str, SocketData()]):
         print(sid, data)
         await self.server.emit('user', data, sid)
 ```

@@ -1,3 +1,4 @@
+import traceback
 from typing import Union, Type, Callable
 
 from nestipy.core.guards import GuardProcessor
@@ -5,10 +6,10 @@ from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import NestipyContextProperty
-
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request
+from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 
@@ -43,19 +44,22 @@ class GraphqlProxy:
 
         async def graphql_handler(*_args, **kwargs):
             context_container = RequestContextContainer.get_instance()
-            context_container.set_value(NestipyContextProperty.args, kwargs)
+            execution_context = ExecutionContext(
+                self._adapter,
+                module_ref,
+                resolver,
+                getattr(resolver, method_name),
+                context_container.get_value(NestipyContextProperty.request),
+                context_container.get_value(NestipyContextProperty.response),
+                None,
+                kwargs
+            )
+            context_container.set_container(NestipyContainer.get_instance())
+            context_container.set_execution_context(execution_context)
             try:
                 # TODO: Refactor with routerProxy
                 # create execution context
-                execution_context = ExecutionContext(
-                    self._adapter,
-                    module_ref,
-                    resolver,
-                    getattr(resolver, method_name),
-                    context_container.get_value(NestipyContextProperty.request),
-                    context_container.get_value(NestipyContextProperty.response)
-                )
-                context_container.set_value(NestipyContextProperty.execution_context, execution_context)
+
                 #  apply guards
                 guard_processor: GuardProcessor = await self.container.get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context)
@@ -66,6 +70,10 @@ class GraphqlProxy:
                 # perform query request
                 result = await self.container.get(resolver, method_name)
                 return result
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(e)
+                logger.error(tb)
             finally:
                 context_container.destroy()
 

@@ -1,4 +1,12 @@
-class Annotation:
-    def __init__(self, metadata=None, *args):
-        self.metadata = metadata
-        self.args = args
+from typing import TypeVar, Callable, Union, Type, Any
+
+from .context_container import RequestContextContainer
+
+TypeAnnotatedCallable = Callable[[Union[str, None], Type, RequestContextContainer], Any]
+
+
+class ParamAnnotation:
+    def __init__(self, callback: TypeAnnotatedCallable, key: str, token: Union[str, None] = None):
+        self.key: Union[str, None] = key
+        self.token: Union[str, None] = token
+        self.callback = callback

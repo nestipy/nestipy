@@ -9,8 +9,20 @@ theme:
   name: material
   custom_dir: site/overrides
   palette:
-    primary: custom
-    accent: custom
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   font:
     text: Montserrat
     size: 400
@@ -25,6 +37,8 @@ theme:
     - navigation.top
   icon:
     repo: fontawesome/brands/github
+
+
 
 extra:
   social:
@@ -69,15 +83,15 @@ nav:
   - Fundamentals:
       - Custom providers: fundamental/custom-provider.md
       - Dynamic modules: fundamental/dynamic-module.md
-#      - Execution context: fundamental/execution-context.md
-#      - Lifecycle events: fundamental/lifecycle-event.md
+      #      - Execution context: fundamental/execution-context.md
+      #      - Lifecycle events: fundamental/lifecycle-event.md
       - Testing: fundamental/testing.md
-#  - Security: plugin.md
+  #  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md
-#      - Resolvers: graphql/resolver.md
-#      - Mutations: graphql/mutation.md
-#      - Subscription: graphql/subscription.md
+  #      - Resolvers: graphql/resolver.md
+  #      - Mutations: graphql/mutation.md
+  #      - Subscription: graphql/subscription.md
 
   - Websockets:
       - Gateways: websocket/gateway.md

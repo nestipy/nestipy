@@ -1,24 +1,16 @@
-from typing import Union, Any
+from typing import Union, Any, TYPE_CHECKING
 
 from nestipy.metadata import NestipyContextProperty
+
+if TYPE_CHECKING:
+    from nestipy.core import ExecutionContext
+    from nestipy.ioc import NestipyContainer
 
 
 class RequestContextContainer:
     _instance: Union["RequestContextContainer", None] = None
-    _request = None
-    _response = None
-    _query_params = {}
-    _params = {}
-    _session = {}
-    _cookies = {}
-    _headers = {}
-    _body = {}
-    _args = {}
-    _files = {}
-    _execution_context = None
-    _websocket_sever = None
-    _socket_sid = None
-    _socket_data = None
+    execution_context: "ExecutionContext"
+    container: "NestipyContainer"
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -26,29 +18,18 @@ class RequestContextContainer:
         return cls._instance
 
     @classmethod
-    def set_value(cls, key: NestipyContextProperty, value: object):
-        self = cls.get_instance()
-        setattr(self, key.value, value)
+    def set_execution_context(cls, context: "ExecutionContext"):
+        ins = cls.get_instance()
+        ins.execution_context = context
 
     @classmethod
-    def get_value(cls, key: NestipyContextProperty) -> Union[Any, None]:
-        self = cls.get_instance()
-        return getattr(self, key.value, None)
+    def set_container(cls, container: "NestipyContainer"):
+        ins = cls.get_instance()
+        ins.container = container
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
         return RequestContextContainer(*args, **kwargs)
 
     def destroy(self):
-        self._request = None
-        self._response = None
-        self._query_params = {}
-        self._params = {}
-        self._session = {}
-        self._headers = {}
-        self._body = {}
-        self._args = {}
-        self._cookies = {}
-        self._execution_context = None
-        self._websocket_sever = None
         self._instance = None

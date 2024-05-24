@@ -54,8 +54,9 @@ class SocketIoAdapter(IoAdapter):
     def on(self, event: str, namespace: str = None):
         def decorator(handler: Callable):
             async def wrapper(sid: str, data: Any):
+                session = await self._io.get_session(sid, namespace)
                 #  transform data id need
-                return await handler(sid, data)
+                return await handler(event, session, data)
 
             self._io.on(event, namespace=namespace)(wrapper)
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type, Union, Callable, TYPE_CHECKING
+from typing import Type, Union, Callable, TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from nestipy.core.adapter.http_adapter import HttpAdapter
@@ -15,7 +15,12 @@ class ArgumentHost(ABC):
             class_handler: Union[Type, object],
             handler: Callable,
             req: Union["Request", None],
-            res: Union["Response", None]
+            res: Union["Response", None],
+            graphql_args: Optional[dict] = None,
+            graphql_context: Optional[any] = None,
+            socket_server:  Optional[any] = None,
+            socket_client:  Optional[any] = None,
+            socket_data:  Optional[any] = None,
     ):
         self._adapter = adapter
         self._module = module
@@ -23,6 +28,11 @@ class ArgumentHost(ABC):
         self._class_handler = class_handler
         self._req = req
         self._res = res
+        self._graphql_args = graphql_args or {}
+        self._graphql_context = graphql_context or None
+        self._socket_server = socket_server
+        self._socket_client = socket_client
+        self._socket_data = socket_data
 
     def get_adapter(self) -> "HttpAdapter":
         return self._adapter

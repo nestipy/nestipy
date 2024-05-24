@@ -1,10 +1,11 @@
 import inspect
+import traceback
 from typing import Type, Union, Callable, Any, TYPE_CHECKING
 
+from nestipy.common.logger import logger
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import NestipyContextProperty, Reflect, ModuleMetadata
-
 from .decorator import GATEWAY_KEY, EVENT_KEY, SUCCESS_EVENT_KEY, ERROR_EVENT_KEY
 from ..core.context.execution_context import ExecutionContext
 
@@ -59,13 +60,9 @@ class IoSocketProxy:
             namespace: str,
             event_name: Any
     ) -> Callable[..., Any]:
-        async def io_handler(sid: Any, data: Any):
+        async def io_handler(event: Any, session: Any, data: Any):
             io_adapter = self.adapter.get_io_adapter()
             context_container = RequestContextContainer.get_instance()
-            context_container.set_value(NestipyContextProperty.io_client, sid)
-            context_container.set_value(NestipyContextProperty.io_data, data)
-            context_container.set_value(NestipyContextProperty.io_server, io_adapter)
-
             container = NestipyContainer.get_instance()
             gateway_method = getattr(gateway, method_name)
             execution_context = ExecutionContext(
@@ -74,9 +71,15 @@ class IoSocketProxy:
                 gateway,
                 gateway_method,
                 None,
-                None
+                None,
+                None,
+                None,
+                io_adapter,
+                session,
+                data
             )
-            context_container.set_value(NestipyContextProperty.execution_context, execution_context)
+            context_container.set_execution_context(execution_context)
+            context_container.set_container(container)
             try:
                 result = await container.get(gateway, method_name)
                 if result is not None:
@@ -87,16 +90,19 @@ class IoSocketProxy:
                         'event': success_event or event_name,
                         'data': result,
                         'namespace': namespace,
-                        "to": sid
+                        "to": session.sid
                     })
             except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(e)
+                logger.error(tb)
                 error_event = Reflect.get_metadata(gateway, ERROR_EVENT_KEY, None)
                 if error_event is not None:
                     await self.call_handler(io_adapter.emit, {
                         'event': error_event,
                         'data': str(e),
                         'namespace': namespace,
-                        "to": sid
+                        "to": session.sid
                     })
                 # create exception handler
             finally:

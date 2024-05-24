@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Literal
+from typing import Literal, Annotated
 
 from nestipy.common.decorator import Module, Injectable
 from nestipy.dynamic_module import ConfigurableModuleBuilder
@@ -12,7 +12,7 @@ ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[
 
 @Injectable()
 class ConfigService:
-    token: Inject[CONFIG_MODULE_OPTION_TOKEN]
+    token: Annotated[str, Inject(CONFIG_MODULE_OPTION_TOKEN)]
 
 
 @Module(
