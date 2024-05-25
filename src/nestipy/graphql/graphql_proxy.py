@@ -49,10 +49,11 @@ class GraphqlProxy:
                 module_ref,
                 resolver,
                 getattr(resolver, method_name),
-                context_container.get_value(NestipyContextProperty.request),
-                context_container.get_value(NestipyContextProperty.response),
                 None,
-                kwargs
+                None,
+                kwargs,
+                None
+
             )
             context_container.set_container(NestipyContainer.get_instance())
             context_container.set_execution_context(execution_context)

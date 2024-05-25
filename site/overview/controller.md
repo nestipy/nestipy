@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from nestipy.common import Controller, Get, Put, Post, Delete
-from nestipy.ioc import Body, Query, Params, Session, Header
+from nestipy.ioc import Body, Query, Param, Session, Header
 
 
 @dataclass
@@ -58,15 +58,15 @@ class CatsController:
         return f"This action returns all cats (limit: {limit} items"
 
     @Get('/{cat_id}')
-    async def find_one(self, cat_id: Annotated[str, Params('cat_id')]):
+    async def find_one(self, cat_id: Annotated[str, Param('cat_id')]):
         return f"This action returns a #{cat_id} cat"
 
     @Put('/{cat_id}')
-    async def update(self, cat_id: Annotated[str, Params('cat_id')], data: Annotated[CreateCat, Body()]):
+    async def update(self, cat_id: Annotated[str, Param('cat_id')], data: Annotated[CreateCat, Body()]):
         return f"This action updates a #{cat_id} cat"
 
     @Delete('/{cat_id}')
-    async def remove(self, cat_id: Annotated[str, Params('cat_id')], user_id: Session[int, None]):
+    async def remove(self, cat_id: Annotated[str, Param('cat_id')], user_id: Session[int, None]):
         return f"This action removes a #{cat_id} cat"
 
 

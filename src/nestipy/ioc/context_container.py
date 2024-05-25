@@ -1,6 +1,4 @@
-from typing import Union, Any, TYPE_CHECKING
-
-from nestipy.metadata import NestipyContextProperty
+from typing import Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nestipy.core import ExecutionContext
@@ -9,8 +7,8 @@ if TYPE_CHECKING:
 
 class RequestContextContainer:
     _instance: Union["RequestContextContainer", None] = None
-    execution_context: "ExecutionContext"
-    container: "NestipyContainer"
+    execution_context: Union["ExecutionContext", None] = None
+    container: Union["NestipyContainer", None] = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

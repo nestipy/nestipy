@@ -60,7 +60,7 @@ class IoSocketProxy:
             namespace: str,
             event_name: Any
     ) -> Callable[..., Any]:
-        async def io_handler(event: Any, session: Any, data: Any):
+        async def io_handler(event: Any, client: Any, data: Any):
             io_adapter = self.adapter.get_io_adapter()
             context_container = RequestContextContainer.get_instance()
             container = NestipyContainer.get_instance()
@@ -75,7 +75,7 @@ class IoSocketProxy:
                 None,
                 None,
                 io_adapter,
-                session,
+                client,
                 data
             )
             context_container.set_execution_context(execution_context)
@@ -90,7 +90,7 @@ class IoSocketProxy:
                         'event': success_event or event_name,
                         'data': result,
                         'namespace': namespace,
-                        "to": session.sid
+                        "to": client.sid
                     })
             except Exception as e:
                 tb = traceback.format_exc()
@@ -102,7 +102,7 @@ class IoSocketProxy:
                         'event': error_event,
                         'data': str(e),
                         'namespace': namespace,
-                        "to": session.sid
+                        "to": client.sid
                     })
                 # create exception handler
             finally:

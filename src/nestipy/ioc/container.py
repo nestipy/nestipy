@@ -1,11 +1,11 @@
 import dataclasses
 import inspect
 from functools import lru_cache
-from typing import Type, Union, Any, Optional, ForwardRef, Callable, Awaitable, TYPE_CHECKING
-
-from pydantic import BaseModel
+from typing import Type, Union, Any, Optional, Callable, Awaitable, TYPE_CHECKING
 
 from nestipy.metadata import ClassMetadata, CtxDepKey, ModuleMetadata, ProviderToken, Reflect
+from pydantic import BaseModel
+
 from .context_container import RequestContextContainer
 from .dependency import TypeAnnotated
 from .meta import ContainerHelper
@@ -44,6 +44,9 @@ class NestipyContainer:
 
     def add_singleton_instance(self, service: Union[Type, str], service_instance: object):
         self._singleton_instances[service] = service_instance
+
+    def get_all_singleton_instance(self) -> list:
+        return [v for k, v in self._singleton_instances.items()]
 
     @classmethod
     @lru_cache()
@@ -144,29 +147,24 @@ class NestipyContainer:
             raise ValueError(f"Circular dependency found  for {service.__name__} service ")
         return service, origin or set()
 
-    async def _resolve_property(self, key: Union[Type, str], origin: Optional[list] = None):
+    async def _resolve_property(
+            self,
+            key: Union[Type, str],
+            origin: Optional[list] = None,
+            disable_scope: bool = False
+    ):
         service, origin = self._check_service(key, origin)
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
         annotations: dict = getattr(service, '__annotations__', {})
         for name, param_annotation in annotations.items():
             annotation, dep_key = self.helper.get_type_from_annotation(param_annotation)
-            if isinstance(annotation, ForwardRef):
-                annotation = eval(annotation.__forward_arg__, globals())
-                if annotation is None:
-                    raise ValueError(f"Unknown forward reference: {annotation}")
             if dep_key.metadata.key in CtxDepKey.to_list():
                 if dep_key.metadata.key is not CtxDepKey.Service:
                     dependency = await self._resolve_context_service(dep_key, annotation)
                     setattr(service, name, dependency)
-                elif dep_key.metadata.token in search_scope or annotation in search_scope:
-                    if dep_key.metadata.token:
-                        dependency = await self.get(dep_key.metadata.token, origin=origin)
-                    else:
-                        dependency = await self.get(annotation, origin=origin)
-                    setattr(service, name, dependency)
-                elif isinstance(annotation, ProviderToken) and annotation.key in search_scope:
-                    dependency = await self.get(annotation.key, origin=origin)
+                elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
+                    dependency = await self.get(dep_key.metadata.token or annotation)
                     setattr(service, name, dependency)
                 else:
                     _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
@@ -203,12 +201,19 @@ class NestipyContainer:
 
     async def resolve_factory(self, factory: Callable, inject: list, search_scope: list):
         search_scope_by_inject = [m for m in inject if m in search_scope]
-        args = await self._get_method_dependency(method_to_resolve=factory, search_scope=search_scope_by_inject,
-                                                 origin=[])
+        args = await self._get_method_dependency(
+            method_to_resolve=factory,
+            search_scope=search_scope_by_inject,
+            origin=[]
+        )
         return await self._call_method(method=factory, args=args)
 
-    async def _resolve_method(self, key: Union[Type, str, object], method: str = '__init__',
-                              origin: Optional[list] = None):
+    async def _resolve_method(
+            self,
+            key: Union[Type, str, object],
+            method: str = '__init__',
+            origin: Optional[list] = None
+    ):
         service, origin = self._check_service(key, origin)
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
@@ -233,14 +238,13 @@ class NestipyContainer:
             self,
             key: Union[Type, str],
             method: str = '__init__',
-            origin: Optional[list] = None
+            origin: Optional[list] = None,
+            disable_scope: Optional[bool] = False
     ) -> Awaitable[object]:
-        exist_singleton = await self._check_exist_singleton(key=key)
-        if exist_singleton:
+        in_singleton = await self._check_exist_singleton(key=key)
+        if in_singleton:
             if method == '__init__':
-                return exist_singleton
-            value = await self._resolve_method(key, method=method, origin=origin)
+                return in_singleton
         else:
-            await self._resolve_property(key, origin=origin)
-            value = await self._resolve_method(key, method=method, origin=origin)
-        return value
+            await self._resolve_property(key, origin=origin, disable_scope=disable_scope)
+        return await self._resolve_method(key, method=method, origin=origin)

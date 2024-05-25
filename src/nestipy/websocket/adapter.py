@@ -3,6 +3,8 @@ from typing import Any, Callable
 
 from socketio import AsyncServer
 
+from .socket_request import Websocket
+
 
 class IoAdapter(ABC):
 
@@ -54,9 +56,16 @@ class SocketIoAdapter(IoAdapter):
     def on(self, event: str, namespace: str = None):
         def decorator(handler: Callable):
             async def wrapper(sid: str, data: Any):
-                session = await self._io.get_session(sid, namespace)
-                #  transform data id need
-                return await handler(event, session, data)
+                environ = self._io.get_environ(sid, namespace)
+                client = Websocket(
+                    namespace,
+                    sid,
+                    data,
+                    environ['asgi.scope'],
+                    environ['asgi.receive'],
+                    environ['asgi.send']
+                )
+                return await handler(event, client, data)
 
             self._io.on(event, namespace=namespace)(wrapper)
 

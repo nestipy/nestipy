@@ -1,8 +1,6 @@
 from typing import get_args, Any, Type, cast
 
-from nestipy.metadata import ProviderToken
-
-from .dependency import TypeAnnotated, ParamAnnotation, Instance
+from .dependency import TypeAnnotated, Instance
 
 
 class ContainerHelper:

@@ -3,7 +3,7 @@ from .container import NestipyContainer
 from .context_container import RequestContextContainer
 from .dependency import Inject, Res, Req, Session, Query, Body, Arg, Context, GraphQlContext, SocketServer, \
     SocketClient, \
-    SocketData, Params, Header, Cookie
+    SocketData, Param, Header, Cookie
 from .middleware import MiddlewareProxy, MiddlewareRouteConfig, MiddlewareContainer
 from .provider import ModuleProviderDict
 
@@ -23,7 +23,7 @@ __all__ = [
     "SocketServer",
     "SocketClient",
     "SocketData",
-    "Params",
+    "Param",
     "MiddlewareProxy",
     "MiddlewareRouteConfig",
     "MiddlewareContainer",

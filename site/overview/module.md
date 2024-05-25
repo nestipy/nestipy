@@ -26,6 +26,7 @@ If we want to use params from `@Module()` decorator in dynamic module, we must d
 
 ```python
 from dataclasses import dataclass
+from typing import Annotated
 
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import Inject
@@ -44,7 +45,7 @@ DATABASE_OPTION = 'DATABASE_OPTION'
 
 @Injectable()
 class DatabaseService:
-    option: Inject[DATABASE_OPTION]
+    option: Annotated[DatabaseOption, Inject(DATABASE_OPTION)]
 
 
 @Module(
@@ -70,7 +71,8 @@ class DatabaseModule:
         )
 ```
 
-To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class rom `nestipy.dynamic_module`.
+To facilitate creating of Dynamic module, Nestipy provide `ConfigurableModuleBuilder` class
+rom `nestipy.dynamic_module`.
 
 This is an example.
 
@@ -91,7 +93,7 @@ ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilde
 
 
 class DatabaseModule(ConfigurableModuleClass):
-    option: Inject[DATABASE_MODULE_OPTION_TOKEN]
+    option: Annotated[DatabaseOption, Inject(DATABASE_MODULE_OPTION_TOKEN)]
 
 ```
 

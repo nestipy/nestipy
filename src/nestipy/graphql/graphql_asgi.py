@@ -2,8 +2,8 @@ import os
 from abc import abstractmethod
 
 import aiofiles
+
 from nestipy.ioc import RequestContextContainer
-from nestipy.metadata import NestipyContextProperty
 
 from nestipy.common.http_ import Request
 from nestipy.graphql.graphql_module import GraphqlOption
@@ -32,6 +32,23 @@ class GraphqlAsgi:
 
     @classmethod
     def _setup_request(cls, scope: dict, receive, send):
-        req = Request(scope, receive, send)
-        RequestContextContainer.get_instance().set_value(NestipyContextProperty.request, req)
         pass
+        # from nestipy.core import ExecutionContext
+        # req = Request(scope, receive, send)
+        # req_container = RequestContextContainer.get_instance()
+        # res = req_container.execution_context.get_response()
+        # class_handler = req_container.execution_context.get_class()
+        # handler = req_container.execution_context.get_handler()
+        # module = req_container.execution_context.get_module()
+        # adapter = req_container.execution_context.get_adapter()
+        # graphql = req_container.execution_context.switch_to_graphql()
+        # req_container.set_execution_context(ExecutionContext(
+        #     adapter,
+        #     module,
+        #     class_handler,
+        #     handler,
+        #     req,
+        #     res,
+        #     graphql.get_context(),
+        #     graphql.get_args()
+        # ))
