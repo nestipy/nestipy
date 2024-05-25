@@ -1,9 +1,11 @@
-from typing import Union, TypeVar, Any, Callable, Type, Optional, TYPE_CHECKING
 from dataclasses import is_dataclass
-from pydantic import BaseModel
+from typing import Any, Type, Optional
+
 from nestipy.metadata import CtxDepKey
-from .context_container import RequestContextContainer
+from pydantic import BaseModel
+
 from .annotation import ParamAnnotation, TypeAnnotatedCallable
+from .context_container import RequestContextContainer
 
 
 class TypeAnnotated:
@@ -35,13 +37,21 @@ def res_callback(token: Optional[str], _type_ref: Type, _request_context: Reques
     return _request_context.execution_context.get_response()
 
 
+def to_validate_value(value: Any, _type_ref: Type):
+    if is_dataclass(_type_ref):
+        return _type_ref(**value)
+    elif issubclass(_type_ref, BaseModel):
+        return _type_ref.model_validate(value)
+    return value
+
+
 async def body_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     req = _request_context.execution_context.get_request()
     form_data = await req.form()
     if form_data is not None:
-        return form_data
+        return to_validate_value(form_data, _type_ref)
     else:
-        return await req.json()
+        return to_validate_value(await req.json(), _type_ref)
 
 
 def _get_request_param_value(
@@ -54,11 +64,7 @@ def _get_request_param_value(
     if token:
         return value.get(token)
     else:
-        if is_dataclass(_type_ref):
-            return _type_ref(**value)
-        elif issubclass(_type_ref, BaseModel):
-            return _type_ref.model_validate(value)
-        return value
+        return to_validate_value(value, _type_ref)
 
 
 def session_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
@@ -117,7 +123,7 @@ Session = create_type_annotated(session_callback, CtxDepKey.Session)
 Cookie = create_type_annotated(cookie_callback, CtxDepKey.Cookie)
 Query = create_type_annotated(query_callback, CtxDepKey.Query)
 Body = create_type_annotated(body_callback, CtxDepKey.Body)
-Params = create_type_annotated(params_callback, CtxDepKey.Param)
+Param = create_type_annotated(params_callback, CtxDepKey.Param)
 Arg = create_type_annotated(args_callback, CtxDepKey.Args)
 Context = create_type_annotated(context_callback, CtxDepKey.Context)
 GraphQlContext = create_type_annotated(graphql_context_callback, CtxDepKey.Context)

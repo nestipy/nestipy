@@ -1,4 +1,5 @@
 from .adapter import SocketIoAdapter, IoAdapter
+from .socket_request import Websocket
 from .decorator import Gateway, SuccessEvent, SubscribeMessage, ErrorEvent
 
 __all__ = [
@@ -7,5 +8,6 @@ __all__ = [
     "Gateway",
     "SuccessEvent",
     "SubscribeMessage",
-    "ErrorEvent"
+    "ErrorEvent",
+    "Websocket"
 ]

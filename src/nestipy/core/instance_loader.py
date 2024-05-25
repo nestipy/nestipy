@@ -29,6 +29,7 @@ class InstanceLoader:
     discover: DiscoverService = DiscoverService()
 
     async def create_instances(self, modules: list[Type]) -> GraphqlModule:
+        from nestipy.common import NestipyInterceptor, CanActivate, NestipyMiddleware, ExceptionFilter
         self.discover = await NestipyContainer.get_instance().get(DiscoverService)
         for module in modules:
             if isinstance(module, DynamicModule):
@@ -48,6 +49,18 @@ class InstanceLoader:
                 self.graphql_instance = instance
             imports = Reflect.get_metadata(module, ModuleMetadata.Imports, [])
             await self.create_instances(imports)
+        # Create  NestipyInterceptor, CanActivate, NestipyMiddleware,ExceptionFilter without scope
+        container = NestipyContainer.get_instance()
+        all_services = container.get_all_services()
+        for service in [
+            s for s in all_services if issubclass(s, (
+                    NestipyInterceptor,
+                    CanActivate,
+                    NestipyMiddleware,
+                    ExceptionFilter
+            ))
+        ]:
+            await self.create_instance(service, with_scope=False)
         return self.graphql_instance
 
     async def _create_providers(self, module: Type) -> list:
@@ -66,8 +79,8 @@ class InstanceLoader:
             controller_instance.append(ins)
         return controller_instance
 
-    async def create_instance(self, class_ref: Type) -> object:
-        instance = await NestipyContainer.get_instance().get(class_ref)
+    async def create_instance(self, class_ref: Type, with_scope: bool = True) -> object:
+        instance = await NestipyContainer.get_instance().get(class_ref, disable_scope=not with_scope)
         await self.initialize_instance(class_ref, instance)
         return instance
 

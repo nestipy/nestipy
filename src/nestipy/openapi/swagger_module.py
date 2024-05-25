@@ -38,7 +38,11 @@ class SwaggerModule:
         paths = app.get_openapi_paths()
         config.paths = paths
         serializer = Serializer()
-        document_json = ujson.dumps(cls.remove_null(ujson.loads(serializer.to_json(config))), allow_nan=False, indent=4)
+        json = serializer.to_json(config)
+        document_json = ujson.dumps(
+            cls.remove_null(ujson.loads(json)), allow_nan=False,
+            indent=4
+        )
         document_yml = serializer.to_yaml(config)
         document_obj = serializer.to_obj(config)
         return _Document(document_json, document_yml, document_obj)

@@ -3,7 +3,6 @@ import traceback
 import typing
 from typing import Type, Union
 
-from openapidocs.v3 import Operation, PathItem
 from pydantic import BaseModel
 
 from nestipy.common.exception import HttpException
@@ -23,6 +22,7 @@ from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
+from ...openapi.openapi_docs.v3 import Operation, PathItem
 
 
 class RouterProxy:

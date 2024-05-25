@@ -15,12 +15,12 @@ def ApiBody(body: Union[BaseModel, Type] = None, consumer: str = 'application/js
     elif isinstance(body, BaseModel):
         content: dict = body.model_json_schema()
     body = RequestBody(
+        required=True,
         content={
             consumer: MediaType(
                 schema=Schema(**content)
             )
         },
-        required=True
     )
     return SetMetadata(key='__openapi__request_body', data=body)
 
