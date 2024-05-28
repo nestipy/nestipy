@@ -55,7 +55,6 @@ class GraphqlProxy:
                 None
 
             )
-            context_container.set_container(NestipyContainer.get_instance())
             context_container.set_execution_context(execution_context)
             try:
                 # TODO: Refactor with routerProxy

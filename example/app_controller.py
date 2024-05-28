@@ -9,7 +9,7 @@ from nestipy.common import NestipyInterceptor, UseInterceptors, Render
 from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
 from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger
 from nestipy.types_ import NextFn
 
 
@@ -52,6 +52,7 @@ class TestMethodInterceptor(NestipyInterceptor):
 class AppController:
     provider: Annotated[AppProvider, Inject()]
 
+    @NoSwagger()
     @Render('index.html')
     @Get()
     async def test(

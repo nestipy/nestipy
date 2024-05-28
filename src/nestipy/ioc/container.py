@@ -83,21 +83,13 @@ class NestipyContainer:
         return []
 
     @classmethod
-    def _data_to_typed(cls, annotation: Union[Type, Any], data: Union[dict, list, str, int, tuple, set, Any]):
-        if dataclasses.is_dataclass(annotation) or issubclass(annotation, BaseModel):
-            return annotation(**data)
-        elif annotation in (dict, list, str, int, tuple, set, Any):
-            return data
-        return None
-
-    @classmethod
-    async def _resolve_context_service(cls, dep_key: TypeAnnotated, annotation: Union[Type, Any]):
+    async def _resolve_context_service(cls, name: str, dep_key: TypeAnnotated, annotation: Union[Type, Any]):
         context_container = RequestContextContainer.get_instance()
         callback = dep_key.metadata.callback
         if inspect.iscoroutinefunction(callback):
-            return await callback(dep_key.metadata.token, annotation, context_container)
+            return await callback(name, dep_key.metadata.token, annotation, context_container)
         else:
-            return callback(dep_key.metadata.token, annotation, context_container)
+            return callback(name, dep_key.metadata.token, annotation, context_container)
 
     async def _resolve_module_provider_dict(self, instance: "ModuleProviderDict", search_scope: list):
         if instance.value:
@@ -128,7 +120,7 @@ class NestipyContainer:
                 search_scope = self.get_dependency_metadata(instance)
                 if instance.token in search_scope:
                     value = await self._resolve_module_provider_dict(instance, search_scope=search_scope)
-                    # update singleton instance to have the async valur from ModuleProviderDict
+                    # update singleton instance to have the async value from ModuleProviderDict
                     self._singleton_instances[key] = value
                     return value
                 else:
@@ -161,7 +153,7 @@ class NestipyContainer:
             annotation, dep_key = self.helper.get_type_from_annotation(param_annotation)
             if dep_key.metadata.key in CtxDepKey.to_list():
                 if dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_context_service(dep_key, annotation)
+                    dependency = await self._resolve_context_service(name, dep_key, annotation)
                     setattr(service, name, dependency)
                 elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
                     dependency = await self.get(dep_key.metadata.token or annotation)
@@ -183,7 +175,7 @@ class NestipyContainer:
             if name != 'self' and param.annotation is not inspect.Parameter.empty:
                 annotation, dep_key = self.helper.get_type_from_annotation(param.annotation)
                 if dep_key.metadata.key in CtxDepKey.to_list() and dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_context_service(dep_key, annotation)
+                    dependency = await self._resolve_context_service(name, dep_key, annotation)
                     args[name] = dependency
                 elif annotation in search_scope:
                     dependency = await self.get(annotation, origin=origin)

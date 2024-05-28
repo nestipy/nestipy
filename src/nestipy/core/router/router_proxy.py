@@ -50,11 +50,13 @@ class RouterProxy:
                         route_path = {}
                     if "responses" not in route['openapi'].keys():
                         continue
-                    route_path[method.lower()] = Operation(
-                        **route['openapi'],
-                        summary=snakecase_to_camelcase(method_name)
-                    )
-                    json_paths[path] = route_path
+
+                    if 'no_swagger' not in route['openapi'].keys():
+                        route_path[method.lower()] = Operation(
+                            **route['openapi'],
+                            summary=snakecase_to_camelcase(method_name)
+                        )
+                        json_paths[path] = route_path
         paths = {}
         for path, op in json_paths.items():
             paths[path] = PathItem(**op)
@@ -85,7 +87,6 @@ class RouterProxy:
                 req,
                 res
             )
-            context_container.set_container(container)
             context_container.set_execution_context(execution_context)
             handler_response: Response
             try:
