@@ -29,6 +29,10 @@ def ApiResponse(status: int, response: Response):
     return SetMetadata(key='__openapi__responses', data={status: response}, as_dict=True)
 
 
+def NoSwagger():
+    return SetMetadata(key='__openapi__no_swagger', data=True)
+
+
 def ApiOkResponse(description: Optional[str] = None, schema: Schema = None, example: Any = None):
     return ApiResponse(
         status=200,

@@ -2,7 +2,7 @@ from typing import TypeVar, Callable, Union, Type, Any
 
 from .context_container import RequestContextContainer
 
-TypeAnnotatedCallable = Callable[[Union[str, None], Type, RequestContextContainer], Any]
+TypeAnnotatedCallable = Callable[[str, Union[str, None], Type, RequestContextContainer], Any]
 
 
 class ParamAnnotation:

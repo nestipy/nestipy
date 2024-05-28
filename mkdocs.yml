@@ -43,11 +43,11 @@ theme:
 extra:
   social:
     - icon: material/email
-      link: mailto:tsiresymila@gmail.com
+      link: mailto:nestipy@gmail.com
     - icon: fontawesome/brands/x-twitter
-      link: mailto:tsiresymila@gmail.com
+      link: https://linkedin.com/in/nestipy
     - icon: fontawesome/brands/linkedin
-      link: mailto:tsiresymila@gmail.com
+      link: https://x.com/nestipy
 
 extra_css:
   - stylesheets/extra.css

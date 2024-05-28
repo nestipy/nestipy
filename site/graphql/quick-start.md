@@ -39,7 +39,7 @@ from nestipy.ioc import Arg
 class CatsResolver:
     @Query()
     @UseGuards(TestGuardMethod)
-    def test_query(self, test: Annotated[str, Arg('test')]) -> str:
+    def test_query(self, test: Annotated[str, Arg()]) -> str:
         return "Query"
 
     @Mutation()
@@ -47,7 +47,7 @@ class CatsResolver:
         return 'Mutation'
 
     @Subscription()
-    async def test_subscription(self, count: Annotated[int, Arg('count')] = 1000) -> AsyncIterator[int]:
+    async def test_subscription(self, count: Annotated[int, Arg()] = 1000) -> AsyncIterator[int]:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)

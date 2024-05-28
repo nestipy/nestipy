@@ -1,4 +1,5 @@
 import enum
+import inspect
 import typing
 from typing import Type, Any
 
@@ -53,7 +54,7 @@ class InstanceLoader:
         container = NestipyContainer.get_instance()
         all_services = container.get_all_services()
         for service in [
-            s for s in all_services if issubclass(s, (
+            s for s in all_services if inspect.isclass(s) and issubclass(s, (
                     NestipyInterceptor,
                     CanActivate,
                     NestipyMiddleware,

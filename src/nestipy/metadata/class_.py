@@ -16,6 +16,9 @@ class ClassMetadata:
     def get_module(self):
         return self._module
 
+    def get_global_providers(self):
+        return self._global_providers
+
     def get_service_providers(self):
         providers = Reflect.get_metadata(self._module, ModuleMetadata.Providers, [])
         import_providers_form_exports = []

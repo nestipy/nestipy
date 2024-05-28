@@ -13,4 +13,5 @@ class OpenApiExplorer:
             if typing.cast(str, key).startswith('__openapi__'):
                 openapi_key = typing.cast(str, key).replace('__openapi__', '')
                 deps[openapi_key] = value
+
         return deps

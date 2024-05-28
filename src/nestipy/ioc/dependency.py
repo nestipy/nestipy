@@ -21,23 +21,23 @@ def create_type_annotated(callback: TypeAnnotatedCallable, key: str) -> TypeAnno
     return TypeAnnotated(ParamAnnotation(callback, key))
 
 
-def inject_callback(token: Optional[str], type_ref: Type, _request_context: RequestContextContainer):
-    return _request_context.container.get(token or type_ref)
+def inject_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+    return None
 
 
-def instance_callback(_token: Optional[str], type_ref: Type, _request_context: RequestContextContainer):
-    return _request_context.container.get(type_ref)
+def instance_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+    return None
 
 
-def req_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def req_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _request_context.execution_context.get_request()
 
 
-def res_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def res_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _request_context.execution_context.get_response()
 
 
-def to_validate_value(value: Any, _type_ref: Type):
+def to_valid_value(value: Any, _type_ref: Type):
     if is_dataclass(_type_ref):
         return _type_ref(**value)
     elif issubclass(_type_ref, BaseModel):
@@ -45,13 +45,13 @@ def to_validate_value(value: Any, _type_ref: Type):
     return value
 
 
-async def body_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+async def body_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     req = _request_context.execution_context.get_request()
     form_data = await req.form()
     if form_data is not None:
-        return to_validate_value(form_data, _type_ref)
+        return to_valid_value(form_data, _type_ref)
     else:
-        return to_validate_value(await req.json(), _type_ref)
+        return to_valid_value(await req.json(), _type_ref)
 
 
 def _get_request_param_value(
@@ -64,54 +64,55 @@ def _get_request_param_value(
     if token:
         return value.get(token)
     else:
-        return to_validate_value(value, _type_ref)
+        return to_valid_value(value, _type_ref)
 
 
-def session_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def session_callback(_name: str, token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _get_request_param_value('session', _type_ref, _request_context, token)
 
 
-def cookie_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def cookie_callback(_name: str, token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _get_request_param_value('cookies', _type_ref, _request_context, token)
 
 
-def query_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def query_callback(_name: str, token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _get_request_param_value('query_params', _type_ref, _request_context, token)
 
 
-def params_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def params_callback(_name: str, token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _get_request_param_value('path_params', _type_ref, _request_context, token)
 
 
-def headers_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def headers_callback(_name: str, token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _get_request_param_value('headers', _type_ref, _request_context, token)
 
 
-def args_callback(token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def args_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     args = _request_context.execution_context.switch_to_graphql().get_args()
-    if token:
-        return args.get(token)
-    else:
-        return args
+    return args.get(_name)
 
 
-def context_callback(_token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def context_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
     return _request_context
 
 
-def graphql_context_callback(_token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def graphql_context_callback(_name: str, _token: Optional[str], _type_ref: Type,
+                             _request_context: RequestContextContainer):
     return _request_context.execution_context.switch_to_graphql().get_context()
 
 
-def websocket_server_callback(_token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def websocket_server_callback(_name: str, _token: Optional[str], _type_ref: Type,
+                              _request_context: RequestContextContainer):
     return _request_context.execution_context.switch_to_websocket().get_server()
 
 
-def websocket_client_callback(_token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def websocket_client_callback(_name: str, _token: Optional[str], _type_ref: Type,
+                              _request_context: RequestContextContainer):
     return _request_context.execution_context.switch_to_websocket().get_client()
 
 
-def websocket_data_callback(_token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+def websocket_data_callback(_name: str, _token: Optional[str], _type_ref: Type,
+                            _request_context: RequestContextContainer):
     return _request_context.execution_context.switch_to_websocket().get_data()
 
 

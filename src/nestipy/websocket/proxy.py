@@ -79,7 +79,6 @@ class IoSocketProxy:
                 data
             )
             context_container.set_execution_context(execution_context)
-            context_container.set_container(container)
             try:
                 result = await container.get(gateway, method_name)
                 if result is not None:
