@@ -86,6 +86,10 @@ nav:
       #      - Execution context: fundamental/execution-context.md
       #      - Lifecycle events: fundamental/lifecycle-event.md
       - Testing: fundamental/testing.md
+  - Techniques:
+      - Configuration: technique/configuration.md
+      - Database: technique/database.md
+      - Task scheduling: technique/schedule.md
   #  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md
