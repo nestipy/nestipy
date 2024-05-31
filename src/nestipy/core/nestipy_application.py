@@ -1,9 +1,9 @@
 import dataclasses
 import os.path
 import traceback
-from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING
+from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
-from openapidocs.v3 import PathItem
+from openapidocs.v3 import PathItem, Schema, Reference
 
 from nestipy.common.http_ import Response, Request
 from nestipy.common.logger import logger
@@ -44,6 +44,7 @@ class NestipyApplicationConfig:
 class NestipyApplication:
     _root_module: Type = None
     _openapi_paths = {}
+    _openapi_schemas = {}
 
     def __init__(self, config: NestipyApplicationConfig = None):
         config = config if config is not None else NestipyApplicationConfig()
@@ -103,7 +104,7 @@ class NestipyApplication:
             modules = self._get_modules(self._root_module)
             graphql_module_instance = await self.instance_loader.create_instances(modules)
             # create and register route to platform adapter
-            self._openapi_paths = self._router_proxy.apply_routes(modules)
+            self._openapi_paths, self._openapi_schemas = self._router_proxy.apply_routes(modules)
             # check if graphql is enabled
             if graphql_module_instance is not None:
                 GraphqlProxy(self._http_adapter, self._graphql_builder).apply_resolvers(
@@ -133,6 +134,9 @@ class NestipyApplication:
 
     def get_openapi_paths(self) -> dict[Any, PathItem]:
         return self._openapi_paths
+
+    def get_open_api_schemas(self) -> Optional[Dict[str, Union[Schema, Reference]]]:
+        return self._openapi_schemas
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get('type') == 'lifespan':

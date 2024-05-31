@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from email.utils import decode_rfc2231
@@ -116,7 +117,12 @@ def parse_multipart_form(
                 )
                 fields[field_name].append(form_file)
             elif post_data:
-                fields[field_name].append(post_data.decode(content_charset))
+                try:
+                    decoded = json.loads(post_data.decode(content_charset))
+                except Exception as e:
+                    print(e)
+                    decoded = post_data.decode(content_charset)
+                fields[field_name].append(decoded)
             else:
                 fields[field_name].append(None)
 

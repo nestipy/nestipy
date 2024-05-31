@@ -8,9 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from .common import OpenAPIRoot, normalize_dict
-
 from .common import OpenAPIElement
+from .common import OpenAPIRoot, normalize_dict
 
 
 class ParameterLocation(Enum):

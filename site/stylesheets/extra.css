@@ -34,7 +34,7 @@ body {
 
 }
 code {
-    font-family: 'Source Code Pro','Source Sans 3', Montserrat, -apple-system, monospace;
+    font-family: 'Source Code Pro', 'Source Sans 3', Montserrat, monospace, -apple-system, Serif;
 }
 
 .highlight span.filename {

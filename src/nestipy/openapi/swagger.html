@@ -1,29 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta name="description" content="SwaggerIU"/>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="SwaggerUI"
+    />
     <title>SwaggerUI</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.12.0/swagger-ui.min.css"
-          integrity="sha512-pV+ep5Xjvc5jwqjAGERsdA00vVaP7eaKd2dYDSEe3sqe3v4ohjue4O51AnLvQGOU2hrlTo7tvLpHXLZfQa9Ubg=="
-          crossorigin="anonymous" referrerpolicy="no-referrer"/>
-</head>
-<body>
-<div id="swagger-ui"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.12.0/swagger-ui-bundle.min.js"
-        integrity="sha512-vGAdoz2QRNOgs8OGP8eKFno/I4jCe+rY6sV8lFaks2UQf7AxPr4e1URRxX/bf8fMUFARO9A+vQ2Jb+XpBiGZyQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.12.0/swagger-ui-standalone-preset.min.js"
-        integrity="sha512-0nWGki2/3rEDkKQE0AwEJKIHNjyaHhj5x/afJmx9XmhMm3hwibOcRJI+uRlXNbi4ASmgi5lTYxqNY1ldAD5GHg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+  </head>
+  <body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js" crossorigin></script>
+  <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-standalone-preset.js" crossorigin></script>
+  <script>
     window.onload = () => {
-        window.ui = SwaggerUIBundle({
-            url: '/openapi.json',
-            dom_id: '#swagger-ui',
-        });
+      window.ui = SwaggerUIBundle({
+        url: '/openapi.json',
+        dom_id: '#swagger-ui',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "StandaloneLayout",
+      });
     };
-</script>
-</body>
+  </script>
+  </body>
 </html>
