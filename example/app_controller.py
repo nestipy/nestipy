@@ -1,18 +1,21 @@
 import dataclasses
+import os.path
+import shutil
 from typing import Any, Annotated
 
 from pydantic import BaseModel
-from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
+
 from app_provider import AppProvider
 from nestipy.common import Controller, Injectable, Post, Get, logger, UploadFile
 from nestipy.common import ExceptionFilter, Catch, UseFilters
-from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
+from nestipy.common import HttpException
 from nestipy.common import NestipyInterceptor, UseInterceptors, Render
 from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
 from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger, ApiBody
 from nestipy.openapi import ApiResponse, ApiParameter, ApiConsumer
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger, ApiBody
+from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
 from nestipy.types_ import NextFn
 
 
@@ -99,4 +102,9 @@ class AppController:
     )
     @UseFilters(HttpExceptionFilter)
     async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body('latin-1')]):
-        raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
+        file_path = os.path.join(os.path.dirname(__file__), f"nestipy_{body.image.filename}")
+        file = open(file_path, "wb")
+        shutil.copyfileobj(body.image.file, file)
+        file.close()
+        return {"uploaded": "Ok"}
+        # raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
