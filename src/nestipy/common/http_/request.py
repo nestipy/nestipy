@@ -1,12 +1,15 @@
+import typing
 from http import cookies as http_cookies
 from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
 
 import ujson
-from starlette.datastructures import UploadFile
+from multipart.multipart import parse_options_header
+from starlette._utils import AwaitableOrContextManagerWrapper, AwaitableOrContextManager
 from starlette.requests import Request as StarletteRequest
 
-from .multipart import parse_content_header, parse_multipart_form, parse_url_encoded_form_data
+from .form_parsers import MultiPartParser, MultiPartException, FormParser, FormData
+from .multipart import parse_content_header
 
 
 def cookie_parser(cookie_string: str) -> dict[str, str]:
@@ -20,6 +23,10 @@ def cookie_parser(cookie_string: str) -> dict[str, str]:
         if key or val:
             cookie_dict[key] = http_cookies._unquote(val)
     return cookie_dict
+
+
+class ClientDisconnect(Exception):
+    pass
 
 
 class Request:
@@ -40,6 +47,8 @@ class Request:
         self._form = None
         self._session = None
         self._cookies = None
+        self._stream_consumed = False
+        self._is_disconnected = False
         if scope["type"] == "http":
             self.starlette_request = StarletteRequest(scope, receive, send)
 
@@ -109,24 +118,37 @@ class Request:
     def set_body(self, body: str):
         self._body = body
 
-    async def body(self, encoding='utf-8') -> str:
-        if self._body is None:
-            body = b""
-            while True:
-                message = await self.receive()
-                body += message.get("body", b"")
+    async def stream(self) -> typing.AsyncGenerator[bytes, None]:
+        if self._body is not None:
+            yield self._body
+            yield b""
+            return
+        if self._stream_consumed:
+            raise RuntimeError("Stream consumed")
+        while not self._stream_consumed:
+            message = await self.receive()
+            if message["type"] == "http.request":
+                body = message.get("body", b"")
                 if not message.get("more_body", False):
-                    break
-            self._body = body
-        return self._body.decode(encoding or 'utf-8')
+                    self._stream_consumed = True
+                if body:
+                    yield body
+            elif message["type"] == "http.disconnect":
+                self._is_disconnected = True
+                raise ClientDisconnect()
+        yield b""
 
-    async def files(self) -> list[UploadFile]:
-        form_data = await self.starlette_request.form()
-        return form_data.getlist('files')
+    async def body(self) -> bytes:
+        if not hasattr(self, "_body"):
+            chunks: list[bytes] = []
+            async for chunk in self.stream():
+                chunks.append(chunk)
+            self._body = b"".join(chunks)
+        return self._body
 
-    async def json(self, encoding='utf-8') -> dict:
+    async def json(self) -> typing.Any:
         if self._json is None:
-            body = await self.body(encoding)
+            body = await self.body()
             try:
                 self._json = ujson.loads('{}' if body == '' else body)
             except ujson.JSONDecodeError:
@@ -140,21 +162,39 @@ class Request:
             _content_type
         )
 
-    async def form(self, encoding='utf-8') -> dict:
+    def form(
+            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+    ) -> AwaitableOrContextManager[FormData]:
+        return AwaitableOrContextManagerWrapper(
+            self._get_form(max_files=max_files, max_fields=max_fields)
+        )
+
+    async def _get_form(
+            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+    ) -> FormData:
         if self._form is None:
-            content_type, options = self.content_type
-            if content_type == "multipart/form-data":
-                self._form = parse_multipart_form(
-                    body=(await self.body(encoding)).encode(),
-                    boundary=options.get("boundary", "").encode(),
-                    multipart_form_part_limit=1000000,
-                )
-            elif content_type == "application/x-www-form-urlencoded":
-                self._form = parse_url_encoded_form_data(
-                    (await self.body(encoding)).encode(),
-                )
+            assert (
+                    parse_options_header is not None
+            ), "The `python-multipart` library must be installed to use form parsing."
+            content_type_header = self.headers.get("content-type")
+            content_type: bytes
+            content_type, _ = parse_options_header(content_type_header)
+            if content_type == b"multipart/form-data":
+                try:
+                    multipart_parser = MultiPartParser(
+                        self.headers,
+                        self.stream(),
+                        max_files=max_files,
+                        max_fields=max_fields,
+                    )
+                    self._form = await multipart_parser.parse()
+                except MultiPartException as exc:
+                    raise exc
+            elif content_type == b"application/x-www-form-urlencoded":
+                form_parser = FormParser(self.headers, self.stream())
+                self._form = await form_parser.parse()
             else:
-                self._form = None
+                self._form = FormData()
         return self._form
 
     @property

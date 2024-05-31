@@ -47,16 +47,16 @@ def to_valid_value(value: Any, _type_ref: Type):
 
 async def body_callback(
         _name: str,
-        encoding: Optional[str],
+        _token: Optional[str],
         _type_ref: Type,
         _request_context: RequestContextContainer
 ):
     req = _request_context.execution_context.get_request()
-    form_data = await req.form(encoding)
+    form_data = await req.form()
     if form_data is not None:
         return to_valid_value(form_data, _type_ref)
     else:
-        return to_valid_value(await req.json(encoding), _type_ref)
+        return to_valid_value(await req.json(), _type_ref)
 
 
 def _get_request_param_value(
