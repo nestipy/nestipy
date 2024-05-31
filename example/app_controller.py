@@ -1,21 +1,40 @@
 import dataclasses
 from typing import Any, Annotated
 
+from pydantic import BaseModel
+from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
 from app_provider import AppProvider
-from nestipy.common import Controller, Injectable, Post, Get, logger
+from nestipy.common import Controller, Injectable, Post, Get, logger, UploadFile
 from nestipy.common import ExceptionFilter, Catch, UseFilters
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import NestipyInterceptor, UseInterceptors, Render
 from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
 from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger, ApiBody
+from nestipy.openapi import ApiResponse, ApiParameter, ApiConsumer
 from nestipy.types_ import NextFn
 
 
+class Test2(BaseModel):
+    name2: str
+
+
 @dataclasses.dataclass
-class TestBody:
-    name: str
+class Test3:
+    name3: str
+
+
+class TestBody(BaseModel):
+    image: UploadFile
+    test2: Test2
+    test3: Test3
+
+
+class UnauthorizedResponse(BaseModel):
+    status: int = 401
+    message: str
+    details: str
 
 
 @Catch()
@@ -45,8 +64,7 @@ class TestMethodInterceptor(NestipyInterceptor):
 
 @Controller()
 @ApiTags('App')
-@ApiOkResponse()
-@ApiNotFoundResponse()
+@ApiNotFoundResponse(UnauthorizedResponse)
 @UseInterceptors(TestInterceptor)
 @UseFilters(Http2ExceptionFilter)
 class AppController:
@@ -71,8 +89,14 @@ class AppController:
         # return await res.render('index.html', {'title': 'Hello'})
 
     @Post()
+    @ApiBody(TestBody, ApiConsumer.MULTIPART)
     @ApiCreatedResponse()
+    @ApiResponse(401, UnauthorizedResponse)
+    @ApiOkResponse()
     @UseInterceptors(TestMethodInterceptor)
+    @ApiParameter(
+        Parameter(in_=ParameterLocation.QUERY, name="param", schema=Schema(type="string"))
+    )
     @UseFilters(HttpExceptionFilter)
-    async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body()]):
+    async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body('latin-1')]):
         raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)

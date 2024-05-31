@@ -32,6 +32,7 @@ class RouterProxy:
 
     def apply_routes(self, modules: list[Union[Type, object]]):
         json_paths = {}
+        json_schemas = {}
         for module_ref in modules:
             routes = RouteExplorer.explore(module_ref)
             for route in routes:
@@ -44,13 +45,13 @@ class RouterProxy:
                     getattr(self.router, method.lower())(path, handler, route)
 
                     # OPEN API REGISTER
-                    if path in json_paths.keys():
+                    if path in json_paths:
                         route_path = json_paths[path]
                     else:
                         route_path = {}
-                    if "responses" not in route['openapi'].keys():
-                        continue
-
+                    # if "responses" not in route['openapi'].keys():
+                    #     continue
+                    json_schemas = {**json_schemas, **route['schemas']}
                     if 'no_swagger' not in route['openapi'].keys():
                         route_path[method.lower()] = Operation(
                             **route['openapi'],
@@ -60,7 +61,7 @@ class RouterProxy:
         paths = {}
         for path, op in json_paths.items():
             paths[path] = PathItem(**op)
-        return paths
+        return paths, json_schemas
 
     def create_request_handler(
             self,

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pydantic import create_model
 
 from .decorator import ApiBearerAuth, ApiBasicAuth, ApiSecurity, NoSwagger
-from .decorator import ApiResponse, ApiCreatedResponse, ApiOkResponse, ApiNotFoundResponse
+from .decorator import ApiResponse, ApiCreatedResponse, ApiOkResponse, ApiNotFoundResponse, ApiConsumer
 from .decorator import ApiTags, ApiId, ApiBody, ApiParameter
 from .document_builder import DocumentBuilder
 from .swagger_module import SwaggerModule
@@ -46,5 +46,6 @@ __all__ = [
     "ApiBearerAuth",
     "ApiBasicAuth",
     "ApiSecurity",
-    "NoSwagger"
+    "NoSwagger",
+    "ApiConsumer"
 ]

@@ -1,9 +1,9 @@
 from dataclasses import is_dataclass
 from typing import Any, Type, Optional
 
-from nestipy.metadata import CtxDepKey
 from pydantic import BaseModel
 
+from nestipy.metadata import CtxDepKey
 from .annotation import ParamAnnotation, TypeAnnotatedCallable
 from .context_container import RequestContextContainer
 
@@ -41,17 +41,22 @@ def to_valid_value(value: Any, _type_ref: Type):
     if is_dataclass(_type_ref):
         return _type_ref(**value)
     elif issubclass(_type_ref, BaseModel):
-        return _type_ref.model_validate(value)
+        return _type_ref(**value)
     return value
 
 
-async def body_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+async def body_callback(
+        _name: str,
+        encoding: Optional[str],
+        _type_ref: Type,
+        _request_context: RequestContextContainer
+):
     req = _request_context.execution_context.get_request()
-    form_data = await req.form()
+    form_data = await req.form(encoding)
     if form_data is not None:
         return to_valid_value(form_data, _type_ref)
     else:
-        return to_valid_value(await req.json(), _type_ref)
+        return to_valid_value(await req.json(encoding), _type_ref)
 
 
 def _get_request_param_value(
