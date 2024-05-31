@@ -1,11 +1,11 @@
 from inspect import isfunction, getmembers
 from typing import List, Type, Union
 
-from nestipy.ioc import MiddlewareContainer
-from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from openapidocs.v3 import Parameter, ParameterLocation
 
 from nestipy.common.utils import deep_merge
+from nestipy.ioc import MiddlewareContainer
+from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from nestipy.openapi.explorer import OpenApiExplorer
 from .route_extractor import RouteParamsExtractor
 
@@ -30,7 +30,7 @@ class RouteExplorer:
 
     def explore_controller(self, controller: Type) -> List[dict]:
 
-        docs = self._openapi_scanner.explore(controller)
+        docs, schemas = self._openapi_scanner.explore(controller)
         routes = []
         # need to extract middleware, guards, exception_handler,
         controller_path = self._normalize_path(Reflect.get_metadata(controller, RouteKey.path, ''))
@@ -46,13 +46,23 @@ class RouteExplorer:
 
                 # openapi docs
                 params = RouteParamsExtractor.extract_params(path)
-                parameters = [Parameter(name=name, in_=ParameterLocation.PATH, required=True, description='Route path',
-                                        allow_empty_value=False)
-                              for name in params.keys()]
-                method_docs = deep_merge(self._openapi_scanner.explore(method), {'parameters': parameters})
+                parameters = [
+                    Parameter(
+                        name=name,
+                        in_=ParameterLocation.PATH,
+                        required=True,
+                        description='Route path',
+                        allow_empty_value=False
+                    )
+                    for name in params.keys()
+                ]
+                method_deps, method_schemas = self._openapi_scanner.explore(method)
+                method_docs = deep_merge(method_deps, {'parameters': parameters})
+                merged_docs = deep_merge(docs, method_docs)
+                merger_schemas = deep_merge(schemas, method_schemas)
                 path_docs = deep_merge(
                     {'tags': [controller.__name__.replace('Controller', '')]},
-                    deep_merge(docs, method_docs)
+                    merged_docs
                 )
                 path_docs['tags'] = [path_docs['tags'][0]]
 
@@ -63,7 +73,8 @@ class RouteExplorer:
                     'request_method': request_method,
                     'method_name': method_name,
                     'controller': controller,
-                    'openapi': path_docs  # openapi docs
+                    'openapi': path_docs,  # openapi docs
+                    'schemas': merger_schemas,
                 }
                 routes.append(route_info)
         return routes

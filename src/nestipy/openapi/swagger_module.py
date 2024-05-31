@@ -37,6 +37,9 @@ class SwaggerModule:
     def _create_document(cls, app: "NestipyApplication", config: OpenAPI) -> _Document:
         paths = app.get_openapi_paths()
         config.paths = paths
+        schemas = app.get_open_api_schemas()
+        if "schemas" in schemas:
+            config.components.schemas = {**config.components.schemas, **schemas["schemas"]}
         serializer = Serializer()
         json = serializer.to_json(config)
         document_json = ujson.dumps(

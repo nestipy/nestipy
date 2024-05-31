@@ -1,6 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="JetClientState">
+    <option name="folders">
+      <list>
+        <folderState>
+          <option name="id" value="dd33444c-80f1-4939-89c9-5d4437ed93a9" />
+          <option name="name" value="Nestipy" />
+          <option name="requests">
+            <list>
+              <requestState>
+                <option name="body">
+                  <bodyState>
+                    <option name="formData">
+                      <list>
+                        <formDataParameterState>
+                          <option name="key" value="image" />
+                          <option name="type" value="FILE" />
+                          <option name="value" value="$USER_HOME$/tsiresy.pem" />
+                        </formDataParameterState>
+                      </list>
+                    </option>
+                    <option name="type" value="FORM_DATA" />
+                  </bodyState>
+                </option>
+                <option name="headers">
+                  <list>
+                    <headerState>
+                      <option name="key" value="Content-Type" />
+                      <option name="value" value="multipart/form-data" />
+                    </headerState>
+                  </list>
+                </option>
+                <option name="id" value="e340aa4a-42f2-499d-9be6-923c16d78972" />
+                <option name="method" value="POST" />
+                <option name="name" value="FileUpload" />
+                <option name="url" value="http://localhost:8000" />
+              </requestState>
+            </list>
+          </option>
+          <option name="sortWeight" value="1000000" />
+          <option name="syncProperties">
+            <synchronizationPropertiesState>
+              <option name="folderPath" value="$PROJECT_DIR$/.jetclient" />
+            </synchronizationPropertiesState>
+          </option>
+        </folderState>
+      </list>
+    </option>
     <option name="id" value="849fe746-eb09-422c-9ba3-50b104f0b074" />
   </component>
 </project>

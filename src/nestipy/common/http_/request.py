@@ -109,7 +109,7 @@ class Request:
     def set_body(self, body: str):
         self._body = body
 
-    async def body(self) -> str:
+    async def body(self, encoding='utf-8') -> str:
         if self._body is None:
             body = b""
             while True:
@@ -118,15 +118,15 @@ class Request:
                 if not message.get("more_body", False):
                     break
             self._body = body
-        return self._body.decode()
+        return self._body.decode(encoding or 'utf-8')
 
     async def files(self) -> list[UploadFile]:
         form_data = await self.starlette_request.form()
         return form_data.getlist('files')
 
-    async def json(self) -> dict:
+    async def json(self, encoding='utf-8') -> dict:
         if self._json is None:
-            body = await self.body()
+            body = await self.body(encoding)
             try:
                 self._json = ujson.loads('{}' if body == '' else body)
             except ujson.JSONDecodeError:
@@ -140,18 +140,18 @@ class Request:
             _content_type
         )
 
-    async def form(self) -> dict:
+    async def form(self, encoding='utf-8') -> dict:
         if self._form is None:
             content_type, options = self.content_type
             if content_type == "multipart/form-data":
                 self._form = parse_multipart_form(
-                    body=(await self.body()).encode(),
+                    body=(await self.body(encoding)).encode(),
                     boundary=options.get("boundary", "").encode(),
-                    multipart_form_part_limit=1000,
+                    multipart_form_part_limit=1000000,
                 )
             elif content_type == "application/x-www-form-urlencoded":
                 self._form = parse_url_encoded_form_data(
-                    (await self.body()).encode(),
+                    (await self.body(encoding)).encode(),
                 )
             else:
                 self._form = None

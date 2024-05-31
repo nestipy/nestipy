@@ -12,7 +12,7 @@ from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import Request, Response
 from nestipy.ioc import Req, Res, Body
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody, NoSwagger
 
 
 @dataclasses.dataclass
@@ -26,6 +26,7 @@ class TestBody:
 @ApiNotFoundResponse()
 class AppController:
 
+    @NoSwagger() # this will hide it in swagger ui.
     @Render('index.html')
     @Get()
     async def test(self, req: Annotated[Request, Req()], res: Annotated[Response, Res()]):
@@ -43,7 +44,7 @@ class AppController:
 
 ### Swagger
 
-This is how config swagger with Nestipy.
+This is how configure swagger with Nestipy.
 
 ```python
 from nestipy.core.nestipy_factory import NestipyFactory

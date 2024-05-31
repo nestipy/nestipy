@@ -1,7 +1,7 @@
-from .openapi_docs.common import Serializer
-from .openapi_docs.v3 import OpenAPI, Info, Response, Components, Schema, SecuritySchemeType
-from .openapi_docs.v3 import PathItem, Operation, SecurityRequirement, ValueType
-from .openapi_docs.v3 import Tag, HTTPSecurity, APIKeySecurity, ParameterLocation, Parameter
+from openapi_docs.common import Serializer
+from openapi_docs.v3 import OpenAPI, Info, Response, Components, Schema, SecuritySchemeType, MediaType
+from openapi_docs.v3 import PathItem, Operation, SecurityRequirement, ValueType
+from openapi_docs.v3 import Tag, HTTPSecurity, APIKeySecurity, ParameterLocation, Parameter, RequestBody
 
 open_api = OpenAPI(
     info=Info(
@@ -41,7 +41,17 @@ open_api = OpenAPI(
                         name='test3',
                         in_=ParameterLocation.HEADER
                     )
-                ]
+                ],
+                request_body=RequestBody(
+                    required=True,
+                    content={
+                        "application/json": MediaType(
+                            schema=Schema(
+                                ref="#/components/schemas/User"
+                            )
+                        )
+                    },
+                )
             )
         )
     },

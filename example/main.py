@@ -16,8 +16,15 @@ app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
 # enable cors
 app.enable_cors()
 # setup swagger
-document = DocumentBuilder().set_title('Example API') \
-    .set_description('The API description').set_version('1.0').add_bearer_auth().add_basic_auth().build()
+document = (DocumentBuilder()
+            .set_title('Nestipy API Documentation')
+            .set_description(
+    'Nestipy is a Python framework inspired by NestJS and built on top of FastAPI or Blacksheep')
+            .set_version('1.0')
+            .add_bearer_auth()
+            .add_basic_auth()
+            .build()
+            )
 SwaggerModule.setup('api', app, document)
 
 # serve static file
