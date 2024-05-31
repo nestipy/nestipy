@@ -1,5 +1,7 @@
 import dataclasses
-from typing import Union, Optional, Any, Type
+import inspect
+from enum import Enum
+from typing import Union, Optional, Any, Type, Callable
 
 from pydantic import TypeAdapter, BaseModel
 
@@ -8,24 +10,75 @@ from .openapi_docs.v3 import RequestBody, Response, Parameter
 from .openapi_docs.v3 import SecurityRequirement, MediaType, Schema
 
 
-def ApiBody(body: Union[BaseModel, Type] = None, consumer: str = 'application/json'):
+class ApiConsumer(Enum):
+    JSON = "application/json"
+    MULTIPART = "multipart/form-data"
+    X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded"
+
+
+def _dict_to_dataclass(data: dict[str, Any], cls: Any) -> Any:
+    field_names = {field.name for field in dataclasses.fields(cls)}
+    filtered_data = {key: value for key, value in data.items() if key in field_names}
+    return cls(**filtered_data)
+
+
+def _get_json_of_body(body: Union[BaseModel, Type]):
     content: dict = {}
+    ref_template = "#/components/schemas/{model}"
     if dataclasses.is_dataclass(body):
-        content: dict = TypeAdapter(body).json_schema()
-    elif isinstance(body, BaseModel):
-        content: dict = body.model_json_schema()
+        content: dict = TypeAdapter(body).json_schema(ref_template=ref_template)
+    elif inspect.isclass(body) and issubclass(body, BaseModel):
+        content: dict = body.model_json_schema(ref_template=ref_template)
+    return content
+
+
+def _create_decorator_to_add_schema_ref(decorator: callable, content: dict):
+    if "$defs" not in content:
+        return decorator
+
+    def update_decorator(cls: Union[Type, Callable]):
+        new_cls = decorator(cls)
+        class_decorated = SetMetadata(key='__openapi__schemas', as_dict=True, data=content["$defs"])(new_cls)
+        return class_decorated
+
+    return update_decorator
+
+
+def ApiBody(body: Union[BaseModel, Type] = None, consumer: ApiConsumer = ApiConsumer.JSON):
+    content = _get_json_of_body(body)
     body = RequestBody(
         required=True,
         content={
-            consumer: MediaType(
-                schema=Schema(**content)
+            consumer.value: MediaType(
+                schema=_dict_to_dataclass(content, Schema),
             )
         },
     )
-    return SetMetadata(key='__openapi__request_body', data=body)
+    decorator = SetMetadata(key='__openapi__request_body', data=body)
+    return _create_decorator_to_add_schema_ref(decorator, content)
 
 
-def ApiResponse(status: int, response: Response):
+def ApiResponse(
+        status: int,
+        response: Union[BaseModel, Type] = None,
+        description: str = None,
+        example: Any = None,
+        consumer: ApiConsumer = ApiConsumer.JSON
+):
+    content = _get_json_of_body(response)
+    response_body = Response(
+        description=description,
+        content={
+            consumer.value: MediaType(
+                schema=_dict_to_dataclass(content, Schema),
+                example=example
+            )
+        },
+    )
+    return _ApiResponse(status, response_body)
+
+
+def _ApiResponse(status: int, response: Response):
     return SetMetadata(key='__openapi__responses', data={status: response}, as_dict=True)
 
 
@@ -33,48 +86,30 @@ def NoSwagger():
     return SetMetadata(key='__openapi__no_swagger', data=True)
 
 
-def ApiOkResponse(description: Optional[str] = None, schema: Schema = None, example: Any = None):
+def ApiOkResponse(schema: Union[BaseModel, Type] = None, description: Optional[str] = None, example: Any = None):
     return ApiResponse(
         status=200,
-        response=Response(
-            description or 'Success response',
-            content={
-                'application/json': MediaType(
-                    schema=schema or Schema(),
-                    example=example
-                )
-            }
-        )
+        description=description,
+        response=schema,
+        example=example
     )
 
 
-def ApiCreatedResponse(description: Optional[str] = None, schema: Schema = None, example: Any = None):
+def ApiCreatedResponse(schema: Union[BaseModel, Type] = None, description: Optional[str] = None, example: Any = None):
     return ApiResponse(
         status=201,
-        response=Response(
-            description or 'Success response',
-            content={
-                'application/json': MediaType(
-                    schema=schema or Schema(),
-                    example=example
-                )
-            }
-        )
+        description=description,
+        response=schema,
+        example=example
     )
 
 
-def ApiNotFoundResponse(description: Optional[str] = None, schema: Schema = None, example: Any = None):
+def ApiNotFoundResponse(schema: Union[BaseModel, Type] = None, description: Optional[str] = None, example: Any = None):
     return ApiResponse(
         status=404,
-        response=Response(
-            description or 'Not Found',
-            content={
-                'application/json': MediaType(
-                    schema=schema or Schema(),
-                    example=example
-                )
-            }
-        )
+        description=description,
+        response=schema,
+        example=example
     )
 
 

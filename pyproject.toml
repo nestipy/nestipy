@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.3.6"
+version = "0.3.7"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -14,10 +14,11 @@ python-socketio = "^5.11.1"
 blacksheep = "^2.0.7"
 aiofiles = "^23.2.1"
 fastapi = "^0.110.0"
-uvicorn = { extras = ["standard"], version = "^0.29.0" }
 strawberry-graphql = "^0.225.0"
 ujson = "^5.9.0"
 minijinja = "^2.0.1"
+python-multipart = "^0.0.9"
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
 
 
 [build-system]
