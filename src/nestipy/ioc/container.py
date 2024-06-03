@@ -1,11 +1,8 @@
-import dataclasses
 import inspect
 from functools import lru_cache
 from typing import Type, Union, Any, Optional, Callable, Awaitable, TYPE_CHECKING
 
 from nestipy.metadata import ClassMetadata, CtxDepKey, ModuleMetadata, ProviderToken, Reflect
-from pydantic import BaseModel
-
 from .context_container import RequestContextContainer
 from .dependency import TypeAnnotated
 from .meta import ContainerHelper
@@ -13,6 +10,8 @@ from .utils import uniq
 
 if TYPE_CHECKING:
     from .provider import ModuleProviderDict
+
+_INIT = "__init__"
 
 
 class NestipyContainer:
@@ -160,29 +159,29 @@ class NestipyContainer:
                     setattr(service, name, dependency)
                 else:
                     _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                    raise ValueError(
-                        f"Service {_name} "
-                        f"not found in scope of {service.__name__}")
+                    raise ValueError(f"Service {_name} not found in scope {search_scope}")
             else:
                 continue
         origin.remove(service)
         self._services[key] = service
 
-    async def _get_method_dependency(self, method_to_resolve: Callable, search_scope: list, origin: list):
+    async def _get_method_dependency(self, method_to_resolve: Callable, search_scope: list,
+                                     disable_scope: bool = False):
         params = inspect.signature(method_to_resolve).parameters
         args = {}
         for name, param in params.items():
             if name != 'self' and param.annotation is not inspect.Parameter.empty:
                 annotation, dep_key = self.helper.get_type_from_annotation(param.annotation)
-                if dep_key.metadata.key in CtxDepKey.to_list() and dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_context_service(name, dep_key, annotation)
-                    args[name] = dependency
-                elif annotation in search_scope:
-                    dependency = await self.get(annotation, origin=origin)
-                    args[name] = dependency
-                else:
-                    _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                    raise ValueError(f"Service {_name} not found in scope {search_scope}")
+                if dep_key.metadata.key in CtxDepKey.to_list():
+                    if dep_key.metadata.key is not CtxDepKey.Service:
+                        dependency = await self._resolve_context_service(name, dep_key, annotation)
+                        args[name] = dependency
+                    elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
+                        dependency = await self.get(dep_key.metadata.token or annotation)
+                        args[name] = dependency
+                    else:
+                        _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
+                        raise ValueError(f"Service {_name} not found in scope {search_scope}")
         return args
 
     @classmethod
@@ -191,29 +190,30 @@ class NestipyContainer:
             return await method(**args)
         return method(**args)
 
-    async def resolve_factory(self, factory: Callable, inject: list, search_scope: list):
+    async def resolve_factory(self, factory: Callable, inject: list, search_scope: list, disable_scope: bool = False):
         search_scope_by_inject = [m for m in inject if m in search_scope]
         args = await self._get_method_dependency(
             method_to_resolve=factory,
             search_scope=search_scope_by_inject,
-            origin=[]
+            disable_scope=disable_scope
         )
         return await self._call_method(method=factory, args=args)
 
     async def _resolve_method(
             self,
             key: Union[Type, str, object],
-            method: str = '__init__',
-            origin: Optional[list] = None
+            method: str = _INIT,
+            origin: Optional[list] = None,
+            disable_scope: bool = False
     ):
         service, origin = self._check_service(key, origin)
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
         method_to_resolve = getattr(service, method, None)
         if not method_to_resolve:
-            raise Exception(f"Method {method}  not found in {service.__name__} service ")
-        args = await self._get_method_dependency(method_to_resolve, search_scope, origin)
-        if method == '__init__':
+            raise Exception(f"Method {method} not found in {service.__name__} service ")
+        args = await self._get_method_dependency(method_to_resolve, search_scope, disable_scope=disable_scope)
+        if method == _INIT:
             result = service(**args)
             if service in self._singleton_classes:
                 self._singleton_instances[service] = result
@@ -229,14 +229,14 @@ class NestipyContainer:
     async def get(
             self,
             key: Union[Type, str],
-            method: str = '__init__',
+            method: str = _INIT,
             origin: Optional[list] = None,
             disable_scope: Optional[bool] = False
     ) -> Awaitable[object]:
         in_singleton = await self._check_exist_singleton(key=key)
         if in_singleton:
-            if method == '__init__':
+            if method == _INIT:
                 return in_singleton
         else:
             await self._resolve_property(key, origin=origin, disable_scope=disable_scope)
-        return await self._resolve_method(key, method=method, origin=origin)
+        return await self._resolve_method(key, method=method, origin=origin, disable_scope=disable_scope)

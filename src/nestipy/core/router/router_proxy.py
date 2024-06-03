@@ -22,7 +22,7 @@ from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
 from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
-from ...openapi.openapi_docs.v3 import Operation, PathItem
+from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
 
 
 class RouterProxy:
@@ -43,14 +43,13 @@ class RouterProxy:
                 handler = self.create_request_handler(module_ref, controller, method_name)
                 for method in methods:
                     getattr(self.router, method.lower())(path, handler, route)
-
                     # OPEN API REGISTER
                     if path in json_paths:
                         route_path = json_paths[path]
                     else:
                         route_path = {}
-                    # if "responses" not in route['openapi'].keys():
-                    #     continue
+                    if "responses" not in route['openapi'].keys():
+                        route['openapi']["responses"] = {200: ApiResponse()}
                     json_schemas = {**json_schemas, **route['schemas']}
                     if 'no_swagger' not in route['openapi'].keys():
                         route_path[method.lower()] = Operation(
@@ -73,11 +72,6 @@ class RouterProxy:
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
 
             context_container = RequestContextContainer.get_instance()
-            # setup container for query params, route params, request, response, session, etc..
-            # await self.setup_context_data(context_container, req, res)
-
-            # TODO: req.files
-
             container = NestipyContainer.get_instance()
             controller_method_handler = getattr(controller, method_name)
             execution_context = ExecutionContext(
@@ -88,6 +82,7 @@ class RouterProxy:
                 req,
                 res
             )
+            # setup container for query params, route params, request, response, session, etc..
             context_container.set_execution_context(execution_context)
             handler_response: Response
             try:
@@ -121,7 +116,6 @@ class RouterProxy:
                         HttpStatus.BAD_REQUEST,
                         "Handler not called because of interceptor: Invalid Request"
                     )
-
                 # process template rendering
                 if self._template_processor.can_process(controller_method_handler, result):
                     result = await res.html(self._template_processor.render())

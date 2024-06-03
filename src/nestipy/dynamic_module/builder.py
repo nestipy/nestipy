@@ -42,12 +42,12 @@ class ConfigurableModuleBuilder(Generic[T]):
             self._extras_process_callback(dynamic_module, self._extras)
         return dynamic_module
 
-    def _create_dynamic_module(self, obj: Any, provider: list) -> DynamicModule:
+    def _create_dynamic_module(self, obj: Any, imports: list, provider: list) -> DynamicModule:
         dynamic_module = DynamicModule(
             obj,
             providers=provider + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
             exports=Reflect.get_metadata(obj, ModuleMetadata.Exports, []),
-            imports=Reflect.get_metadata(obj, ModuleMetadata.Imports, []),
+            imports=imports + Reflect.get_metadata(obj, ModuleMetadata.Imports, []),
             controllers=Reflect.get_metadata(obj, ModuleMetadata.Controllers, []),
             is_global=Reflect.get_metadata(obj, ModuleMetadata.Global, False)
         )
@@ -63,7 +63,7 @@ class ConfigurableModuleBuilder(Generic[T]):
                 token=MODULE_OPTION_TOKEN,
                 value=options
             )
-            return self._create_dynamic_module(cls_, [provider])
+            return self._create_dynamic_module(cls_, [], [provider])
 
         def register_async(
                 cls_: Any,
@@ -72,6 +72,7 @@ class ConfigurableModuleBuilder(Generic[T]):
                 existing: Union[Type, str] = None,
                 use_class: Type = None,
                 inject: list = None,
+                imports: list = None,
                 extras: dict = None
         ) -> DynamicModule:
             if extras is not None:
@@ -84,7 +85,7 @@ class ConfigurableModuleBuilder(Generic[T]):
                 existing=existing,
                 value=value
             )
-            return self._create_dynamic_module(cls_, [provider])
+            return self._create_dynamic_module(cls_, imports or [], [provider])
 
         cls = type('ConfigurableModuleClass', (object,), {
             self._method_name: classmethod(register),

@@ -5,6 +5,7 @@ from .container import NestipyContainer
 
 class ModuleProviderDict:
     inject: list = []
+    imports: list = []
     token: Union[str, Type]
     value: Any = None
     factory: Callable[..., Union[Awaitable, Any]] = None
@@ -18,7 +19,7 @@ class ModuleProviderDict:
             factory: Callable[..., Union[Awaitable, Any]] = None,
             existing: Union[Type, str] = None,
             use_class: Type = None,
-            inject: list = None
+            inject: list = None,
     ):
         self.token = token
         self.value = value
