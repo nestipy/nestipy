@@ -139,7 +139,7 @@ class Request:
         yield b""
 
     async def body(self) -> bytes:
-        if not hasattr(self, "_body"):
+        if self._body is None:
             chunks: list[bytes] = []
             async for chunk in self.stream():
                 chunks.append(chunk)
