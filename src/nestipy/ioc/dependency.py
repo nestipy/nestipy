@@ -53,7 +53,7 @@ async def body_callback(
 ):
     req = _request_context.execution_context.get_request()
     form_data = await req.form()
-    if form_data is not None:
+    if bool(form_data):
         return to_valid_value(form_data, _type_ref)
     else:
         return to_valid_value(await req.json(), _type_ref)
