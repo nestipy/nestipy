@@ -13,7 +13,7 @@ class TypeAnnotated:
     def __init__(self, metadata: ParamAnnotation):
         self.metadata = metadata
 
-    def __call__(self, token: str = None) -> "TypeAnnotated":
+    def __call__(self, token: Any = None) -> "TypeAnnotated":
         return TypeAnnotated(ParamAnnotation(self.metadata.callback, self.metadata.key, token))
 
 
@@ -134,6 +134,6 @@ Arg = create_type_annotated(args_callback, CtxDepKey.Args)
 Context = create_type_annotated(context_callback, CtxDepKey.Context)
 GraphQlContext = create_type_annotated(graphql_context_callback, CtxDepKey.Context)
 Header = create_type_annotated(headers_callback, CtxDepKey.Header)
-SocketServer = create_type_annotated(websocket_server_callback, CtxDepKey.Service)
-SocketClient = create_type_annotated(websocket_client_callback, CtxDepKey.SocketClient)
+WebSocketServer = create_type_annotated(websocket_server_callback, CtxDepKey.Service)
+WebSocketClient = create_type_annotated(websocket_client_callback, CtxDepKey.WebSocketClient)
 SocketData = create_type_annotated(websocket_data_callback, CtxDepKey.SocketData)

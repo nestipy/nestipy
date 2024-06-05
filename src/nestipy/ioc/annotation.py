@@ -6,7 +6,7 @@ TypeAnnotatedCallable = Callable[[str, Union[str, None], Type, RequestContextCon
 
 
 class ParamAnnotation:
-    def __init__(self, callback: TypeAnnotatedCallable, key: str, token: Union[str, None] = None):
+    def __init__(self, callback: TypeAnnotatedCallable, key: str, token: Union[str | Any, None] = None):
         self.key: Union[str, None] = key
-        self.token: Union[str, None] = token
+        self.token: Union[str | Any, None] = token
         self.callback = callback

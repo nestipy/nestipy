@@ -28,7 +28,7 @@ class BlackSheepAdapter(HttpAdapter):
             max_age=300,
         )
 
-    def create_wilchard(self, prefix: str = '/', name: str = 'full_path') -> str:
+    def create_wichard(self, prefix: str = '/', name: str = 'full_path') -> str:
         return f"/{prefix.strip('/')}" + "/{" + f"path:{name}" + "}"
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:

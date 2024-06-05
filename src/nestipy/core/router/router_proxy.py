@@ -26,17 +26,18 @@ from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiRespo
 
 
 class RouterProxy:
-    def __init__(self, router: HttpAdapter):
+    def __init__(self, router: HttpAdapter, ):
         self.router = router
         self._template_processor = TemplateRendererProcessor(router)
 
-    def apply_routes(self, modules: list[Union[Type, object]]):
+    def apply_routes(self, modules: list[Union[Type, object]], prefix: str = ""):
+        _prefix: Union[str | None] = f"/{prefix.strip('/')}" if prefix is not None and prefix.strip() != "" else None
         json_paths = {}
         json_schemas = {}
         for module_ref in modules:
             routes = RouteExplorer.explore(module_ref)
             for route in routes:
-                path = route['path']
+                path = f"{_prefix.rstrip('/')}/{route['path'].strip('/')}".rstrip('/') if _prefix else route['path']
                 methods = route['request_method']
                 method_name = route['method_name']
                 controller = route['controller']

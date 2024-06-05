@@ -10,7 +10,10 @@ pip install nestipy_peewee
 
 Bellow is a basic example by loading config from `.env` file using `nestipy_config`.
 ```python
+from typing import Annotated
+
 from nestipy.common import Module
+from nestipy.ioc import Inject
 from nestipy_config import ConfigModule, ConfigOption, ConfigService
 from nestipy_peewee import PeeweeConfig, PeeweeModule, Model
 from peewee import TextField, IntegerField
@@ -23,7 +26,7 @@ class User:
     age = IntegerField()
 
 
-async def peewee_factory(config: ConfigService) -> PeeweeConfig:
+async def peewee_factory(config: Annotated[ConfigService, Inject()]) -> PeeweeConfig:
     return PeeweeConfig(
         driver='mysql',
         host=config.get('DB_HOST'),
@@ -52,6 +55,7 @@ async def peewee_factory(config: ConfigService) -> PeeweeConfig:
         PeeweeModule.for_root_async(
             factory=peewee_factory,
             inject=[ConfigService]
+            # we can inject `ConfigService` here because `ConfigModule` is declared as global
         ),
     ],
     controllers=[AppController],
@@ -107,7 +111,10 @@ pip install nestipy_beanie
 In the following example, we also use nestipy_config to load the database configuration from a .env file.
 
 ```python
+from typing import Annotated
+
 from nestipy.common import Module
+from nestipy.ioc import Inject
 from nestipy_config import ConfigModule, ConfigOption, ConfigService
 
 from app_controller import AppController
@@ -116,20 +123,20 @@ from product_document import Product
 from nestipy_beanie import BeanieModule, BeanieOption
 
 
-def beanie_config(config: ConfigService) -> BeanieOption:
+def beanie_config(config: Annotated[ConfigService, Inject()]) -> BeanieOption:
     return BeanieOption(
         url=f"mongodb://{config.get('DB_USER')}:{config.get('DB_PASSWORD')}@{config.get('DB_HOST')}:{config.get('DB_PORT')}",
-        documents=[Product], # register beanie document here.
+        documents=[Product],  # register beanie document here.
         database=config.get("DB_NAME")
     )
 
 
 @Module(
     imports=[
-        ConfigModule.for_root(ConfigOption(), {'is_global': True}),
         BeanieModule.for_root_async(
             factory=beanie_config,
-            inject=[ConfigService]
+            inject=[ConfigService],
+            imports=[ConfigModule.for_root(ConfigOption())]
         ),
         # BeanieModule.for_root(BeanieOption(
         #     url="mongodb://user:pass@host:27017",
@@ -176,12 +183,21 @@ class AppModule:
 
 Now, we can get instance of `prisma` by injecting `PrismaService`.
 ```python
+from dataclasses import dataclass, asdict
 from typing import Annotated
 
 from nestipy.common import Injectable
 from nestipy.ioc import Inject
+from prisma.types import PostCreateInput, PostUpdateInput
 
 from nestipy_prisma import PrismaService
+
+
+@dataclass
+class PostDto:
+    title: str
+    published: bool
+    desc: str
 
 
 @Injectable()
@@ -189,19 +205,21 @@ class AppService:
     prisma: Annotated[PrismaService, Inject()]
 
     async def get(self):
-        return self.prisma.post.find_many()
+        result = await self.prisma.post.find_many()
+        return [a.model_dump(mode="json") for a in result]
 
-    @classmethod
-    async def post(cls, data: dict):
-        return "test"
+    async def post(self, data: PostDto):
+        return (await self.prisma.post.create(
+            PostCreateInput(**asdict(data))
+        )).model_dump()
 
-    @classmethod
-    async def put(cls, id_: int, data: dict):
-        return "test"
+    async def put(self, id_: str, data: PostDto):
+        return (await self.prisma.post.update(PostUpdateInput(**asdict(data)), where={
+            "id": id_
+        })).model_dump(mode="json")
 
-    @classmethod
-    async def delete(cls, id_: int):
-        return "test"
+    async def delete(self, id_: str):
+        return (await self.prisma.post.delete(where={"id": id_})).model_dump(mode="json")
 
 ```
 

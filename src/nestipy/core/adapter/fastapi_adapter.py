@@ -22,7 +22,7 @@ class FastApiAdapter(HttpAdapter):
     def get_instance(self) -> any:
         return self.instance
 
-    def create_wilchard(self, prefix: str = '/', name: str = 'full_path') -> str:
+    def create_wichard(self, prefix: str = '/', name: str = 'full_path') -> str:
         return f"/{prefix.strip('/')}" + "/{" + f"{name}:path" + "}"
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:

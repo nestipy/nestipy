@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class TemplateEngine(ABC):
@@ -22,4 +23,8 @@ class TemplateEngine(ABC):
 
     @abstractmethod
     def render_str(self, string: str, context: dict) -> str:
+        pass
+
+    @abstractmethod
+    def get_env(self) -> Any:
         pass

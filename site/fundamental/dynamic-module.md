@@ -123,7 +123,7 @@ class DatabaseModule(ConfigurableModuleClass, NestipyModule):
         pass
 
 
-async def database_config_factory(config: ConfigService) -> DatabaseConfigOption:
+async def database_config_factory(config: Annotated[ConfigService, Inject()]) -> DatabaseConfigOption:
     return DatabaseConfigOption(
         host=config.get('DB_HOST'),
         port=int(config.get('DB_PORT')),
@@ -148,4 +148,4 @@ class AppModule:
 Note: We can inject service directly inside `Module` if we want to use `DatabaseService` with lifecycle hook
 inside `DatabaseModule
 
-Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-dynamic-module)** for an  example.
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-dynamic-module)** for an example.

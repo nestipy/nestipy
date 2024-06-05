@@ -1,22 +1,29 @@
 import dataclasses
 import os.path
 import shutil
-from typing import Any, Annotated
+from typing import Any, Annotated, Optional, Type
 
 from pydantic import BaseModel
 
 from app_provider import AppProvider
 from nestipy.common import Controller, Injectable, Post, Get, logger, UploadFile
 from nestipy.common import ExceptionFilter, Catch, UseFilters
-from nestipy.common import HttpException
+from nestipy.common import HttpException, apply_decorators
 from nestipy.common import NestipyInterceptor, UseInterceptors, Render
 from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
-from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header
+from nestipy.ioc import Inject, Req, Res, Body, Cookie, Session, Header, create_type_annotated, RequestContextContainer
 from nestipy.openapi import ApiResponse, ApiParameter, ApiConsumer
 from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger, ApiBody
 from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
 from nestipy.types_ import NextFn
+
+
+def user_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
+    return "User"
+
+
+User = create_type_annotated(user_callback, "user")
 
 
 class Test2(BaseModel):
@@ -65,10 +72,16 @@ class TestMethodInterceptor(NestipyInterceptor):
         return await next_fn()
 
 
+def ApiDecorator():
+    return apply_decorators(
+        ApiNotFoundResponse(UnauthorizedResponse),
+        UseInterceptors(TestInterceptor)
+    )
+
+
 @Controller()
 @ApiTags('App')
-@ApiNotFoundResponse(UnauthorizedResponse)
-@UseInterceptors(TestInterceptor)
+@ApiDecorator()
 @UseFilters(Http2ExceptionFilter)
 class AppController:
     provider: Annotated[AppProvider, Inject()]
@@ -101,7 +114,13 @@ class AppController:
         Parameter(in_=ParameterLocation.QUERY, name="param", schema=Schema(type="string"))
     )
     @UseFilters(HttpExceptionFilter)
-    async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body('latin-1')]):
+    async def post(
+            self,
+            res: Annotated[Response, Res()],
+            user: Annotated[str, User()],
+            body: Annotated[TestBody, Body('latin-1')]
+    ):
+        print(user)
         file_path = os.path.join(os.path.dirname(__file__), f"nestipy_{body.image.filename}")
         file = open(file_path, "wb")
         shutil.copyfileobj(body.image.file, file)

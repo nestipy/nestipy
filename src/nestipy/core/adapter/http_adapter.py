@@ -4,9 +4,9 @@ from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
+from nestipy.metadata import SetMetadata, Reflect
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
-from nestipy.metadata import SetMetadata, Reflect
 
 if TYPE_CHECKING:
     from nestipy.common.exception.interface import ExceptionFilter
@@ -31,7 +31,7 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def create_wilchard(self, prefix: str = '/') -> str:
+    def create_wichard(self, prefix: str = '/') -> str:
         pass
 
     @abstractmethod

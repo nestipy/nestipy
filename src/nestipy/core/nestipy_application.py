@@ -45,6 +45,7 @@ class NestipyApplication:
     _root_module: Type = None
     _openapi_paths = {}
     _openapi_schemas = {}
+    _prefix: Union[str | None] = None
 
     def __init__(self, config: NestipyApplicationConfig = None):
         config = config if config is not None else NestipyApplicationConfig()
@@ -104,7 +105,7 @@ class NestipyApplication:
             modules = self._get_modules(self._root_module)
             graphql_module_instance = await self.instance_loader.create_instances(modules)
             # create and register route to platform adapter
-            self._openapi_paths, self._openapi_schemas = self._router_proxy.apply_routes(modules)
+            self._openapi_paths, self._openapi_schemas = self._router_proxy.apply_routes(modules, self._prefix)
             # check if graphql is enabled
             if graphql_module_instance is not None:
                 GraphqlProxy(self._http_adapter, self._graphql_builder).apply_resolvers(
@@ -162,7 +163,7 @@ class NestipyApplication:
                 attachment=False
             )
 
-        static_path = self._http_adapter.create_wilchard(f'/{url.strip("/")}')
+        static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
         self._http_adapter.get(static_path, render_asset_file, {})
 
     def set_base_view_dir(self, view_dir: str):
@@ -196,6 +197,9 @@ class NestipyApplication:
     def use_global_guards(self, *guards: Union[Type, "CanActivate"]):
         self._http_adapter.add_global_guards(*guards)
         # self._add_root_module_provider(*guards)
+
+    def use_global_prefix(self, prefix: str = ""):
+        self._prefix = prefix or ""
 
     def _add_root_module_provider(self, *providers: Union[ModuleProviderDict, Type], _init: bool = True):
         root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])

@@ -48,6 +48,7 @@ class TestGlobalFilter(ExceptionFilter):
 
 app.use_global_filters(TestGlobalFilter)
 
+app.use_global_prefix('/v1')
 # socket io
 sio = socketio.AsyncServer(async_mode='asgi')
 app.use_io_adapter(SocketIoAdapter(sio))
