@@ -17,7 +17,7 @@ class CtxDepKey:
     Arg: str = 'arg'
     Context: str = 'execution_context'
     Files: str = 'files'
-    SocketClient: str = 'io_client'
+    WebSocketClient: str = 'io_client'
     SocketData: str = 'io_data'
 
     @classmethod
@@ -27,7 +27,7 @@ class CtxDepKey:
             cls.Response, cls.Session, cls.Queries,
             cls.Query, cls.Body,
             cls.Params, cls.Args, cls.Arg,
-            cls.SocketClient, cls.Cookie,
+            cls.WebSocketClient, cls.Cookie,
             cls.Files, cls.Cookies,
             cls.Context, cls.Sessions,
             cls.SocketData, cls.Header, cls.Headers

@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from minijinja import Environment
 
@@ -33,3 +34,6 @@ class MinimalJinjaTemplateEngine(TemplateEngine):
 
     def render_str(self, string: str, context: dict) -> str:
         return self.env.render_str(string, **context)
+
+    def get_env(self) -> Any:
+        return self.env

@@ -150,18 +150,15 @@ class NestipyContainer:
         annotations: dict = getattr(service, '__annotations__', {})
         for name, param_annotation in annotations.items():
             annotation, dep_key = self.helper.get_type_from_annotation(param_annotation)
-            if dep_key.metadata.key in CtxDepKey.to_list():
-                if dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_context_service(name, dep_key, annotation)
-                    setattr(service, name, dependency)
-                elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
-                    dependency = await self.get(dep_key.metadata.token or annotation)
-                    setattr(service, name, dependency)
-                else:
-                    _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                    raise ValueError(f"Service {_name} not found in scope {search_scope}")
+            if dep_key.metadata.key is not CtxDepKey.Service:
+                dependency = await self._resolve_context_service(name, dep_key, annotation)
+                setattr(service, name, dependency)
+            elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
+                dependency = await self.get(dep_key.metadata.token or annotation)
+                setattr(service, name, dependency)
             else:
-                continue
+                _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
+                raise ValueError(f"Service {_name} not found in scope {search_scope}")
         origin.remove(service)
         self._services[key] = service
 
@@ -172,16 +169,15 @@ class NestipyContainer:
         for name, param in params.items():
             if name != 'self' and param.annotation is not inspect.Parameter.empty:
                 annotation, dep_key = self.helper.get_type_from_annotation(param.annotation)
-                if dep_key.metadata.key in CtxDepKey.to_list():
-                    if dep_key.metadata.key is not CtxDepKey.Service:
-                        dependency = await self._resolve_context_service(name, dep_key, annotation)
-                        args[name] = dependency
-                    elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
-                        dependency = await self.get(dep_key.metadata.token or annotation)
-                        args[name] = dependency
-                    else:
-                        _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                        raise ValueError(f"Service {_name} not found in scope {search_scope}")
+                if dep_key.metadata.key is not CtxDepKey.Service:
+                    dependency = await self._resolve_context_service(name, dep_key, annotation)
+                    args[name] = dependency
+                elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
+                    dependency = await self.get(dep_key.metadata.token or annotation)
+                    args[name] = dependency
+                else:
+                    _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
+                    raise ValueError(f"Service {_name} not found in scope {search_scope}")
         return args
 
     @classmethod

@@ -8,7 +8,7 @@ class PubSub:
     def __init__(self):
         self.ee = EventEmitter()
 
-    async def asyncIterator(self, event: str):
+    async def async_iterator(self, event: str):
         loop = asyncio.get_event_loop()
         future = loop.create_future()
 
