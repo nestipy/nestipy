@@ -2,7 +2,6 @@ import os.path
 from typing import Any
 
 import socketio
-import uvicorn
 
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
@@ -61,5 +60,3 @@ async def startup():
     logger.info('Starting up ...')
 
 
-if __name__ == '__main__':
-    uvicorn.run('main:app', reload=True)
