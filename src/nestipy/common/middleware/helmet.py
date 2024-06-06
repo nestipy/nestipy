@@ -8,6 +8,10 @@ from nestipy.common.http_ import Request, Response
 
 
 def helmet() -> Type:
+    """
+    Returns:
+        HelmetMiddleware(Callable): Helmet middlewares for Nestipy
+    """
     @Injectable()
     class HelmetMiddleware(NestipyMiddleware):
         async def use(self, req: Request, res: Response, next_fn: NextFn):

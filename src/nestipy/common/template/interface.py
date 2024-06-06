@@ -23,6 +23,13 @@ class TemplateEngine(ABC):
 
     @abstractmethod
     def render_str(self, string: str, context: dict) -> str:
+        """
+        Args:
+            string (str): The string to compile.
+            context (dict): The context data to be used in rendering.
+        Returns:
+            str: The rendered string .
+        """
         pass
 
     @abstractmethod

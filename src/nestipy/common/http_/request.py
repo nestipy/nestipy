@@ -115,10 +115,11 @@ class Request:
     def session(self, session: dict):
         self._session = session
 
-    def set_body(self, body: str):
-        self._body = body
-
     async def stream(self) -> typing.AsyncGenerator[bytes, None]:
+        """
+        Returns:
+            stream: A stream generator value form request
+        """
         if self._body is not None:
             yield self._body
             yield b""
@@ -139,6 +140,10 @@ class Request:
         yield b""
 
     async def body(self) -> bytes:
+        """
+        Returns:
+            body(bytes): Return bytes version of request body
+        """
         if self._body is None:
             chunks: list[bytes] = []
             async for chunk in self.stream():
@@ -147,6 +152,11 @@ class Request:
         return self._body
 
     async def json(self) -> typing.Any:
+        """
+
+        Returns:
+            json(dict): Return json value of request body
+        """
         if self._json is None:
             body = await self.body()
             try:
@@ -157,6 +167,11 @@ class Request:
 
     @property
     def content_type(self) -> tuple[str, dict[str, str]]:
+        """
+
+        Returns:
+            content_type: Content-Type of request body
+        """
         _content_type = self.headers.get("content-type", "")
         return parse_content_header(
             _content_type
