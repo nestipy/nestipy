@@ -9,4 +9,10 @@ if TYPE_CHECKING:
 class NestipyMiddleware(ABC):
     @abstractmethod
     async def use(self, req: "Request", res: "Response", next_fn: "NextFn"):
+        """
+        Args:
+            req (Request): The http request
+            res (Response): the http response
+            next_fn (NextFn): th next function handler
+        """
         pass

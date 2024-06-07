@@ -5,6 +5,7 @@ from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional,
 
 from openapidocs.v3 import PathItem, Schema, Reference
 
+from nestipy.common.exception import HttpStatus, HttpStatusMessages
 from nestipy.common.http_ import Response, Request
 from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
@@ -36,9 +37,10 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass
-class NestipyApplicationConfig:
+class NestipyConfig:
     adapter: HttpAdapter = None
     cors: bool = None
+    debug: bool = True
 
 
 class NestipyApplication:
@@ -46,9 +48,10 @@ class NestipyApplication:
     _openapi_paths = {}
     _openapi_schemas = {}
     _prefix: Union[str | None] = None
+    _debug: bool = True
 
-    def __init__(self, config: NestipyApplicationConfig = None):
-        config = config if config is not None else NestipyApplicationConfig()
+    def __init__(self, config: NestipyConfig = None):
+        config = config if config is not None else NestipyConfig()
         # self._http_adapter: HttpServer = FastAPIAdapter()
         self._http_adapter: HttpAdapter = config.adapter if config.adapter is not None else FastApiAdapter()
         self._graphql_builder = StrawberryAdapter()
@@ -70,9 +73,11 @@ class NestipyApplication:
     async def get(cls, key: Union[Type, str]):
         return NestipyContainer.get_instance().get(key)
 
-    def process_config(self, config: NestipyApplicationConfig):
+    def process_config(self, config: NestipyConfig):
         if config.cors is not None:
             self._http_adapter.enable_cors()
+        self._debug = config.debug
+        self._http_adapter.debug = config.debug
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -119,10 +124,47 @@ class NestipyApplication:
             openapi_register: Callable = Reflect.get_metadata(self, OPENAPI_HANDLER_METADATA, None)
             if openapi_register is not None:
                 openapi_register()
+
         except Exception as e:
             tb = traceback.format_exc()
             logger.error(e)
             logger.error(tb)
+        finally:
+            # Register devtools static path
+            if self._debug:
+                self.use_static_assets(
+                    os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'static')),
+                    '_devtools/static'
+                )
+
+                # Not found
+                async def render_not_found(req: "Request", res: "Response", _next_fn: "NextFn") -> Response:
+                    accept = req.headers.get('accept')
+                    if 'application/json' in accept:
+                        return await res.status(HttpStatus.NOT_FOUND).json({
+                            "status": HttpStatus.NOT_FOUND,
+                            "message": HttpStatusMessages.NOT_FOUND
+                        })
+                    else:
+                        jinja = MinimalJinjaTemplateEngine(
+                            os.path.realpath(
+                                os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'templates')
+                            )
+                        )
+                        return await (
+                            res.status(HttpStatus.NOT_FOUND)
+                            .header('Content-Type', "text/html")
+                            .send(jinja.render('404.html', {
+                                'status_code': HttpStatus.NOT_FOUND,
+                                'status_message': HttpStatusMessages.NOT_FOUND,
+                                'details': """
+                                    The page you are looking for might have been removed 
+                                    had its name changed or temporarily unavailable.
+                                """
+                            })))
+
+                not_found_path = self._http_adapter.create_wichard().lstrip('/')
+                self._http_adapter.get(not_found_path, render_not_found, {})
 
     async def _destroy(self):
         await self.instance_loader.destroy()
@@ -159,7 +201,6 @@ class NestipyApplication:
             file_path = os.path.join(assets_path, req.path.replace(f'/{url.strip("/")}', '').strip('/'))
             return await res.download(
                 file_path=file_path,
-                file_name=os.path.basename(file_path),
                 attachment=False
             )
 

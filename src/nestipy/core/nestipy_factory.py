@@ -3,7 +3,7 @@ import typing
 from typing import Type
 
 from .adapter.blacksheep_adapter import BlackSheepAdapter
-from .nestipy_application import NestipyApplication, NestipyApplicationConfig
+from .nestipy_application import NestipyApplication, NestipyConfig
 
 
 class _NestipyFactoryMeta(type):
@@ -15,11 +15,11 @@ class _NestipyFactoryMeta(type):
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
-    def create(cls, module: Type, config: NestipyApplicationConfig = None) -> NestipyApplication:
+    def create(cls, module: Type, config: NestipyConfig = None) -> NestipyApplication:
         cls._setup_log()
         if getattr(cls, '__generic_type__', None) == 'NestipyBlackSheepApplication':
             if not config:
-                config = NestipyApplicationConfig(adapter=BlackSheepAdapter())
+                config = NestipyConfig(adapter=BlackSheepAdapter())
         application = NestipyApplication(config=config)
         application.init(module)
         return application

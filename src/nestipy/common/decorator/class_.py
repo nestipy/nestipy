@@ -68,8 +68,11 @@ class Module:
 
     def __call__(self, cls: Type):
         Reflect.set_metadata(cls, ModuleMetadata.Providers, self.providers + getattr(cls, ModuleMetadata.Providers, []))
-        Reflect.set_metadata(cls, ModuleMetadata.Controllers,
-                             self.controllers + getattr(cls, ModuleMetadata.Controllers, []))
+        Reflect.set_metadata(
+            cls,
+            ModuleMetadata.Controllers,
+            self.controllers + getattr(cls, ModuleMetadata.Controllers, [])
+        )
         Reflect.set_metadata(cls, ModuleMetadata.Imports, self.imports + getattr(cls, ModuleMetadata.Imports, []))
         Reflect.set_metadata(cls, ModuleMetadata.Exports, self.exports + getattr(cls, ModuleMetadata.Exports, []))
         Reflect.set_metadata(cls, ModuleMetadata.Global, self.is_global or getattr(cls, ModuleMetadata.Global, False))

@@ -23,7 +23,7 @@
     pip install nestipy-cli
     nestipy new my_app
     cd my_app
-    python main.py
+    nestipy start --dev
 ```
 
 ```

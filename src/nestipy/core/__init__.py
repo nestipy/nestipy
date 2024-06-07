@@ -3,7 +3,7 @@ from .constant import AppKey
 from .context.execution_context import ExecutionContext, ArgumentHost, HttpArgumentHost
 from .discover import DiscoverService
 from .middleware import MiddlewareConsumer
-from .nestipy_application import NestipyApplication, NestipyApplicationConfig
+from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_factory import NestipyFactory
 from .on_init import OnInit
 from .on_destroy import OnDestroy
@@ -13,7 +13,7 @@ from .template import MinimalJinjaTemplateEngine
 __all__ = [
     "NestipyFactory",
     "NestipyApplication",
-    "NestipyApplicationConfig",
+    "NestipyConfig",
     "HttpAdapter",
     "ExecutionContext",
     "ArgumentHost",

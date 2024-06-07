@@ -8,6 +8,14 @@ from .meta import InterceptorKey
 
 
 def UseInterceptors(*interceptors: Union[Type, NestipyInterceptor]):
+    """
+    Interceptor decorator to apply interceptor on controller or method of controller.
+    Args:
+        *interceptors (Union[Type, NestipyInterceptor]): List of interceptors
+
+    Returns:
+        wrapper(Callable): A decorator callable
+    """
     decorator = SetMetadata(InterceptorKey.Meta, list(interceptors), as_list=True)
 
     def wrapper(cls: Union[Type, Callable]):
