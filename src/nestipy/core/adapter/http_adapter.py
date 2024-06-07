@@ -1,9 +1,13 @@
+import json
+import os
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
+from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.metadata import SetMetadata, Reflect
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
@@ -25,6 +29,7 @@ class HttpAdapter(ABC):
     shutdown_hook: list = []
 
     _io_adapter: IoAdapter = None
+    debug: bool = True
 
     @abstractmethod
     def get_instance(self) -> any:
@@ -161,7 +166,7 @@ class HttpAdapter(ABC):
         )
         res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))
 
-        async def next_fn(error: HttpException = None):
+        async def next_fn(error: Union[HttpException | None] = None):
             #  catch error
             if error is not None:
                 accept = req.headers.get('accept')
@@ -172,7 +177,32 @@ class HttpAdapter(ABC):
                         "details": error.details
                     })
                 else:
-                    return await res.status(error.status_code).send(str(error))
+                    if self.debug:
+                        jinja = MinimalJinjaTemplateEngine(
+                            os.path.realpath(
+                                os.path.join(os.path.dirname(__file__), '..', '..', 'devtools', 'frontend', 'templates')
+                            )
+                        )
+                        json_data = json.dumps(asdict(error.track_back))
+                        content = jinja.render('error.html', {
+                            'json_data': json_data,
+                            'status_code': error.status_code,
+                            'status_message': error.message
+                        })
+                        return await (
+                            res
+                            .header("Expire", "0")
+                            .header("Cache-Control", 'max-age=0, must-revalidate')
+                            .header('Content-Type', 'text/html;charset=utf-8').status(error.status_code)
+                            .send(content)
+                        )
+                    else:
+                        return await (
+                            res
+                            .header('Content-Type', 'text/html;charset=utf-8')
+                            .status(error.status_code)
+                            .send(str(error))
+                        )
             else:
                 return await res.status(204).send("No content")
 

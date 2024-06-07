@@ -58,7 +58,7 @@ app = NestipyFactory[NestipyBlackSheepApplication].create(AppModule)
 After installation, simply run this command in your OS terminal to start the application and listen for incoming HTTP requests:
 
 ```bash
-python main.py
+nestipy start --dev
 ```
 Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app)** for an  example.
 

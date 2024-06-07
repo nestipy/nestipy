@@ -6,7 +6,7 @@ from typing import Any, Annotated, Optional, Type
 from pydantic import BaseModel
 
 from app_provider import AppProvider
-from nestipy.common import Controller, Injectable, Post, Get, logger, UploadFile
+from nestipy.common import Controller, Injectable, Post, Get, logger, UploadFile, HttpStatus, HttpStatusMessages
 from nestipy.common import ExceptionFilter, Catch, UseFilters
 from nestipy.common import HttpException, apply_decorators
 from nestipy.common import NestipyInterceptor, UseInterceptors, Render
@@ -101,7 +101,8 @@ class AppController:
         # req.session['user_id'] = 2
         # res.cookie('test', 'test-cookie')
         logger.info(sessions)
-        return {'title': 'Hello'}
+        raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
+        # return {'title': 'Hello'}
         # return await res.render('index.html', {'title': 'Hello'})
 
     @Post()

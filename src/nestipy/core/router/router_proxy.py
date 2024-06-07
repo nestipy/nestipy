@@ -1,4 +1,6 @@
 import dataclasses
+import os
+import sys
 import traceback
 import typing
 from typing import Type, Union
@@ -6,6 +8,7 @@ from typing import Type, Union
 from pydantic import BaseModel
 
 from nestipy.common.exception import HttpException
+from nestipy.common.exception.http import ExceptionDetail, RequestTrack, Traceback
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
 from nestipy.common.http_ import Request, Response
@@ -129,7 +132,8 @@ class RouterProxy:
                 logger.error(tb)
                 if not isinstance(e, HttpException):
                     e = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))
-
+                track = self.get_full_traceback_details(req, e.message, os.getcwd())
+                e.track_back = track
                 # Call exception catch
                 exception_handler = await container.get(ExceptionFilterHandler)
                 result = await exception_handler.catch(e, execution_context)
@@ -148,17 +152,52 @@ class RouterProxy:
     async def _ensure_response(cls, res: "Response", result: Union["Response", str, dict, list]) -> "Response":
 
         if isinstance(result, (str, int, float)):
-            return await res.send(content=str(result), status_code=200)
+            return await res.send(content=str(result))
         elif isinstance(result, (list, dict)):
-            return await res.json(content=result, status_code=200)
+            return await res.json(content=result)
         elif dataclasses.is_dataclass(result):
             return await res.json(
                 content=dataclasses.asdict(typing.cast(dataclasses.dataclass, result)),
-                status_code=200
             )
         elif isinstance(result, BaseModel):
-            return await res.json(content=result.dict(), status_code=200)
+            return await res.json(content=result.dict())
         elif isinstance(result, Response):
             return result
         else:
             return await res.json(content={'error': 'Unknown response format'}, status_code=403)
+
+    @classmethod
+    def get_code_context(cls, filename, lineno, n):
+        try:
+            with open(filename, 'r') as file:
+                lines = file.readlines()
+            return ''.join(lines)
+        except Exception as e:
+            return f"Could not read file {filename}: {str(e)}"
+
+    @classmethod
+    def get_full_traceback_details(cls, req: Request, exception: typing.Any, file_path: str):
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        traceback_details = []
+
+        # Extracting traceback details
+        tb = exc_tb
+        while tb is not None:
+            filename: str = tb.tb_frame.f_code.co_filename
+            frame_info = Traceback(
+                filename=f"{filename.replace(file_path, '').strip('/')}",
+                lineno=tb.tb_lineno,
+                name=tb.tb_frame.f_code.co_name,
+                code=cls.get_code_context(tb.tb_frame.f_code.co_filename, tb.tb_lineno, 5),
+                is_package=not filename.startswith(file_path)
+            )
+            traceback_details.append(frame_info)
+            tb = tb.tb_next
+        return ExceptionDetail(
+            exception=exception,
+            type=exc_type.__name__,
+            root=file_path,
+            traceback=traceback_details,
+            request=RequestTrack(method=req.method, host=req.path),
+            message=exc_value.details  or str(exc_value)
+        )

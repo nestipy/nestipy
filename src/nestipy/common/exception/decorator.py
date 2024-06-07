@@ -11,6 +11,14 @@ if TYPE_CHECKING:
 
 
 def Catch(*exceptions: Union[Type["HttpException"], "HttpException"]):
+    """
+    Catch decorator
+    Args:
+        *exceptions(Union[Type["HttpException"], "HttpException"]): List of exceptions
+
+    Returns:
+        decorator: Catch decorator
+    """
     decorator = SetMetadata(ExceptionKey.MetaType, list(exceptions), as_list=True)
 
     def wrapper(cls: Type["ExceptionFilter"]):
@@ -21,4 +29,12 @@ def Catch(*exceptions: Union[Type["HttpException"], "HttpException"]):
 
 
 def UseFilters(*filters: Union[Type["ExceptionFilter"], "ExceptionFilter"]):
+    """
+    Filter decorator
+    Args:
+        *filters (Union[Type["ExceptionFilter"], "ExceptionFilter"]): List of filters
+
+    Returns:
+        decorator: Filter decorator
+    """
     return SetMetadata(ExceptionKey.MetaFilter, list(filters), as_list=True)

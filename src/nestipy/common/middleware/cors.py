@@ -8,6 +8,10 @@ from nestipy.common.http_ import Request, Response
 
 
 def cors() -> Type:
+    """
+    Returns:
+        CorsMiddleware(Callable): Cors middlewares for Nestipy
+    """
     @Injectable()
     class CorsMiddleware(NestipyMiddleware):
         async def use(self, req: Request, res: Response, next_fn: NextFn):

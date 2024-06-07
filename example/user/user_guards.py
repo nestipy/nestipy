@@ -9,7 +9,7 @@ class TestGuard(CanActivate):
 
     def can_activate(self, context: ExecutionContext) -> bool:
         print("TestGuard called")
-        return True
+        return False
 
 
 @Injectable()

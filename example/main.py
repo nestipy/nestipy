@@ -2,6 +2,7 @@ import os.path
 from typing import Any
 
 import socketio
+import uvicorn
 
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
@@ -45,9 +46,9 @@ class TestGlobalFilter(ExceptionFilter):
         })
 
 
-app.use_global_filters(TestGlobalFilter)
+# app.use_global_filters(TestGlobalFilter)
 
-app.use_global_prefix('/v1')
+# app.use_global_prefix('/v1')
 # socket io
 sio = socketio.AsyncServer(async_mode='asgi')
 app.use_io_adapter(SocketIoAdapter(sio))
@@ -60,3 +61,5 @@ async def startup():
     logger.info('Starting up ...')
 
 
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
