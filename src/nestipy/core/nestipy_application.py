@@ -5,7 +5,6 @@ from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional,
 
 from openapidocs.v3 import PathItem, Schema, Reference
 
-from nestipy.common.exception import HttpStatus, HttpStatusMessages
 from nestipy.common.http_ import Response, Request
 from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
@@ -131,40 +130,14 @@ class NestipyApplication:
             logger.error(tb)
         finally:
             # Register devtools static path
+            self.use_static_assets(
+                os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'static')),
+                '_devtools/static'
+            )
             if self._debug:
-                self.use_static_assets(
-                    os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'static')),
-                    '_devtools/static'
-                )
-
                 # Not found
-                async def render_not_found(req: "Request", res: "Response", _next_fn: "NextFn") -> Response:
-                    accept = req.headers.get('accept')
-                    if 'application/json' in accept:
-                        return await res.status(HttpStatus.NOT_FOUND).json({
-                            "status": HttpStatus.NOT_FOUND,
-                            "message": HttpStatusMessages.NOT_FOUND
-                        })
-                    else:
-                        jinja = MinimalJinjaTemplateEngine(
-                            os.path.realpath(
-                                os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'templates')
-                            )
-                        )
-                        return await (
-                            res.status(HttpStatus.NOT_FOUND)
-                            .header('Content-Type', "text/html")
-                            .send(jinja.render('404.html', {
-                                'status_code': HttpStatus.NOT_FOUND,
-                                'status_message': HttpStatusMessages.NOT_FOUND,
-                                'details': """
-                                    The page you are looking for might have been removed 
-                                    had its name changed or temporarily unavailable.
-                                """
-                            })))
-
                 not_found_path = self._http_adapter.create_wichard().lstrip('/')
-                self._http_adapter.get(not_found_path, render_not_found, {})
+                self._http_adapter.get(not_found_path, RouterProxy.render_not_found, {})
 
     async def _destroy(self):
         await self.instance_loader.destroy()

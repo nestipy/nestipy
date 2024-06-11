@@ -46,7 +46,7 @@ class TestGlobalFilter(ExceptionFilter):
         })
 
 
-# app.use_global_filters(TestGlobalFilter)
+# app.use_global_filters(TestGlobalFiltaer)
 
 # app.use_global_prefix('/v1')
 # socket io
@@ -62,4 +62,4 @@ async def startup():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, forwarded_allow_ips='*')

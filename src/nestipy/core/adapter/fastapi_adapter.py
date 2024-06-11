@@ -57,7 +57,13 @@ class FastApiAdapter(HttpAdapter):
         self.instance.head(route)(self._create_fastapi_handler(callback, metadata))
 
     def all(self, route: str, callback: CallableHandler, metadata: dict) -> None:
-        pass
+        self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.post(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.put(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.patch(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.delete(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.head(route)(self._create_fastapi_handler(callback, metadata))
+        self.instance.options(route)(self._create_fastapi_handler(callback, metadata))
 
     def engine(self, args, *kwargs) -> None:
         pass

@@ -5,13 +5,13 @@ from nestipy.core.guards import GuardProcessor
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
-from nestipy.metadata import NestipyContextProperty
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
-from ..common import Request
+from ..common import Request, Response
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
+from ..types_ import NextFn
 
 
 class GraphqlProxy:
@@ -74,6 +74,8 @@ class GraphqlProxy:
                 tb = traceback.format_exc()
                 logger.error(e)
                 logger.error(tb)
+                context_container.destroy()
+                return self._graphql_server.raise_exception(e)
             finally:
                 context_container.destroy()
 
@@ -91,6 +93,11 @@ class GraphqlProxy:
                 schema=self._graphql_server.create_schema()
             ).handle
         )
+
+        async def graphql_redirect(_req: Request, res: Response, _next_fn: NextFn):
+            return await res.redirect(f"{graphql_path}/")
+
+        self._adapter.get(graphql_path, graphql_redirect, {})
 
     @classmethod
     def should_render_graphql_ide(cls, req: Request) -> bool:
