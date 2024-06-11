@@ -183,7 +183,8 @@ class HttpAdapter(ABC):
                                 os.path.join(os.path.dirname(__file__), '..', '..', 'devtools', 'frontend', 'templates')
                             )
                         )
-                        json_data = json.dumps(asdict(error.track_back))
+                        dict_value = asdict(error.track_back)
+                        json_data = json.dumps(dict_value)
                         content = jinja.render('error.html', {
                             'json_data': json_data,
                             'status_code': error.status_code,

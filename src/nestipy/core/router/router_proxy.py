@@ -176,6 +176,23 @@ class RouterProxy:
             return f"Could not read file {filename}: {str(e)}"
 
     @classmethod
+    async def render_not_found(cls, _req: "Request", _res: "Response", _next_fn: "NextFn") -> Response:
+        try:
+            raise HttpException(
+                HttpStatus.NOT_FOUND,
+                HttpStatusMessages.NOT_FOUND,
+                "Sorry, but the page you are looking for has not been found or temporarily unavailable."
+            )
+        except Exception as ex:
+            track_b = cls.get_full_traceback_details(
+                _req,
+                f"{HttpStatus.NOT_FOUND} - {HttpStatusMessages.NOT_FOUND}",
+                os.getcwd()
+            )
+            ex.track_back = track_b
+            return await _next_fn(ex)
+
+    @classmethod
     def get_full_traceback_details(cls, req: Request, exception: typing.Any, file_path: str):
         exc_type, exc_value, exc_tb = sys.exc_info()
         traceback_details = []
@@ -199,5 +216,5 @@ class RouterProxy:
             root=file_path,
             traceback=traceback_details,
             request=RequestTrack(method=req.method, host=req.path),
-            message=exc_value.details  or str(exc_value)
+            message=exc_value.details or str(exc_value)
         )
