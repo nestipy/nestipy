@@ -15,6 +15,10 @@ class GraphqlAdapter(ABC):
         pass
 
     @abstractmethod
+    def raise_exception(self, e: Exception):
+        pass
+
+    @abstractmethod
     def create_mutation_field_resolver(self, resolver: Callable) -> object:
         pass
 

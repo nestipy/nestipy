@@ -44,9 +44,9 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
                     ClassMetadata(handler_class, global_providers=services)
                 )
 
-        return await self._recursive_aplly_interceptor(0, all_interceptors, next_fn)
+        return await self._recursive_apply_interceptor(0, all_interceptors, next_fn)
 
-    async def _recursive_aplly_interceptor(self, index: int, all_interceptors: list, next_fn: "NextFn"):
+    async def _recursive_apply_interceptor(self, index: int, all_interceptors: list, next_fn: "NextFn"):
         if len(all_interceptors) > index:
             interceptor = all_interceptors[index]
             instance: NestipyInterceptor = await self.container.get(interceptor)
@@ -54,7 +54,7 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
             async def _next_fn():
                 return await instance.intercept(self.context, next_fn)
 
-            return await self._recursive_aplly_interceptor(index + 1, all_interceptors, _next_fn)
+            return await self._recursive_apply_interceptor(index + 1, all_interceptors, _next_fn)
         else:
             return await next_fn()
 

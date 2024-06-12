@@ -10,6 +10,9 @@ from ..strawberry.strawberry_asgi import StrawberryAsgi
 
 
 class StrawberryAdapter(GraphqlAdapter):
+    def raise_exception(self, e: Exception):
+        raise e
+
     _schema: Schema = None
 
     def create_query_field_resolver(self, resolver: Callable) -> object:
