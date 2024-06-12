@@ -20,7 +20,10 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
         self.set_graphql_option(option)
 
     async def render_graphql_ide(self, request: Union[Request, WebSocket]) -> Response:
-        return HTMLResponse(await self.get_graphql_ide())
+        if self.option.ide:
+            return HTMLResponse(await self.get_graphql_ide())
+        else:
+            raise HTTPException(404, "Not Found")
 
     async def handle(self, scope: dict, receive, send):
         await super().handle(scope, receive, send)

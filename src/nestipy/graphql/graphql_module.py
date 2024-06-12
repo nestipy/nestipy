@@ -9,7 +9,7 @@ from nestipy.ioc import Inject
 @dataclasses.dataclass
 class GraphqlOption:
     url: str = '/graphql'
-    ide: Literal['default', 'graphiql'] = 'default'
+    ide: Literal['default', 'graphiql'] | None = 'default'
 
 
 ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[GraphqlOption]().set_method(
