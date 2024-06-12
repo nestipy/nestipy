@@ -216,5 +216,5 @@ class RouterProxy:
             root=file_path,
             traceback=traceback_details,
             request=RequestTrack(method=req.method, host=req.path),
-            message=exc_value.details or str(exc_value)
+            message=getattr(exc_value, "details", None) or str(exc_value)
         )
