@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.4.3"
+version = "0.4.4"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -19,6 +19,7 @@ ujson = "^5.9.0"
 minijinja = "^2.0.1"
 python-multipart = "^0.0.9"
 multipart = "^0.2.4"
+rich = "^13.7.1"
 
 
 [build-system]

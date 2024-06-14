@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 from abc import ABC, abstractmethod
@@ -99,11 +100,17 @@ class HttpAdapter(ABC):
 
     async def on_startup(self, *_args, **_kwargs):
         for hook in self.startup_hooks:
-            await hook()
+            if inspect.iscoroutinefunction(hook):
+                await hook()
+            else:
+                hook()
 
     async def on_shutdown(self, *_args, **_kwargs):
         for hook in self.shutdown_hook:
-            await hook()
+            if inspect.iscoroutinefunction(hook):
+                await hook()
+            else:
+                hook()
 
     def on_startup_callback(self, callback: Callable):
         self.startup_hooks.append(callback)

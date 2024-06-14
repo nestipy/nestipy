@@ -190,6 +190,7 @@ class RouterProxy:
                 os.getcwd()
             )
             ex.track_back = track_b
+            _res.status(404)
             return await _next_fn(ex)
 
     @classmethod

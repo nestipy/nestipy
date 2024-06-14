@@ -46,7 +46,7 @@ class TestGlobalFilter(ExceptionFilter):
         })
 
 
-# app.use_global_filters(TestGlobalFiltaer)
+# app.use_global_filters(TestGlobalFilter)
 
 # app.use_global_prefix('/v1')
 # socket io

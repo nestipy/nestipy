@@ -1,3 +1,4 @@
+from rich.traceback import install
 import dataclasses
 import os.path
 import traceback
@@ -6,7 +7,7 @@ from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional,
 from openapidocs.v3 import PathItem, Schema, Reference
 
 from nestipy.common.http_ import Response, Request
-from nestipy.common.logger import logger
+from nestipy.common.logger import logger, console
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.common.utils import uniq_list
@@ -33,6 +34,9 @@ if TYPE_CHECKING:
     from nestipy.common.exception.interface import ExceptionFilter
     from nestipy.common.interceptor import NestipyInterceptor
     from nestipy.common.guards.can_activate import CanActivate
+
+# install rich track_back
+install(console=console, width=200)
 
 
 @dataclasses.dataclass
@@ -125,9 +129,8 @@ class NestipyApplication:
                 openapi_register()
 
         except Exception as e:
-            tb = traceback.format_exc()
+            _tb = traceback.format_exc()
             logger.error(e)
-            logger.error(tb)
         finally:
             # Register devtools static path
             self.use_static_assets(

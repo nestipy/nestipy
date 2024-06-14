@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from typing import Union, TYPE_CHECKING, AsyncIterator, Callable
 
@@ -157,6 +158,9 @@ class Response:
             await self._write(b"File not found")
             return self
         file_name = os.path.basename(file_path)
+        extension = file_name.split('.')[-1]
+        mimetype, _ = mimetypes.guess_type(f".{extension}")
+        self.header('Content-Type', mimetype or 'application/octet-stream')
         self.header("Content-Disposition", f"{'attachment; ' if attachment else ''}filename={file_name}")
         async with aiofiles.open(file_path, "rb") as file:
             content = await file.read()
