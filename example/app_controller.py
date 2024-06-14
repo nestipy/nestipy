@@ -101,13 +101,13 @@ class AppController:
         # req.session['user_id'] = 2
         # res.cookie('test', 'test-cookie')
         logger.info(sessions)
-        raise HttpException(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            HttpStatusMessages.INTERNAL_SERVER_ERROR,
-            details="Example internal server error message."
-        )
+        # raise HttpException(
+        #     HttpStatus.INTERNAL_SERVER_ERROR,
+        #     HttpStatusMessages.INTERNAL_SERVER_ERROR,
+        #     details="Example internal server error message."
+        # )
         # return {'title': 'Hello'}
-        # return await res.render('index.html', {'title': 'Hello'})
+        return await res.render('index.html', {'title': 'Hello'})
 
     @Post()
     @ApiBody(TestBody, ApiConsumer.MULTIPART)
