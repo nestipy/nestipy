@@ -158,7 +158,7 @@ class Response:
             await self._write(b"File not found")
             return self
         file_name = os.path.basename(file_path)
-        mimetype, _ = mimetypes.guess_type(file_name)
+        mimetype, _ = mimetypes.guess_extension(f".{file_name.split('.')[-1]}")
         self.header('Content-Type', mimetype or 'application/octet-stream')
         self.header("Content-Disposition", f"{'attachment; ' if attachment else ''}filename={file_name}")
         async with aiofiles.open(file_path, "rb") as file:
