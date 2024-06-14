@@ -1,4 +1,3 @@
-# TODO: precise import
 from nestipy.ioc import ModuleProviderDict
 from .config import ConfigModule, ConfigService
 from .decorator import Module, Controller, Injectable, Route, Get, Post, Patch, Put, Delete, apply_decorators
@@ -6,7 +5,7 @@ from .exception import HttpException, HttpStatusMessages, HttpStatus, UseFilters
 from .guards import CanActivate, UseGuards
 from .http_ import Request, Response, Websocket, UploadFile
 from .interceptor import NestipyInterceptor, UseInterceptors
-from .logger import logger
+from .logger import logger, console
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
 from .template import Render, TemplateEngine
 
@@ -46,5 +45,6 @@ __all__ = [
     "session",
     "SessionOption",
     "logger",
+    "console",
     "apply_decorators"
 ]
