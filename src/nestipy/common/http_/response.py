@@ -208,7 +208,7 @@ class Response:
         Render template if template engine was configured.
         Args:
             template(str): the template name
-            context (Union[dict, None]): context value to pass to template
+            context (dict | None): context value to pass to template
 
         Returns:
 
