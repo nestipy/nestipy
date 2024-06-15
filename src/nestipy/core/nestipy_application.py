@@ -128,6 +128,11 @@ class NestipyApplication:
             if openapi_register is not None:
                 openapi_register()
 
+            if self._debug:
+                # Not found
+                not_found_path = self._http_adapter.create_wichard().lstrip('/')
+                self._http_adapter.get(not_found_path, self._router_proxy.render_not_found, {})
+
         except Exception as e:
             _tb = traceback.format_exc()
             logger.error(e)
@@ -137,10 +142,7 @@ class NestipyApplication:
                 os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'static')),
                 '_devtools/static'
             )
-            if self._debug:
-                # Not found
-                not_found_path = self._http_adapter.create_wichard().lstrip('/')
-                self._http_adapter.get(not_found_path, RouterProxy.render_not_found, {})
+
 
     async def _destroy(self):
         await self.instance_loader.destroy()
@@ -207,7 +209,7 @@ class NestipyApplication:
         self._http_adapter.add_global_interceptors(*interceptors)
         self._add_root_module_provider(*interceptors)
 
-    def use_global_filters(self, *filters: Union[Type['ExceptionFilter'], 'ExceptionFilter']):
+    def use_global_filters(self, *filters: Union[Type, "ExceptionFilter"]):
         self._http_adapter.add_global_filters(*filters)
         self._add_root_module_provider(*filters)
 
