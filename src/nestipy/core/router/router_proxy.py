@@ -175,8 +175,7 @@ class RouterProxy:
         except Exception as e:
             return f"Could not read file {filename}: {str(e)}"
 
-    @classmethod
-    async def render_not_found(cls, _req: "Request", _res: "Response", _next_fn: "NextFn") -> Response:
+    async def render_not_found(self, _req: "Request", _res: "Response", _next_fn: "NextFn") -> Response:
         try:
             raise HttpException(
                 HttpStatus.NOT_FOUND,
@@ -184,14 +183,29 @@ class RouterProxy:
                 "Sorry, but the page you are looking for has not been found or temporarily unavailable."
             )
         except Exception as ex:
-            track_b = cls.get_full_traceback_details(
+            track_b = self.get_full_traceback_details(
                 _req,
                 f"{HttpStatus.NOT_FOUND} - {HttpStatusMessages.NOT_FOUND}",
                 os.getcwd()
             )
+
             ex.track_back = track_b
             _res.status(404)
-            return await _next_fn(ex)
+            execution_context = ExecutionContext(
+                self.router,
+                self,
+                self,
+                self.render_not_found,
+                _req,
+                _res
+            )
+            exception_handler = await NestipyContainer.get_instance().get(ExceptionFilterHandler)
+            result = await exception_handler.catch(ex, execution_context)
+            if result:
+                handler_response = await self._ensure_response(_res, result)
+            else:
+                handler_response = await self._ensure_response(_res, await _next_fn(ex))
+            return handler_response
 
     @classmethod
     def get_full_traceback_details(cls, req: Request, exception: typing.Any, file_path: str):

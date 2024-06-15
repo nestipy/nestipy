@@ -5,6 +5,7 @@ import socketio
 import uvicorn
 
 from app_module import AppModule
+from not_found import NotFoundHandler
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
 from nestipy.common import session
 from nestipy.core import ArgumentHost, NestipyFactory, NestipyFastApiApplication
@@ -47,6 +48,8 @@ class TestGlobalFilter(ExceptionFilter):
 
 
 # app.use_global_filters(TestGlobalFilter)
+
+app.use_global_filters(NotFoundHandler)
 
 # app.use_global_prefix('/v1')
 # socket io
