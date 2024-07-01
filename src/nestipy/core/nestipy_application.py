@@ -131,6 +131,7 @@ class NestipyApplication:
         except Exception as e:
             _tb = traceback.format_exc()
             logger.error(e)
+            logger.error(_tb)
         finally:
             # Register devtools static path
             self.use_static_assets(
