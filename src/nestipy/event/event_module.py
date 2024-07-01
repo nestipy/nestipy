@@ -22,7 +22,7 @@ from .event_metadata import EventMetadata, EventData
         EventEmitter
     ]
 )
-class EventModule(ConfigurableClassBuilder, NestipyModule):
+class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
     _discovery: Annotated[DiscoverService, Inject()]
     _event_emitter: Annotated[EventEmitter, Inject()]
 

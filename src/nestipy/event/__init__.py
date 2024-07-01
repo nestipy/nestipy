@@ -1,9 +1,9 @@
-from .event_module import EventModule
+from .event_module import EventEmitterModule
 from .event_decorator import OnEvent, OnceEvent
 from .event_emitter import EventEmitter
 
 __all__ = [
-    "EventModule",
+    "EventEmitterModule",
     "OnEvent",
     "OnceEvent",
     "EventEmitter"
