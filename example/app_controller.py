@@ -17,6 +17,7 @@ from nestipy.openapi import ApiResponse, ApiParameter, ApiConsumer
 from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, NoSwagger, ApiBody
 from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
 from nestipy.types_ import NextFn
+from nestipy.event import OnEvent, EventEmitter
 
 
 def user_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
@@ -85,6 +86,7 @@ def ApiDecorator():
 @UseFilters(Http2ExceptionFilter)
 class AppController:
     provider: Annotated[AppProvider, Inject()]
+    event_emitter: Annotated[EventEmitter, Inject()]
 
     @NoSwagger()
     @Render('index.html')
@@ -101,6 +103,7 @@ class AppController:
         # req.session['user_id'] = 2
         # res.cookie('test', 'test-cookie')
         logger.info(sessions)
+        self.event_emitter.emit('test', sessions)
         # raise HttpException(
         #     HttpStatus.INTERNAL_SERVER_ERROR,
         #     HttpStatusMessages.INTERNAL_SERVER_ERROR,
@@ -132,3 +135,7 @@ class AppController:
         file.close()
         return {"uploaded": "Ok"}
         # raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
+
+    @OnEvent('test')
+    def test_listener(self, data: any):
+        print(f"event listener called ... {data}")

@@ -8,6 +8,7 @@ from nestipy.common import ConfigModule, Request, Response, CanActivate, Module,
 from nestipy.common import ModuleProviderDict
 from nestipy.core import AppKey, MiddlewareConsumer
 from nestipy.core import ExecutionContext
+from nestipy.event import EventModule
 from nestipy.graphql import GraphqlModule, GraphqlOption
 from nestipy.types_ import NextFn
 from user.user_module import UserModule
@@ -35,6 +36,7 @@ class TestMiddleware(NestipyMiddleware):
         GraphqlModule.for_root(GraphqlOption(
             url='/graphql', ide='default'
         )),
+        EventModule.for_root(is_global=True),
         UserModule
     ],
     providers=[
