@@ -24,6 +24,7 @@ class Traceback:
     lineno: int
     name: str
     code: str
+    start_line_number: int = field(default=1)
     is_package: bool = field(default=False)
 
 
