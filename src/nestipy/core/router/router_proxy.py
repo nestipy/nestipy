@@ -167,11 +167,23 @@ class RouterProxy:
             return await res.json(content={'error': 'Unknown response format'}, status_code=403)
 
     @classmethod
+    def get_center_elements(cls, lst: list, p: int, m: int):
+        n = len(lst)
+        size = (m * 2) + 1
+        if n < size:
+            return lst, 1
+        start = max(0, p - m - 1)
+        end = min(n, p + m + 1)
+
+        return lst[start:end], start + 1
+
+    @classmethod
     def get_code_context(cls, filename, lineno, n):
         try:
             with open(filename, 'r') as file:
                 lines = file.readlines()
-            return ''.join(lines)
+            elements, start_line = cls.get_center_elements(lines, lineno, n)
+            return ''.join(elements), start_line
         except Exception as e:
             return f"Could not read file {filename}: {str(e)}"
 
@@ -216,11 +228,13 @@ class RouterProxy:
         tb = exc_tb
         while tb is not None:
             filename: str = tb.tb_frame.f_code.co_filename
+            code, start = cls.get_code_context(tb.tb_frame.f_code.co_filename, tb.tb_lineno, 9)
             frame_info = Traceback(
                 filename=f"{filename.replace(file_path, '').strip('/')}",
                 lineno=tb.tb_lineno,
                 name=tb.tb_frame.f_code.co_name,
-                code=cls.get_code_context(tb.tb_frame.f_code.co_filename, tb.tb_lineno, 5),
+                code=code,
+                start_line_number=start,
                 is_package=not filename.startswith(file_path)
             )
             traceback_details.append(frame_info)
