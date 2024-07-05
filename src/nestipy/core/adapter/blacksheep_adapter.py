@@ -1,4 +1,4 @@
-from blacksheep import Application, Response as BlackSheepResponse
+from blacksheep import Application, Response as BlackSheepResponse, Request as BlackSheepRequest
 from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, \
     WebSocket as BSWebSocket, StreamedContent
 
@@ -68,7 +68,7 @@ class BlackSheepAdapter(HttpAdapter):
     def _create_blacksheep_handler(self, callback: CallableHandler, _metadata: dict):
         # path = metadata['path']
         # params = RouteParamsExtractor.extract_params(path)
-        async def blacksheep_handler() -> BlackSheepResponse:
+        async def blacksheep_handler(_bs_request: BlackSheepRequest) -> BlackSheepResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
             if result.is_stream():
