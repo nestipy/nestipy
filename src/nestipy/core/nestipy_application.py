@@ -52,6 +52,7 @@ class NestipyApplication:
     _openapi_schemas = {}
     _prefix: Union[str | None] = None
     _debug: bool = True
+    _ready: bool = False
 
     def __init__(self, config: NestipyConfig = None):
         config = config if config is not None else NestipyConfig()
@@ -108,7 +109,7 @@ class NestipyApplication:
         module_metadata_maker = ModuleMetadataCreator(self._root_module)
         module_metadata_maker.create()
 
-    async def _setup(self):
+    async def setup(self):
         try:
             modules = self._get_modules(self._root_module)
             graphql_module_instance = await self.instance_loader.create_instances(modules)
@@ -128,6 +129,8 @@ class NestipyApplication:
             if openapi_register is not None:
                 openapi_register()
 
+            self._ready = True
+
         except Exception as e:
             _tb = traceback.format_exc()
             logger.error(e)
@@ -142,6 +145,11 @@ class NestipyApplication:
                 # Not found
                 not_found_path = self._http_adapter.create_wichard().lstrip('/')
                 self._http_adapter.get(not_found_path, self._router_proxy.render_not_found, {})
+
+    async def ready(self) -> bool:
+        if not self._ready:
+            await self.setup()
+        return self._ready
 
     async def _destroy(self):
         await self.instance_loader.destroy()
@@ -160,7 +168,7 @@ class NestipyApplication:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get('type') == 'lifespan':
-            await self._setup()
+            await self.setup()
         await self.get_adapter()(scope, receive, send)
 
     def use(self, *middleware: Union[Type[NestipyMiddleware], Callable]):
