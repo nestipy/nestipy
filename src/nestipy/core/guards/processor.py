@@ -17,13 +17,14 @@ class GuardProcessor(SpecialProviderExtractor):
     def __init__(self):
         self.container = NestipyContainer.get_instance()
 
-    async def process(self, context: ExecutionContext) -> tuple[bool, Union[Type, None]]:
+    async def process(self, context: ExecutionContext, is_http: bool = True) -> tuple[bool, Union[Type, None]]:
 
         handler_module_class = context.get_module()
         handler_class = context.get_class()
         handler = context.get_handler()
-
-        global_guards = context.get_adapter().get_global_guards()
+        global_guards = []
+        if is_http:
+            global_guards = context.get_adapter().get_global_guards()
         module_guards = self.extract_special_providers(
             handler_module_class,
             CanActivate,

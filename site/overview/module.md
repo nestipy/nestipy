@@ -78,6 +78,7 @@ This is an example.
 
 ```python
 from dataclasses import dataclass
+from nestipy.common import Module
 from typing import Annotated
 from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.ioc import Inject
@@ -92,6 +93,7 @@ ConfigurableModuleClass, DATABASE_MODULE_OPTION_TOKEN = ConfigurableModuleBuilde
     'for_root').build()
 
 
+@Module()
 class DatabaseModule(ConfigurableModuleClass):
     option: Annotated[DatabaseOption, Inject(DATABASE_MODULE_OPTION_TOKEN)]
 
