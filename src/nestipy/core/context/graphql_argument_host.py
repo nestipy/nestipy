@@ -1,6 +1,7 @@
+from typing import TYPE_CHECKING
+
 from nestipy.common.http_ import Response, Request
 from .argument_host import ArgumentHost
-from typing import Type, Union, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nestipy.common.http_ import Request, Response

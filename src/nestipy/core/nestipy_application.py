@@ -75,7 +75,7 @@ class NestipyApplication:
 
     @classmethod
     async def get(cls, key: Union[Type, str]):
-        return NestipyContainer.get_instance().get(key)
+        return await NestipyContainer.get_instance().get(key)
 
     def process_config(self, config: NestipyConfig):
         if config.cors is not None:
@@ -231,6 +231,14 @@ class NestipyApplication:
         root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])
         root_providers = root_providers + list(providers)
         Reflect.set_metadata(self._root_module, ModuleMetadata.Providers, root_providers)
+        #  re init setting metadata
+        if _init:
+            self._set_metadata()
+
+    def add_module_root_module(self, *modules: Type, _init: bool = True):
+        root_imports: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Imports, [])
+        root_imports = root_imports + list(modules)
+        Reflect.set_metadata(self._root_module, ModuleMetadata.Imports, root_imports)
         #  re init setting metadata
         if _init:
             self._set_metadata()

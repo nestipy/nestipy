@@ -10,7 +10,7 @@ class ArgumentHost(ABC):
 
     def __init__(
             self,
-            adapter: "HttpAdapter",
+            adapter: Union["HttpAdapter", None],
             module: Union[Type, object],
             class_handler: Union[Type, object],
             handler: Callable,
@@ -34,7 +34,7 @@ class ArgumentHost(ABC):
         self._socket_client = socket_client
         self._socket_data = socket_data
 
-    def get_adapter(self) -> "HttpAdapter":
+    def get_adapter(self) -> Union["HttpAdapter", None]:
         return self._adapter
 
     def get_module(self) -> Union[Type, object, None]:

@@ -18,12 +18,12 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
     def __init__(self, ):
         self.container = NestipyContainer.get_instance()
 
-    async def catch(self, exception: HttpException, context: ArgumentHost) -> Union[Any, None]:
+    async def catch(self, exception: HttpException, context: ArgumentHost, is_http: bool = True) -> Union[Any, None]:
         self.context = context
         handler_module_class = self.context.get_module()
         handler_class = self.context.get_class()
         handler = self.context.get_handler()
-        global_filters = context.get_adapter().get_global_filters()
+        global_filters = context.get_adapter().get_global_filters() if is_http else []
         module_filters = self.extract_special_providers(
             handler_module_class,
             ExceptionFilter,
@@ -31,7 +31,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         )
         class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
         handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
-        all_filters = global_filters + module_filters + class_filters
+        all_filters = global_filters + module_filters + class_filters + handler_filters
         # setup dependency as the same as the container
         for fit in all_filters:
             if issubclass(fit, ExceptionFilter):

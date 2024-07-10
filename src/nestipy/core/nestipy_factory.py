@@ -2,8 +2,10 @@ import logging
 import typing
 from typing import Type
 
+from nestipy.microservice.client.option import MicroserviceOption
 from .adapter.blacksheep_adapter import BlackSheepAdapter
 from .nestipy_application import NestipyApplication, NestipyConfig
+from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
 
 
 class _NestipyFactoryMeta(type):
@@ -25,8 +27,17 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         return application
 
     @classmethod
-    def create_micro_service(cls):
-        pass
+    def create_microservice(cls, module: Type, option: list[MicroserviceOption]) -> NestipyMicroservice:
+        return NestipyMicroservice(module, option)
+
+    @classmethod
+    def connect_microservice(
+            cls,
+            module: Type,
+            option: list[MicroserviceOption],
+            config: NestipyConfig = None
+    ) -> NestipyConnectMicroservice:
+        return NestipyConnectMicroservice(module, config, option)
 
     @classmethod
     def _setup_log(cls):

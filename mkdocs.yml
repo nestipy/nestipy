@@ -101,6 +101,12 @@ nav:
   - Websockets:
       - Gateways: websocket/gateway.md
       - Adapters: websocket/adapter.md
+  - Microservices:
+      - Overview: microservice/overview.md
+      - Redis: microservice/redis.md
+      - MQTT: microservice/mqtt.md
+      - NATS: microservice/nats.md
+      - RabbitMQ: microservice/rabbitmq.md
   - Openapi: openapi/start.md
   - Cli: cli.md
   - Utils: util.md

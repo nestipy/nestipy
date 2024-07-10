@@ -135,7 +135,7 @@ class RouterProxy:
                 track = self.get_full_traceback_details(req, e.message, os.getcwd())
                 e.track_back = track
                 # Call exception catch
-                exception_handler = await container.get(ExceptionFilterHandler)
+                exception_handler: ExceptionFilterHandler = await container.get(ExceptionFilterHandler)
                 result = await exception_handler.catch(e, execution_context)
                 if result:
                     handler_response = await self._ensure_response(res, result)

@@ -19,13 +19,13 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
     def __init__(self):
         self.container = NestipyContainer.get_instance()
 
-    async def intercept(self, context: ExecutionContext, next_fn: "NextFn"):
+    async def intercept(self, context: ExecutionContext, next_fn: "NextFn", is_http: bool = True):
         self.context = context
         handler_module_class = context.get_module()
         handler_class = context.get_class()
         handler = context.get_handler()
 
-        global_interceptors = context.get_adapter().get_global_interceptors()
+        global_interceptors = context.get_adapter().get_global_interceptors() if is_http else []
         module_interceptors = self.extract_special_providers(
             handler_module_class,
             NestipyInterceptor,
