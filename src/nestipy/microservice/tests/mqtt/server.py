@@ -1,13 +1,11 @@
 import asyncio
 
-from nestipy.microservice.client import MqttClientProxy
-from nestipy.microservice.client.option import MicroserviceOption, MicroserviceClientOption
-from nestipy.microservice.serilaizer import JSONSerializer
+from nestipy.microservice.client import MqttClientProxy, MicroserviceOption
+from nestipy.microservice.client.option import MicroserviceClientOption
 from nestipy.microservice.server.base import MicroServiceServer
 
 
 async def main():
-    serializer = JSONSerializer()
     client = MqttClientProxy(
         MicroserviceOption(
             option=MicroserviceClientOption(
@@ -15,9 +13,8 @@ async def main():
                 port=1883
             )
         ),
-        serializer
     )
-    server = MicroServiceServer(pubsub=client, serializer=serializer)
+    server = MicroServiceServer(pubsub=client)
     print("Running server ...")
     await server.listen()
 

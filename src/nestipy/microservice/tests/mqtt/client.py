@@ -1,8 +1,7 @@
 import asyncio
 
-from nestipy.microservice.client import MqttClientProxy
-from nestipy.microservice.client.option import MicroserviceOption, MicroserviceClientOption
-from nestipy.microservice.serilaizer import JSONSerializer
+from nestipy.microservice.client import MqttClientProxy, MicroserviceOption
+from nestipy.microservice.client.option import MicroserviceClientOption
 
 
 async def main():
@@ -13,7 +12,6 @@ async def main():
                 port=1883
             )
         ),
-        serializer=JSONSerializer()
     )
     await client.send("topic", "request")
 

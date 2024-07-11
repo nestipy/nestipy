@@ -101,7 +101,47 @@ from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClien
 class AppModule:
     ...
 ```
+Or use `ModuleProviderDict`.
 
+```python
+from typing import Annotated
+
+from nestipy.common import Module, ModuleProviderDict
+from nestipy.ioc import Inject
+from nestipy.microservice import ClientProxy, ClientModuleFactory
+from nestipy.microservice import MicroserviceClientOption, MicroserviceOption, Transport
+
+
+async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
+    return ClientModuleFactory.create(MicroserviceOption(
+        transport=Transport.REDIS,
+        option=MicroserviceClientOption(
+            host=config.get("HOST"),
+            port=int(config.get("PORT"))
+        ))
+    )
+
+
+@Module(
+    providers=[
+        ModuleProviderDict(
+            token="MATH_SERVICE",
+            factory=MicroserviceOption,
+            # value=ClientModuleFactory.create(
+            #     MicroserviceOption(
+            #         transport=Transport.REDIS,
+            #         option=MicroserviceClientOption(
+            #             host="localhost",
+            #             port=6379
+            #         ))
+            # )
+        )
+    ]
+    ...
+)
+class AppModule:
+    ...
+```
 Now, we can inject `client`.
 
 ```python
@@ -219,7 +259,7 @@ app = NestipyFactory.connect_microservice(
     ]
 )
 
-app.start_all_microservice()
+app.start_all_microservices()
 
 if __name__ == '__main__':
     uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)

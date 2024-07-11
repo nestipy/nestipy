@@ -1,8 +1,6 @@
 import asyncio
 
-from nestipy.microservice.client import NatsClientProxy
-from nestipy.microservice.client.option import MicroserviceOption
-from nestipy.microservice.serilaizer import JSONSerializer
+from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
 
 
 async def main():
@@ -10,7 +8,6 @@ async def main():
         MicroserviceOption(
             url="nats://localhost:4222"
         ),
-        serializer=JSONSerializer()
     )
     await client.send("topic", "request")
 

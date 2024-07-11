@@ -2,7 +2,7 @@ import logging
 import typing
 from typing import Type
 
-from nestipy.microservice.client.option import MicroserviceOption
+from nestipy.microservice.client.base import MicroserviceOption
 from .adapter.blacksheep_adapter import BlackSheepAdapter
 from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
