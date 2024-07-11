@@ -1,7 +1,6 @@
 import asyncio
 from typing import Type
 
-from nestipy.common import logger
 from nestipy.core import NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
 from nestipy.microservice.client.factory import ClientModuleFactory
@@ -54,7 +53,6 @@ class NestipyMicroservice:
     async def stop(self):
         for server in self.servers:
             await server.close()
-        asyncio.get_running_loop().close()
 
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
