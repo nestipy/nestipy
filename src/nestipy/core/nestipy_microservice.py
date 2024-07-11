@@ -1,7 +1,7 @@
 import asyncio
+import traceback
 from asyncio import CancelledError
 from typing import Type
-import traceback
 
 from nestipy.core import NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
@@ -78,6 +78,13 @@ class NestipyMicroservice:
             finally:
                 pass
 
+    def start_all_microservices(self):
+        def start():
+            asyncio.create_task(self.start())
+
+        self.app.on_startup(start)
+        self.app.on_shutdown(self.stop)
+
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
     _running: bool = False
@@ -86,10 +93,3 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
         NestipyMicroservice.__init__(self, module, option)
         NestipyApplication.__init__(self, config)
         self.app = self
-
-    def start_all_microservices(self):
-        def start():
-            asyncio.create_task(self.start())
-
-        self.app.on_startup(start)
-        self.app.on_shutdown(self.stop)
