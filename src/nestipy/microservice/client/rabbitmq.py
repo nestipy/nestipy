@@ -70,7 +70,6 @@ class RabbitMQClientProxy(ClientProxy):
                 async for message in queue_iter:
                     async with message.process():
                         msg = cast(Message, message)
-                        print("RabbitMQ OnData:: ", msg.body)
                         yield msg.body.decode('utf-8')
 
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:

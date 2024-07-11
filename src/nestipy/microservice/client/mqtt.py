@@ -42,14 +42,12 @@ class MqttClientProxy(ClientProxy):
 
     async def listen(self) -> AsyncIterator[str]:
         async for message in self.client.messages:
-            print("Mqtt OnData:: ", message.topic, message.payload)
             yield message.payload.decode('utf-8')
         await asyncio.sleep(0.01)
 
     async def listen_response(self, from_topic: str, timeout: int = 30) -> Any:
 
         async for message in self.client.messages:
-            print("Mqtt OnData Response :: ", message.topic, message.payload)
             return message.payload.decode('utf-8')
         await asyncio.sleep(0.01)
 
