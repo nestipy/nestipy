@@ -6,13 +6,11 @@ from nestipy.microservice.client import ClientProxy
 from nestipy.microservice.client.option import Transport
 from nestipy.microservice.context import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
 from nestipy.microservice.exception import RpcException, RPCErrorCode, RPCErrorMessage
-from nestipy.microservice.serilaizer import Serializer
 
 
 class MicroServiceServer(ABC):
-    def __init__(self, pubsub: ClientProxy, serializer: Serializer):
+    def __init__(self, pubsub: ClientProxy):
         self._pubsub = pubsub
-        self._serializer = serializer
         self._subscriptions: list[tuple[str, Callable]] = []
         self._request_subscriptions: list[tuple[str, Callable]] = []
 
@@ -21,7 +19,7 @@ class MicroServiceServer(ABC):
         await self._pubsub.subscribe(MICROSERVICE_CHANNEL)
         async for data in self._pubsub.listen():
             print("OnData ::", data)
-            json_rep = await self._serializer.deserialize(data)
+            json_rep = await self._pubsub.option.serializer.deserialize(data)
             request = RpcRequest(**json_rep)
             if request.is_event():
                 await self.handle_event(request)
@@ -65,10 +63,10 @@ class MicroServiceServer(ABC):
                 )
                 await slave.send_response(
                     request.response_topic,
-                    await self._serializer.serialize(asdict(rpc_response))
+                    await self._pubsub.option.serializer.serialize(asdict(rpc_response))
                 )
                 return
-        rpc_response = await self._serializer.serialize(
+        rpc_response = await self._pubsub.option.serializer.serialize(
             asdict(
                 RpcResponse(
                     pattern=request.pattern,

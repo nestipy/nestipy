@@ -3,17 +3,15 @@ from typing import AsyncIterator
 
 from redis.asyncio import Redis, client
 
-from nestipy.microservice.serilaizer import Serializer
-from .base import ClientProxy
-from .option import MicroserviceOption
+from .base import ClientProxy, MicroserviceOption
 
 
 class RedisClientProxy(ClientProxy):
     broker: Redis
     pubsub: client.PubSub
 
-    def __init__(self, option: MicroserviceOption, serializer: Serializer):
-        super().__init__(option, serializer)
+    def __init__(self, option: MicroserviceOption):
+        super().__init__(option)
 
     async def connect(self):
         url = f'redis://{self.option.option.host}:{self.option.option.port}'
@@ -55,4 +53,4 @@ class RedisClientProxy(ClientProxy):
         await self.pubsub.unsubscribe(*args)
 
     async def slave(self) -> "ClientProxy":
-        return RedisClientProxy(self.option, serializer=self.serializer)
+        return RedisClientProxy(self.option)

@@ -1,10 +1,10 @@
 import asyncio
 from typing import Type
 
+from nestipy.common import logger
 from nestipy.core import NestipyApplication, NestipyConfig
-from nestipy.microservice.client import MqttClientProxy, RabbitMQClientProxy, NatsClientProxy
-from nestipy.microservice.client import RedisClientProxy, ClientProxy
-from nestipy.microservice.client.option import MicroserviceOption, Transport
+from nestipy.microservice.client.base import MicroserviceOption
+from nestipy.microservice.client.factory import ClientModuleFactory
 from nestipy.microservice.proxy import MicroserviceProxy
 from nestipy.microservice.serilaizer import JSONSerializer
 from nestipy.microservice.server import MicroServiceServer
@@ -14,6 +14,7 @@ from nestipy.microservice.server.module import MicroserviceServerModule
 class NestipyMicroservice:
     app: NestipyApplication
     servers: list[MicroServiceServer] = []
+    _ms_ready: bool = False
 
     def __init__(self, module: Type, option: list[MicroserviceOption]):
         self.root_module = module
@@ -21,10 +22,16 @@ class NestipyMicroservice:
         self.serializer = JSONSerializer()
         self.app = NestipyApplication()
 
-    async def _setup_microservice(self):
+    async def ready(self):
+        for opt in self.option:
+            client_adapter = ClientModuleFactory.create(opt)
+            server = MicroServiceServer(
+                pubsub=client_adapter,
+            )
+            self.servers.append(server)
         self.app.init(self.root_module)
         self.app.add_module_root_module(MicroserviceServerModule, _init=True)
-        # create all instance
+        # create all instance if not
         await self.app.setup()
         # get server module
         server_module: MicroserviceServerModule = await self.app.get(MicroserviceServerModule)
@@ -32,17 +39,13 @@ class NestipyMicroservice:
         for server in self.servers:
             MicroserviceProxy(server).apply_routes(controllers)
 
+        self._ms_ready = True
+
     async def start(self):
-        for opt in self.option:
-            client_adapter = self._create_client_adapter(opt)
-            server = MicroServiceServer(
-                pubsub=client_adapter,
-                serializer=self.serializer
-            )
-            self.servers.append(server)
-        # get all handler
-        await self._setup_microservice()
         # start server listener
+        if not self._ms_ready:
+            await self.ready()
+
         coroutines = []
         for server in self.servers:
             coroutines.append(server.listen())
@@ -53,43 +56,29 @@ class NestipyMicroservice:
             await server.close()
         asyncio.get_running_loop().close()
 
-    def _create_client_adapter(self, option: MicroserviceOption) -> ClientProxy:
-        match option.transport:
-            case Transport.REDIS:
-                return RedisClientProxy(
-                    option,
-                    self.serializer
-                )
-            case Transport.MQTT:
-                return MqttClientProxy(
-                    option,
-                    self.serializer
-                )
-            case Transport.RABBITMQ:
-                return RabbitMQClientProxy(
-                    option,
-                    self.serializer
-                )
-            case Transport.NATS:
-                return NatsClientProxy(
-                    option,
-                    self.serializer
-                )
-            case Transport.CUSTOM:
-                if option.proxy is not None and isinstance(option.proxy, ClientProxy):
-                    return option.proxy
-                else:
-                    raise Exception("Transport not known")
-            case _:
-                raise Exception("Transport not known")
-
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
+    _running: bool = False
+
     def __init__(self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]):
-        super(NestipyApplication).__init__(config)
-        super(NestipyMicroservice).__init__(module, option)
+        NestipyMicroservice.__init__(self, module, option)
+        NestipyApplication.__init__(self, config)
         self.app = self
 
-    def start_all_microservice(self):
-        self.app.on_startup(self.start)
+    def start_all_microservices(self):
+        async def start():
+            if not self._ready:
+                await self.ready()
+            if not self._running:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                for server in self.servers:
+                    def create_task():
+                        task = server.listen()
+                        asyncio.create_task(task)
+
+                    create_task()
+                self._running = True
+
+        self.app.on_startup(start)
         self.app.on_shutdown(self.stop)

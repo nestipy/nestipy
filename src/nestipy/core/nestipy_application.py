@@ -168,7 +168,7 @@ class NestipyApplication:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get('type') == 'lifespan':
-            await self.setup()
+            await self.ready()
         await self.get_adapter()(scope, receive, send)
 
     def use(self, *middleware: Union[Type[NestipyMiddleware], Callable]):

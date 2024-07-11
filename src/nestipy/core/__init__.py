@@ -9,6 +9,7 @@ from .on_init import OnInit
 from .on_destroy import OnDestroy
 from .platform import NestipyFastApiApplication, NestipyBlackSheepApplication
 from .template import MinimalJinjaTemplateEngine
+from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
 
 __all__ = [
     "NestipyFactory",
@@ -25,5 +26,7 @@ __all__ = [
     "MiddlewareConsumer",
     "DiscoverService",
     "OnInit",
-    "OnDestroy"
+    "OnDestroy",
+    "NestipyMicroservice",
+    "NestipyConnectMicroservice"
 ]

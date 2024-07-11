@@ -1,9 +1,5 @@
 import enum
-from dataclasses import dataclass, field
-from typing import Union, Optional
-
-from .base import ClientProxy
-from .transporter import CustomTransportStrategy
+from dataclasses import dataclass
 
 
 class Transport(enum.Enum):
@@ -18,11 +14,3 @@ class Transport(enum.Enum):
 class MicroserviceClientOption:
     host: str
     port: int
-
-
-@dataclass
-class MicroserviceOption:
-    transport: Union[Transport, CustomTransportStrategy] = field(default=Transport.REDIS)
-    option: Optional[MicroserviceClientOption] = None
-    url: Optional[str] = None
-    proxy: Optional[ClientProxy] = None

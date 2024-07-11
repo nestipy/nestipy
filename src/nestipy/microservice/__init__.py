@@ -1,6 +1,6 @@
-from .client import ClientsModule, ClientsConfig
+from .client import ClientsModule, ClientsConfig, ClientModuleFactory, MicroserviceOption
 from .client import RedisClientProxy, MqttClientProxy, ClientProxy, RabbitMQClientProxy, NatsClientProxy
-from .client.option import MicroserviceOption, MicroserviceClientOption, Transport
+from .client.option import MicroserviceClientOption, Transport
 from .context import RpcResponse, RpcRequest
 from .decorator import MessagePattern, EventPattern
 from .dependency import Payload, Ctx, Client
@@ -30,5 +30,6 @@ __all__ = [
     "Ctx",
     "Client",
     "RPCErrorMessage",
-    "RPCErrorCode"
+    "RPCErrorCode",
+    "ClientModuleFactory"
 ]

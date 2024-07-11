@@ -1,20 +1,16 @@
 import asyncio
 
-from nestipy.microservice.client import NatsClientProxy
-from nestipy.microservice.client.option import MicroserviceOption
-from nestipy.microservice.serilaizer import JSONSerializer
+from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
 from nestipy.microservice.server.base import MicroServiceServer
 
 
 async def main():
-    serializer = JSONSerializer()
     client = NatsClientProxy(
         MicroserviceOption(
             url="nats://localhost:4222"
         ),
-        serializer
     )
-    server = MicroServiceServer(pubsub=client, serializer=serializer)
+    server = MicroServiceServer(pubsub=client)
     print("Running server ...")
     await server.listen()
 

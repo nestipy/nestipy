@@ -5,9 +5,7 @@ import nats
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
 
-from nestipy.microservice.serilaizer import Serializer
-from .base import ClientProxy
-from .option import MicroserviceOption
+from .base import ClientProxy, MicroserviceOption
 
 NATS_QUEUE = "microservice:queue"
 
@@ -16,13 +14,12 @@ class NatsClientProxy(ClientProxy):
     client: Client
     consumer: Subscription
 
-    def __init__(self, option: MicroserviceOption, serializer: Serializer):
-        super().__init__(option, serializer)
+    def __init__(self, option: MicroserviceOption):
+        super().__init__(option)
 
     async def slave(self) -> "ClientProxy":
         return NatsClientProxy(
             self.option,
-            serializer=self.serializer
         )
 
     async def connect(self):

@@ -3,16 +3,14 @@ from typing import Any, AsyncIterator
 
 from aiomqtt import Client
 
-from nestipy.microservice.client.base import ClientProxy
-from nestipy.microservice.client.option import MicroserviceOption
-from nestipy.microservice.serilaizer import Serializer
+from .base import ClientProxy, MicroserviceOption
 
 
 class MqttClientProxy(ClientProxy):
     client: Client
 
-    def __init__(self, option: MicroserviceOption, serializer: Serializer):
-        super().__init__(option, serializer)
+    def __init__(self, option: MicroserviceOption, ):
+        super().__init__(option)
         self.client = Client(
             self.option.option.host,
             port=self.option.option.port,
@@ -23,7 +21,6 @@ class MqttClientProxy(ClientProxy):
     async def slave(self) -> "ClientProxy":
         return MqttClientProxy(
             option=self.option,
-            serializer=self.serializer
         )
 
     async def connect(self):

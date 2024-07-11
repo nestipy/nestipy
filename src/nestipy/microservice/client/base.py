@@ -2,21 +2,31 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from dataclasses import field, dataclass
 from typing import AsyncIterator
+from typing import Optional
 
 import async_timeout
 
-from nestipy.microservice.client.option import MicroserviceOption
 from nestipy.microservice.context import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
 from nestipy.microservice.exception import RpcException, RPCErrorMessage, RPCErrorCode
-from nestipy.microservice.serilaizer import Serializer
+from nestipy.microservice.serilaizer import Serializer, JSONSerializer
+from .option import Transport, MicroserviceClientOption
+
+
+@dataclass
+class MicroserviceOption:
+    transport: Transport = field(default=Transport.REDIS)
+    option: Optional[MicroserviceClientOption] = None
+    url: Optional[str] = None
+    proxy: Optional["ClientProxy"] = None
+    serializer: Serializer = field(default=JSONSerializer())
 
 
 class ClientProxy(ABC):
 
-    def __init__(self, option: MicroserviceOption, serializer: Serializer):
+    def __init__(self, option: MicroserviceOption):
         self.option = option
-        self.serializer = serializer
 
     @abstractmethod
     async def slave(self) -> "ClientProxy":
@@ -53,7 +63,7 @@ class ClientProxy(ABC):
         await self.subscribe(response_topic)
         await self._publish(
             MICROSERVICE_CHANNEL,
-            await self.serializer.serialize(
+            await self.option.serializer.serialize(
                 asdict(request)
             )
         )
@@ -68,7 +78,7 @@ class ClientProxy(ABC):
             )
         await self.unsubscribe(response_topic)
         await self.close()
-        json_rep = await self.serializer.deserialize(rpc_response)
+        json_rep = await self.option.serializer.deserialize(rpc_response)
         response = RpcResponse.from_dict(json_rep)
         if response.exception:
             raise response.exception
@@ -79,7 +89,7 @@ class ClientProxy(ABC):
             pattern=topic,
             data=data
         )
-        json_req = await self.serializer.serialize(
+        json_req = await self.option.serializer.serialize(
             asdict(request)
         )
         await self._publish(

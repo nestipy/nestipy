@@ -98,9 +98,6 @@ class InstanceLoader:
             await ins.on_startup()
 
     async def destroy(self):
-        for module in self.discover.get_all_module():
-            if isinstance(module, NestipyModule):
-                await module.on_shutdown()
 
         for provider in self.discover.get_all_provider():
             if isinstance(provider, OnDestroy):
@@ -109,3 +106,7 @@ class InstanceLoader:
         for controller in self.discover.get_all_controller():
             if isinstance(controller, OnDestroy):
                 await controller.on_shutdown()
+
+        for module in self.discover.get_all_module():
+            if isinstance(module, NestipyModule):
+                await module.on_shutdown()
