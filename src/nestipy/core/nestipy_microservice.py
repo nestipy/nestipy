@@ -14,6 +14,7 @@ class NestipyMicroservice:
     app: NestipyApplication
     servers: list[MicroServiceServer] = []
     _ms_ready: bool = False
+    coroutines: list = []
 
     def __init__(self, module: Type, option: list[MicroserviceOption]):
         self.root_module = module
@@ -41,16 +42,17 @@ class NestipyMicroservice:
         self._ms_ready = True
 
     async def start(self):
+        loop = asyncio.get_running_loop()
         # start server listener
         if not self._ms_ready:
             await self.ready()
-
-        coroutines = []
         for server in self.servers:
-            coroutines.append(server.listen())
-        await asyncio.gather(*coroutines)
+            self.coroutines.append(asyncio.create_task(server.listen()))
+        await asyncio.gather(*self.coroutines)
 
     async def stop(self):
+        if task in self.coroutines:
+            await task.cancel()
         for server in self.servers:
             await server.close()
 
@@ -64,19 +66,5 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
         self.app = self
 
     def start_all_microservices(self):
-        async def start():
-            if not self._ready:
-                await self.ready()
-            if not self._running:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                for server in self.servers:
-                    def create_task():
-                        task = server.listen()
-                        asyncio.create_task(task)
-
-                    create_task()
-                self._running = True
-
-        self.app.on_startup(start)
+        self.app.on_startup(self.start)
         self.app.on_shutdown(self.stop)

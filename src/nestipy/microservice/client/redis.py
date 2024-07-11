@@ -29,7 +29,6 @@ class RedisClientProxy(ClientProxy):
         while True:
             message = await self.pubsub.get_message(ignore_subscribe_messages=True)
             if message is not None:
-                print("Redis OnData:: ", message)
                 if message["type"] == "message":
                     yield message["data"]
             await asyncio.sleep(0.01)
@@ -39,7 +38,6 @@ class RedisClientProxy(ClientProxy):
             if message is not None:
                 if message['type'] == 'message':
                     response = message['data']
-                    print("OnResponse:: ", response)
                     return response
 
     async def close(self):
