@@ -51,7 +51,7 @@ class NestipyMicroservice:
         await asyncio.gather(*self.coroutines)
 
     async def stop(self):
-        if task in self.coroutines:
+        for task in self.coroutines:
             await task.cancel()
         for server in self.servers:
             await server.close()
