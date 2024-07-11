@@ -1,5 +1,7 @@
 import asyncio
+from asyncio import CancelledError
 from typing import Type
+import traceback
 
 from nestipy.core import NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
@@ -42,19 +44,39 @@ class NestipyMicroservice:
         self._ms_ready = True
 
     async def start(self):
+        self.coroutines = []
         loop = asyncio.get_running_loop()
         # start server listener
         if not self._ms_ready:
             await self.ready()
         for server in self.servers:
-            self.coroutines.append(asyncio.create_task(server.listen()))
-        await asyncio.gather(*self.coroutines)
+            self.coroutines.append(server.listen())
+        try:
+            await asyncio.gather(*self.coroutines)
+        except CancelledError as e:
+            traceback.print_exc()
+            print(e)
+        except ValueError as e:
+            traceback.print_exc()
+            print(e)
+        finally:
+            pass
+
+    async def restart(self):
+        await self.stop()
+        await self.start()
 
     async def stop(self):
-        for task in self.coroutines:
-            await task.cancel()
+        # for task in self.coroutines:
+        #     task.done()
         for server in self.servers:
-            await server.close()
+            try:
+                await server.close()
+            except RuntimeError as e:
+                traceback.print_exc()
+                print(e)
+            finally:
+                pass
 
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
@@ -66,5 +88,8 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
         self.app = self
 
     def start_all_microservices(self):
-        self.app.on_startup(self.start)
+        def start():
+            asyncio.create_task(self.start())
+
+        self.app.on_startup(start)
         self.app.on_shutdown(self.stop)
