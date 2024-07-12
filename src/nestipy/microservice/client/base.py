@@ -21,6 +21,7 @@ class MicroserviceOption:
     url: Optional[str] = None
     proxy: Optional["ClientProxy"] = None
     serializer: Serializer = field(default=JSONSerializer())
+    timeout: int = 30
 
 
 class ClientProxy(ABC):
@@ -70,8 +71,8 @@ class ClientProxy(ABC):
         )
         #  add timeout
         try:
-            with async_timeout.timeout(60):
-                rpc_response = await self.listen_response(response_topic, 60)
+            with async_timeout.timeout(self.option.timeout):
+                rpc_response = await self.listen_response(response_topic, self.option.timeout)
         except asyncio.TimeoutError:
             raise RpcException(
                 status_code=RPCErrorCode.DEADLINE_EXCEEDED,
