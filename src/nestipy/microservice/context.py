@@ -13,6 +13,7 @@ class RpcRequest:
     data: Any
     pattern: Any
     response_topic: Optional[Any] = None
+    headers: dict[str, str] = dataclasses.field(default_factory=lambda: {})
 
     def is_event(self) -> bool:
         return self.response_topic is None
@@ -25,3 +26,4 @@ class RpcResponse:
     data: Any
     status: Literal["success", "error"]
     exception: Union[RpcException, None] = None
+    headers: dict[str, str] = dataclasses.field(default_factory=lambda: {})
