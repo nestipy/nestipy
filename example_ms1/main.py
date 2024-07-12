@@ -1,10 +1,12 @@
-import uvicorn
+import random
 
-from app_module import AppModule
+import uvicorn
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
 
-app = NestipyFactory.connect_microservice(
+from app_module import AppModule
+
+app = NestipyFactory.create_microservice(
     AppModule, [
         MicroserviceOption(
             transport=Transport.REDIS,
@@ -15,8 +17,5 @@ app = NestipyFactory.connect_microservice(
         )
     ]
 )
-app.start_all_microservices()
 if __name__ == '__main__':
-    uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=False)
-    # print("Starting microservice server ")
-    # asyncio.run(app.start())
+    uvicorn.run('main:app', host="0.0.0.0", port=random.randint(5000, 7000), reload=True, log_level="critical")

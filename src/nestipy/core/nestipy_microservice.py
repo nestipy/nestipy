@@ -1,8 +1,7 @@
 import asyncio
 import traceback
-from asyncio import CancelledError
-from typing import Type
 
+from nestipy.common.logger import console
 from nestipy.core import NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
 from nestipy.microservice.client.factory import ClientModuleFactory
@@ -10,6 +9,7 @@ from nestipy.microservice.proxy import MicroserviceProxy
 from nestipy.microservice.serilaizer import JSONSerializer
 from nestipy.microservice.server import MicroServiceServer
 from nestipy.microservice.server.module import MicroserviceServerModule
+from rich.style import Style
 
 
 class NestipyMicroservice:
@@ -17,6 +17,8 @@ class NestipyMicroservice:
     servers: list[MicroServiceServer] = []
     _ms_ready: bool = False
     coroutines: list = []
+
+    console: Console
 
     def __init__(self, module: Type, option: list[MicroserviceOption]):
         self.root_module = module
@@ -51,20 +53,7 @@ class NestipyMicroservice:
             await self.ready()
         for server in self.servers:
             self.coroutines.append(server.listen())
-        try:
-            await asyncio.gather(*self.coroutines)
-        except CancelledError as e:
-            traceback.print_exc()
-            print(e)
-        except ValueError as e:
-            traceback.print_exc()
-            print(e)
-        finally:
-            pass
-
-    async def restart(self):
-        await self.stop()
-        await self.start()
+        await asyncio.gather(*self.coroutines)
 
     async def stop(self):
         # for task in self.coroutines:
@@ -78,12 +67,10 @@ class NestipyMicroservice:
             finally:
                 pass
 
-    def start_all_microservices(self):
-        def start():
+    async def __call__(self, scope: dict, receive: Callable, send: Callable):
+        if scope.get('type') == 'lifespan':
             asyncio.create_task(self.start())
-
-        self.app.on_startup(start)
-        self.app.on_shutdown(self.stop)
+            console.print("[INFO]    Microservice startup completed", style=Style(color="green", bold=True))
 
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
@@ -93,3 +80,13 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
         NestipyMicroservice.__init__(self, module, option)
         NestipyApplication.__init__(self, config)
         self.app = self
+
+    async def __call__(self, scope: dict, receive: Callable, send: Callable):
+        await NestipyApplication.__call__(self, scope, receive, send)
+
+    def start_all_microservices(self):
+        def start():
+            asyncio.create_task(self.start())
+
+        self.app.on_startup(start)
+        self.app.on_shutdown(self.stop)

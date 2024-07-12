@@ -7,10 +7,10 @@ microservices.
 To instantiate a microservice, use the `create_microservice() `method of the `NestipyFactory` class:
 
 ```python
-import asyncio
+import random
 
+import uvicorn
 from app_module import AppModule
-
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
 
@@ -28,9 +28,10 @@ app = NestipyFactory.create_microservice(
 )
 
 if __name__ == '__main__':
-    # uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)
-    print("Starting all microservices server ...")
-    asyncio.run(app.start())
+    uvicorn.run(
+        'main:app', host="0.0.0.0", port=random.randint(5000, 7000), reload=True, log_level="critical",
+        lifespan="on"
+    )
 
 ```
 
@@ -113,12 +114,14 @@ from nestipy.microservice import MicroserviceClientOption, MicroserviceOption, T
 
 
 async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
-    return ClientModuleFactory.create(MicroserviceOption(
-        transport=Transport.REDIS,
-        option=MicroserviceClientOption(
-            host=config.get("HOST"),
-            port=int(config.get("PORT"))
-        ))
+    return ClientModuleFactory.create(
+        MicroserviceOption(
+            transport=Transport.REDIS,
+            option=MicroserviceClientOption(
+                host=config.get("HOST"),
+                port=int(config.get("PORT"))
+            )
+        )
     )
 
 
@@ -127,6 +130,9 @@ async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
         ModuleProviderDict(
             token="MATH_SERVICE",
             factory=MicroserviceOption,
+            inject=[
+                ConfigModule.for_root()
+            ]
             # value=ClientModuleFactory.create(
             #     MicroserviceOption(
             #         transport=Transport.REDIS,
@@ -179,7 +185,7 @@ class AppController:
     @UseGuards(TestGuard)
     @MessagePattern("test")
     async def get(self, data: Annotated[str, Payload()]) -> str:
-        print("Event data ::", data)
+        print("RPC data ::", data)
         return await self.service.get()
 ```
 
@@ -221,13 +227,13 @@ class AppController:
     @UseGuards(TestGuard)
     @MessagePattern("test")
     async def get(self, data: Annotated[str, Payload()]) -> str:
-        print("Event data ::", data)
+        print("RPC data ::", data)
         return await self.service.get()
 
     @UseFilters(MyRpcExceptionFilter)
     @MessagePattern("test2")
     async def get2(self, data: Annotated[str, Payload()]) -> None:
-        print("Event data ::", data)
+        print("RPC data ::", data)
         raise RpcException(
             RPCErrorCode.ABORTED,
             RPCErrorMessage.ABORTED
@@ -240,9 +246,9 @@ Nestipy support hybrid application. To achieve this, we need to use `connect_mic
 
 ```python
 
+
 import uvicorn
 from app_module import AppModule
-
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
 
@@ -262,7 +268,8 @@ app = NestipyFactory.connect_microservice(
 app.start_all_microservices()
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        'main:app', host="0.0.0.0", port=8000, reload=True)
 ```
 
 We need to call `app.start_all_microservice()` to prevent HTTP server for starting all microservices servers after
