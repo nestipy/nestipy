@@ -1,15 +1,16 @@
 import asyncio
 import traceback
+from typing import Callable, Type
+
+from rich.style import Style
 
 from nestipy.common.logger import console
 from nestipy.core import NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
 from nestipy.microservice.client.factory import ClientModuleFactory
 from nestipy.microservice.proxy import MicroserviceProxy
-from nestipy.microservice.serilaizer import JSONSerializer
 from nestipy.microservice.server import MicroServiceServer
 from nestipy.microservice.server.module import MicroserviceServerModule
-from rich.style import Style
 
 
 class NestipyMicroservice:
@@ -21,7 +22,6 @@ class NestipyMicroservice:
     def __init__(self, module: Type, option: list[MicroserviceOption]):
         self.root_module = module
         self.option = option
-        self.serializer = JSONSerializer()
         self.app = NestipyApplication()
 
     async def ready(self):
@@ -45,7 +45,6 @@ class NestipyMicroservice:
 
     async def start(self):
         self.coroutines = []
-        loop = asyncio.get_running_loop()
         # start server listener
         if not self._ms_ready:
             await self.ready()
@@ -67,7 +66,10 @@ class NestipyMicroservice:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get('type') == 'lifespan':
-            asyncio.create_task(self.start())
+            def create_task():
+                asyncio.create_task(self.start())
+
+            create_task()
             console.print("[INFO]    Microservice startup completed", style=Style(color="green", bold=True))
 
 
@@ -83,8 +85,8 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
         await NestipyApplication.__call__(self, scope, receive, send)
 
     def start_all_microservices(self):
-        def start():
+        def on_start():
             asyncio.create_task(self.start())
 
-        self.app.on_startup(start)
+        self.app.on_startup(on_start)
         self.app.on_shutdown(self.stop)
