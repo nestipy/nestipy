@@ -52,13 +52,14 @@ class ClientProxy(ABC):
     async def send_response(self, topic, data):
         pass
 
-    async def send(self, topic, data: any) -> RpcResponse:
+    async def send(self, topic, data: any, headers: dict[str, str] = None) -> RpcResponse:
         await self.connect()
         response_topic = uuid.uuid4().hex
         request = RpcRequest(
             pattern=topic,
             data=data,
-            response_topic=response_topic
+            response_topic=response_topic,
+            headers=headers or {}
         )
         await self.subscribe(response_topic)
         await self._publish(
@@ -84,10 +85,11 @@ class ClientProxy(ABC):
             raise response.exception
         return response
 
-    async def emit(self, topic, data):
+    async def emit(self, topic, data, headers: dict[str, str] = None):
         request = RpcRequest(
             pattern=topic,
-            data=data
+            data=data,
+            headers=headers or {}
         )
         json_req = await self.option.serializer.serialize(
             asdict(request)
