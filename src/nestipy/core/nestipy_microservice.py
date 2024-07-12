@@ -18,8 +18,6 @@ class NestipyMicroservice:
     _ms_ready: bool = False
     coroutines: list = []
 
-    console: Console
-
     def __init__(self, module: Type, option: list[MicroserviceOption]):
         self.root_module = module
         self.option = option
