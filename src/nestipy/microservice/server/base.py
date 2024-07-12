@@ -18,7 +18,6 @@ class MicroServiceServer(ABC):
         await self._pubsub.connect()
         await self._pubsub.subscribe(MICROSERVICE_CHANNEL)
         async for data in self._pubsub.listen():
-            print("OnData ::", data)
             json_rep = await self._pubsub.option.serializer.deserialize(data)
             request = RpcRequest(**json_rep)
             if request.is_event():
