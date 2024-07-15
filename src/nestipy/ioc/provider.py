@@ -20,7 +20,7 @@ class ModuleProviderDict:
             existing: Union[Type, str] = None,
             use_class: Type = None,
             inject: list = None,
-            imports: list = Union[list[Type], None]
+            imports: Union[list[Type], None] = None
     ):
         self.token = token
         self.value = value
