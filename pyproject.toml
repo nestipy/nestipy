@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.5.4"
+version = "0.5.5"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
