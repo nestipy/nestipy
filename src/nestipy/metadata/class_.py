@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Type, Union
 
 from .module import ModuleMetadata
 from .reflect import Reflect
@@ -19,12 +19,12 @@ class ClassMetadata:
     def get_global_providers(self):
         return self._global_providers
 
-    def get_service_providers(self):
-        providers = Reflect.get_metadata(self._module, ModuleMetadata.Providers, [])
+    def get_service_providers(self, module: Union[Type, None] = None):
+        providers = Reflect.get_metadata(module or self._module, ModuleMetadata.Providers, [])
         import_providers_form_exports = []
         # Only not a root module need to get import_providers to share
         # if not Reflect.get_metadata(self._module, ModuleMetadata.Root, False):
-        for im in Reflect.get_metadata(self._module, ModuleMetadata.Imports, []):
+        for im in Reflect.get_metadata(module or self._module, ModuleMetadata.Imports, []):
             exports = Reflect.get_metadata(im.module if hasattr(im, 'module') else im, ModuleMetadata.Exports, [])
             # check if dynamic module
             # if hasattr(im, 'module') and hasattr(im, 'exports'):
