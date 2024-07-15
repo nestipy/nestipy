@@ -83,7 +83,8 @@ class ConfigurableModuleBuilder(Generic[T]):
                 inject=inject or [],
                 use_class=use_class,
                 existing=existing,
-                value=value
+                value=value,
+                imports=imports
             )
             return self._create_dynamic_module(cls_, imports or [], [provider])
 
