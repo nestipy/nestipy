@@ -20,6 +20,7 @@ class ModuleProviderDict:
             existing: Union[Type, str] = None,
             use_class: Type = None,
             inject: list = None,
+            imports: list = Union[list[Type], None]
     ):
         self.token = token
         self.value = value
@@ -27,4 +28,5 @@ class ModuleProviderDict:
         self.existing = existing
         self.use_class = use_class
         self.inject = inject or []
+        self.imports = imports or []
         NestipyContainer.get_instance().add_singleton_instance(token, self)

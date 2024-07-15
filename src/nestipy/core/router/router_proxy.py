@@ -160,7 +160,7 @@ class RouterProxy:
                 content=dataclasses.asdict(typing.cast(dataclasses.dataclass, result)),
             )
         elif isinstance(result, BaseModel):
-            return await res.json(content=result.dict())
+            return await res.json(content=result.model_dump(mode='json'))
         elif isinstance(result, Response):
             return result
         else:

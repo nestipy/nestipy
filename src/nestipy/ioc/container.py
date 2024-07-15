@@ -74,6 +74,9 @@ class NestipyContainer:
             uniq_providers = []
             for m in uniq(providers + global_providers + import_providers):
                 if isinstance(m, ModuleProviderDict):
+                    for my in m.imports:
+                        m_provider, m_import_providers = metadata.get_service_providers(my)
+                        uniq_providers = uniq(uniq_providers + m_import_providers + m_provider)
                     uniq_providers.append(m.token)
                 else:
                     uniq_providers.append(m)
