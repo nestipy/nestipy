@@ -3,7 +3,7 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
-from openapidocs.v3 import PathItem, Schema, Reference
+from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
 from rich.traceback import install
 
 from nestipy.common.http_ import Response, Request

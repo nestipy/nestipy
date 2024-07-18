@@ -1,7 +1,7 @@
 from inspect import isfunction, getmembers
 from typing import List, Type, Union
 
-from openapidocs.v3 import Parameter, ParameterLocation
+from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation
 
 from nestipy.common.utils import deep_merge
 from nestipy.ioc import MiddlewareContainer

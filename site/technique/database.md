@@ -1,4 +1,125 @@
 Currently, Nestipy includes a module designed to facilitate database interactions. This module offers tools and functionalities to manage database connections, perform queries, and handle data efficiently, making it easier for developers to integrate database operations within their applications.
+## Sqlalchemy Integration
+Nestipy provides the `nestipy_alchemy` module, which demonstrates how to utilize the `sqlalchemy` package effectively.
+
+## Installation
+```bash
+pip install nestipy_alchemy
+```
+This is a simple example of integration.
+
+```python
+from typing import Annotated
+
+from nestipy.common import Module
+from nestipy.ioc import Inject
+from nestipy_config import ConfigModule, ConfigService
+
+from app_controller import AppController
+from app_service import AppService
+from nestipy_alchemy import SQLAlchemyModule, SQLAlchemyOption
+from user_model import Base
+
+
+async def sqlalchemy_option(config: Annotated[ConfigService, Inject()]) -> SQLAlchemyOption:
+    return SQLAlchemyOption(
+        url=config.get("DATABASE_URL"),
+        declarative_base=Base,
+        sync=False
+    )
+
+
+@Module(
+    imports=[
+        ConfigModule.for_root(),
+        SQLAlchemyModule.for_root_async(
+            factory=sqlalchemy_option,
+            inject=[ConfigService],
+            imports=[ConfigModule],
+        ),
+        # SQLAlchemyModule.for_root(
+        #     option=SQLAlchemyOption(
+        #         url="DATABASE_URL",
+        #         declarative_base=Base,
+        #         sync=False
+        #     )
+        # )
+    ],
+    controllers=[AppController],
+    providers=[AppService]
+)
+class AppModule:
+    ...
+```
+This is a example of model.
+```python
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import DateTime, String, func, Integer
+from sqlalchemy.orm import Mapped, mapped_column, declarative_base
+
+Base = declarative_base()
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str] = mapped_column(String(255))
+    password: Mapped[str] = mapped_column(String(255))
+    create_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    def __repr__(self) -> str:
+        return f"User(id={self.id!r}, name={self.name!r}, email={self.email!r})"
+
+
+class UserModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
+    password: str
+    create_date: datetime
+```
+
+Using it in `Service` of `Controller`.
+
+```python
+from dataclasses import asdict
+from typing import Annotated
+
+from dto import CreateUserDto
+from nestipy_alchemy import SQLAlchemyService
+from sqlalchemy.future import select
+from user_model import User, UserModel
+
+from nestipy.common import Injectable
+from nestipy.ioc import Inject
+
+
+@Injectable()
+class AppService:
+    db_service: Annotated[SQLAlchemyService, Inject()]
+
+    async def get(self):
+        async with self.db_service.session as session:
+            stmt = select(User).order_by(User.create_date)
+            query = await session.execute(stmt)
+            await session.close()
+        return [UserModel.model_validate(user[0]).model_dump(mode='json') for user in query.fetchall()]
+
+    async def post(self, data: CreateUserDto):
+        async with self.db_service.session as session:
+            user = User(
+                **asdict(data)
+            )
+            session.add(user)
+            await session.flush()
+            await session.commit()
+        return user
+```
 ## Peewee Integration
 
 Nestipy provides the `nestipy_peewee` module, which demonstrates how to utilize the `peewee` package effectively.

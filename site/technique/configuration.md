@@ -13,7 +13,7 @@ from nestipy.common import Module
 
 @Module(
     imports=[
-         ConfigModule.for_root(ConfigOption(), {'is_global': True})
+         ConfigModule.for_root(ConfigOption(), is_global=True)
     ]
 )
 class AppModule:
