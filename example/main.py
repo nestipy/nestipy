@@ -42,7 +42,7 @@ class TestGlobalFilter(ExceptionFilter):
     async def catch(self, exception: HttpException, host: ArgumentHost) -> Any:
         return await host.get_response().status(exception.status_code).json({
             'status': exception.status_code,
-            'error': exception.message,
+            'error': exception.message, 
             'details': exception.details
         })
 

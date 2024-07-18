@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import TypeVar, Generic, Optional, Any, Callable, Union, Type, Awaitable
 
-from nestipy.ioc import ModuleProviderDict
+from nestipy.ioc.provider import ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect
 
 T = TypeVar('T')
