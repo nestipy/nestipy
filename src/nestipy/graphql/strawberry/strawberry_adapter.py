@@ -1,6 +1,7 @@
 import inspect
 from typing import Callable, Type, Any, get_type_hints, get_args
 
+import strawberry
 from strawberry import type as strawberry_type, field as strawberry_field, mutation, subscription, Schema
 
 from nestipy.metadata.dependency import CtxDepKey
@@ -38,8 +39,29 @@ class StrawberryAdapter(GraphqlAdapter):
         new_parameters = []
         for param_name, param in signature.parameters.items():
             args = get_args(param.annotation)
-            if any(isinstance(arg, TypeAnnotated) and arg.metadata.key == CtxDepKey.Args for arg in args):
+            if any(isinstance(arg, TypeAnnotated) and arg.metadata.key == CtxDepKey.Args and arg.metadata.token is None
+                   for arg in args):
                 new_parameters.append(param)
+
+        new_parameters_keys = [k.name for k in new_parameters]
+        # Add root and context
+        if "root" not in new_parameters_keys and "info" not in new_parameters_keys:
+            new_parameters.insert(
+                0,
+                inspect.Parameter(
+                    'root',
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=Any
+                )
+            )
+            new_parameters.insert(
+                1,
+                inspect.Parameter(
+                    'info',
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=strawberry.Info
+                )
+            )
 
         if 'self' in signature.parameters and list(signature.parameters.keys())[0] == "self":
             new_parameters.insert(0, signature.parameters['self'])
