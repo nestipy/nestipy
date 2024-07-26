@@ -1,12 +1,14 @@
 import inspect
-from typing import Callable, Type, Any
+from typing import Callable, Type, Any, get_type_hints, get_args
 
 from strawberry import type as strawberry_type, field as strawberry_field, mutation, subscription, Schema
 
+from nestipy.metadata.dependency import CtxDepKey
 from ..graphql_adapter import GraphqlAdapter
 from ..graphql_asgi import GraphqlAsgi
 from ..graphql_module import GraphqlOption
 from ..strawberry.strawberry_asgi import StrawberryAsgi
+from ...ioc.dependency import TypeAnnotated
 
 
 class StrawberryAdapter(GraphqlAdapter):
@@ -31,8 +33,25 @@ class StrawberryAdapter(GraphqlAdapter):
         if return_annotation is None:
             raise Exception(f"Method {original_handler.__name__} has nor return annotation")
 
-        mutated_handler.__annotations__ = original_handler.__annotations__
-        mutated_handler.__signature__ = signature
+        original_annotations = get_type_hints(original_handler)
+
+        new_parameters = []
+        for param_name, param in signature.parameters.items():
+            args = get_args(param.annotation)
+            if any(isinstance(arg, TypeAnnotated) and arg.metadata.key == CtxDepKey.Args for arg in args):
+                new_parameters.append(param)
+
+        if 'self' in signature.parameters and list(signature.parameters.keys())[0] == "self":
+            new_parameters.insert(0, signature.parameters['self'])
+        elif 'cls' in signature.parameters and list(signature.parameters.keys())[0] == "cls":
+            new_parameters.insert(0, signature.parameters['cls'])
+
+        new_signature = inspect.Signature(
+            parameters=new_parameters,
+            return_annotation=return_annotation
+        )
+        mutated_handler.__annotations__ = original_annotations
+        mutated_handler.__signature__ = new_signature
         return return_annotation
 
     def create_schema(self, **kwargs):

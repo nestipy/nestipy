@@ -1,10 +1,10 @@
 import asyncio
 from typing import AsyncIterator, Annotated
 
-from nestipy.common import UseGuards
+from nestipy.common import UseGuards, Request
 from nestipy.graphql import Query, Resolver, Mutation
 from nestipy.graphql.decorator import Subscription
-from nestipy.ioc import Arg
+from nestipy.ioc import Arg, Req
 from .user_guards import TestGuard, TestGuardMethod
 
 
@@ -14,8 +14,8 @@ class UserResolver:
 
     @Query()
     @UseGuards(TestGuardMethod)
-    def test_query(self, test: Annotated[str, Arg()]) -> str:
-        print(test)
+    def test_query(self, test: Annotated[str, Arg()], req: Annotated[Request, Req()]) -> str:
+        print(test, req)
         return "Query"
 
     @Mutation()
