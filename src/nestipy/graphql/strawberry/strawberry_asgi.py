@@ -1,5 +1,6 @@
+from dataclasses import asdict
 from typing import (
-    Union, Callable,
+    Union, Callable
 )
 
 from starlette.requests import Request
@@ -7,17 +8,36 @@ from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from starlette.websockets import WebSocket
 from strawberry.asgi import GraphQL
 from strawberry.http.exceptions import HTTPException
+from strawberry.http.typevars import Context
 from strawberry.schema import BaseSchema
+from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
 
 from ..graphql_asgi import GraphqlAsgi
-from ..graphql_module import GraphqlOption
+from ..graphql_module import GraphqlOption, AsgiOption
 
 
 class StrawberryAsgi(GraphQL, GraphqlAsgi):
 
-    def __init__(self, schema: BaseSchema, option: GraphqlOption):
-        super().__init__(schema)
+    def __init__(
+            self,
+            schema: BaseSchema,
+            option: GraphqlOption,
+    ):
+        asgi_option = asdict(option.asgi_option or AsgiOption())
+        asgi_option["subscription_protocols"] = asgi_option["subscription_protocols"] or (
+            GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL,)
+
+        super().__init__(
+            schema=schema,
+            **asgi_option
+        )
         self.set_graphql_option(option)
+
+    async def get_context(
+            self, request: Union[Request, WebSocket], response: Response
+    ) -> Context:
+        context = {"request": request, "response": response}
+        return self.modify_default_context(context)
 
     async def render_graphql_ide(self, request: Union[Request, WebSocket]) -> Response:
         if self.option.ide:
@@ -41,9 +61,10 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
         except HTTPException as e:
             response = PlainTextResponse(e.reason, status_code=e.status_code)
         # Apply cors to graphql
-        response.headers.update({
-            'access-control-allow-origin': '*',
-            'access-control-allow-headers': 'Content-Type',
-            'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS'
-        })
+        if self.option.cors:
+            response.headers.update({
+                'access-control-allow-origin': '*',
+                'access-control-allow-headers': 'Content-Type',
+                'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS'
+            })
         await response(scope, receive, send)

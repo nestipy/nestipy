@@ -8,7 +8,8 @@ from nestipy.core.context.execution_context import ExecutionContext
 class TestGuard(CanActivate):
 
     def can_activate(self, context: ExecutionContext) -> bool:
-        print("TestGuard called")
+        headers = context.switch_to_http().get_request().headers
+        print("TestGuard called with headers::: ", headers)
         return False
 
 

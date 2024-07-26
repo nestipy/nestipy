@@ -1,4 +1,4 @@
-from typing import Union, Type, TYPE_CHECKING
+from typing import Union, Type, TYPE_CHECKING, Callable
 
 from nestipy.metadata import SetMetadata
 
@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from nestipy.common.exception.http import HttpException
 
 
-def Catch(*exceptions: Union[Type["HttpException"], "HttpException"]):
+def Catch(
+        *exceptions: Union[Type["HttpException"], "HttpException"]
+) -> Callable[[Type["ExceptionFilter"]], Type["ExceptionFilter"]]:
     """
     Catch decorator
     Args:

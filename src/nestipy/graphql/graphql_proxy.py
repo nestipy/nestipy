@@ -7,7 +7,7 @@ from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
-from ..common import Request, Response
+from ..common import Request, Response, HttpException, HttpStatus, HttpStatusMessages
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
@@ -44,13 +44,14 @@ class GraphqlProxy:
 
         async def graphql_handler(*_args, **kwargs):
             context_container = RequestContextContainer.get_instance()
+            default_context = context_container.execution_context
             execution_context = ExecutionContext(
                 self._adapter,
                 module_ref,
                 resolver,
                 getattr(resolver, method_name),
-                None,
-                None,
+                default_context.get_request(),
+                default_context.get_response(),
                 kwargs,
                 None
 
@@ -65,7 +66,7 @@ class GraphqlProxy:
                 can_activate = await guard_processor.process(execution_context)
                 if not can_activate[0]:
                     # TODO: is this need to specify return Exception
-                    raise Exception(f"Not authorized from guard {can_activate[1]}")
+                    raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
 
                 # perform query request
                 result = await self.container.get(resolver, method_name)
@@ -90,7 +91,7 @@ class GraphqlProxy:
             graphql_path,
             self._graphql_server.create_graphql_asgi_app(
                 option=option,
-                schema=self._graphql_server.create_schema()
+                schema=self._graphql_server.create_schema(**(option.schema_option or {}))
             ).handle
         )
 
