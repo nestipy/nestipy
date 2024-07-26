@@ -5,6 +5,7 @@ from strawberry import type as ObjectType, interface as Interface
 
 from .strawberry_asgi import StrawberryAsgi
 from .strawberry_adapter import StrawberryAdapter
+from .dependency import Root, Info
 
 __all__ = [
     "StrawberryAsgi",
@@ -20,5 +21,7 @@ __all__ = [
     "Lazy",
     "Lazy",
     "Parent",
-    "Argument"
+    "Argument",
+    "Root",
+    "Info"
 ]
