@@ -2,7 +2,6 @@ from typing import Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nestipy.core import ExecutionContext
-    from nestipy.ioc import NestipyContainer
 
 
 class RequestContextContainer:

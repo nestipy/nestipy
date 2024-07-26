@@ -10,7 +10,7 @@ class TestGuard(CanActivate):
     def can_activate(self, context: ExecutionContext) -> bool:
         headers = context.switch_to_http().get_request().headers
         print("TestGuard called with headers::: ", headers)
-        return False
+        return True
 
 
 @Injectable()
