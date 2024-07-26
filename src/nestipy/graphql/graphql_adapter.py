@@ -51,7 +51,7 @@ class GraphqlAdapter(ABC):
         return type(name, (), {k: r for (k, r) in self._subscription_properties})
 
     @abstractmethod
-    def create_schema(self) -> Any:
+    def create_schema(self, **kwargs) -> Any:
         pass
 
     @abstractmethod

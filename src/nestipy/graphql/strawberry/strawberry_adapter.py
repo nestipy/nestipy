@@ -35,7 +35,7 @@ class StrawberryAdapter(GraphqlAdapter):
         mutated_handler.__signature__ = signature
         return return_annotation
 
-    def create_schema(self, *args, **kwargs):
+    def create_schema(self, **kwargs):
         query = self.create_query()
         mutation_ = self.create_mutation()
         subscription_ = self.create_subscription()
@@ -48,7 +48,7 @@ class StrawberryAdapter(GraphqlAdapter):
             query=strawberry_type(query),
             mutation=strawberry_type(mutation_) if mutation_ is not None else None,
             subscription=strawberry_type(subscription_) if subscription_ is not None else None,
-            *args, **kwargs
+            **kwargs
         )
 
     def create_graphql_asgi_app(self, schema: Any, option: GraphqlOption) -> GraphqlAsgi:
