@@ -41,10 +41,10 @@ jobs:
           poetry --version
 
       - name: Bump version for release
+        id: load_version
         run: |
-          poetry version patch &&
           version=$(poetry version | awk '{ print $2 }') &&
-          poetry version $version
+          poetry version $version && echo "tag=$version" >> "$GITHUB_OUTPUT"
 
       - name: Build package
         run: |
@@ -55,6 +55,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.load_version.outputs.tag }}
 
       - name: Publish package on PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -71,4 +72,4 @@ jobs:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
-    
+
