@@ -18,17 +18,27 @@ class GraphQlDecorator:
                 class_ref = Injectable()(class_ref)
             Reflect.set_metadata(class_ref, self.graphql_type, self.graphql_value)
             Reflect.set_metadata(class_ref, NestipyGraphqlKey.return_type, return_type)
+            Reflect.set_metadata(class_ref, NestipyGraphqlKey.args, args)
+            Reflect.set_metadata(class_ref, NestipyGraphqlKey.kwargs, kwargs)
             return class_ref
 
         return wrapper
 
 
-def Resolver(return_type: Type = None, *args, **kwargs):
-    return GraphQlDecorator(NestipyGraphqlKey.resolver, is_method=False)(return_type, *args, **kwargs)
+def Resolver(of: Type = None, *args, **kwargs):
+    return GraphQlDecorator(NestipyGraphqlKey.resolver, is_method=False)(of, *args, **kwargs)
 
 
 def Query(return_type: Type = None, *args, **kwargs):
     return GraphQlDecorator(NestipyGraphqlKey.handler, NestipyGraphqlKey.query)(return_type, *args, **kwargs)
+
+
+def ResolveField(return_type: Type = None, name: str = None, *args, **kwargs):
+    return GraphQlDecorator(NestipyGraphqlKey.handler, NestipyGraphqlKey.field_resolver, True)(
+        return_type,
+        *args,
+        **{"name": name, **kwargs}
+    )
 
 
 def Mutation(return_type: Type = None, *args, **kwargs):
