@@ -2,14 +2,20 @@ import inspect
 from typing import Callable, Type, Any, get_type_hints, get_args
 
 import strawberry
-from strawberry import type as strawberry_type, field as strawberry_field, mutation, subscription, Schema
+from strawberry import (
+    type as strawberry_type,
+    field as strawberry_field,
+    mutation,
+    subscription, Schema
+)
+from strawberry.field import StrawberryField
 
+from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey
 from ..graphql_adapter import GraphqlAdapter
 from ..graphql_asgi import GraphqlAsgi
 from ..graphql_module import GraphqlOption
 from ..strawberry.strawberry_asgi import StrawberryAsgi
-from ...ioc.dependency import TypeAnnotated
 
 
 class StrawberryAdapter(GraphqlAdapter):
@@ -17,6 +23,16 @@ class StrawberryAdapter(GraphqlAdapter):
         raise e
 
     _schema: Schema = None
+
+    def create_type_field_resolver(self, prop: dict, resolver: Callable) -> object:
+        type_to_resolve: Type = prop["type"]
+        prop_name = prop["name"]
+        field = strawberry_field(resolver=resolver)
+        field.name = prop_name
+        fields: list[StrawberryField] = type_to_resolve.__strawberry_definition__.fields
+        new_fields = [field if f.name == prop_name else f for f in fields]
+        type_to_resolve.__strawberry_definition__.fields = new_fields
+        return type_to_resolve
 
     def create_query_field_resolver(self, resolver: Callable) -> object:
         return strawberry_field(resolver)
@@ -27,12 +43,14 @@ class StrawberryAdapter(GraphqlAdapter):
     def create_subscription_field_resolver(self, resolver: Callable) -> object:
         return subscription(resolver)
 
-    def mutate_handler(self, original_handler: Any, mutated_handler: Callable) -> Type:
+    def mutate_handler(self, original_handler: Any, mutated_handler: Callable, default_return_type: Any) -> Type:
         signature = inspect.signature(original_handler)
-        return_annotation = signature.return_annotation
+        return_annotation = signature.return_annotation if (
+                signature.return_annotation is not getattr(inspect, '_empty')
+        ) else default_return_type
         # Set annotations for the new function
         if return_annotation is None:
-            raise Exception(f"Method {original_handler.__name__} has nor return annotation")
+            raise Exception(f"Method {original_handler.__name__} has no return annotation")
 
         original_annotations = get_type_hints(original_handler)
 

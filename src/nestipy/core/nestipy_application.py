@@ -117,7 +117,7 @@ class NestipyApplication:
             self._openapi_paths, self._openapi_schemas = self._router_proxy.apply_routes(modules, self._prefix)
             # check if graphql is enabled
             if graphql_module_instance is not None:
-                GraphqlProxy(self._http_adapter, self._graphql_builder).apply_resolvers(
+                await GraphqlProxy(self._http_adapter, self._graphql_builder).apply_resolvers(
                     graphql_module_instance,
                     modules
                 )

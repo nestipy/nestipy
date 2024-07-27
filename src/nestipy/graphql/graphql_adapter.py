@@ -15,6 +15,10 @@ class GraphqlAdapter(ABC):
         pass
 
     @abstractmethod
+    def create_type_field_resolver(self, prop: dict, resolve: Callable) -> object:
+        pass
+
+    @abstractmethod
     def raise_exception(self, e: Exception):
         pass
 
@@ -26,13 +30,13 @@ class GraphqlAdapter(ABC):
     def create_subscription_field_resolver(self, resolver: Callable) -> object:
         pass
 
-    def add_query_property(self, property_name: str, return_type: Any, resolver: Callable):
+    def add_query_property(self, property_name: str, resolver: Callable):
         self._query_properties.append((property_name, self.create_query_field_resolver(resolver)))
 
-    def add_mutation_property(self, property_name: str, return_type: Any, resolver: Callable):
+    def add_mutation_property(self, property_name: str, resolver: Callable):
         self._mutation_properties.append((property_name, self.create_mutation_field_resolver(resolver)))
 
-    def add_subscription_property(self, property_name: str, return_type: Any, resolver: Callable):
+    def add_subscription_property(self, property_name: str, resolver: Callable):
         self._subscription_properties.append((property_name, self.create_subscription_field_resolver(resolver)))
 
     def create_query(self, name: str = 'Query') -> Union[Type, None]:
@@ -55,7 +59,7 @@ class GraphqlAdapter(ABC):
         pass
 
     @abstractmethod
-    def mutate_handler(self, original_handler: Callable, wrapper_handler: Callable) -> Type:
+    def mutate_handler(self, original_handler: Callable, wrapper_handler: Callable, default_return_type: Any) -> Type:
         pass
 
     @abstractmethod

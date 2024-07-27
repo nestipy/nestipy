@@ -29,18 +29,38 @@ So, `CatsResolver` will be like.
 
 ```python
 import asyncio
-from typing import AsyncIterator, Annotated
+from typing import AsyncIterator, Annotated, Any
 
-from nestipy.graphql import Resolver, Query, Mutation, Subscription
-from nestipy.ioc import Arg
+from nestipy.common import UseGuards, Request
+from nestipy.graphql import Query, Resolver, Mutation
+from nestipy.graphql import ResolveField
+from nestipy.graphql.decorator import Subscription
+from nestipy.graphql.strawberry import Info
+from nestipy.graphql.strawberry import ObjectType
+from nestipy.ioc import Arg, Req
+from .user_guards import TestGuard, TestGuardMethod
 
 
-@Resolver()
-class CatsResolver:
+@ObjectType()
+class Test:
+    test1: str
+    test2: str
+
+
+@Resolver(of=Test)
+@UseGuards(TestGuard)
+class UserResolver:
+
     @Query()
     @UseGuards(TestGuardMethod)
-    def test_query(self, test: Annotated[str, Arg()]) -> str:
-        return "Query"
+    def test_query(
+            self,
+            test: Annotated[str, Arg()],
+            info: Annotated[Any, Info()],
+            req: Annotated[Request, Req()]
+    ) -> Test:
+        print(test, req, info)
+        return Test(test1="test1", test2="holla")
 
     @Mutation()
     def test_mutation(self) -> str:
@@ -51,6 +71,11 @@ class CatsResolver:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)
+
+    @ResolveField()
+    async def test2(self, root: Test) -> str:
+        return 'test2 value ' + root.test1
+
 ```
 
 For scalar, input, etc.. we can reef to <b>[Strawberry documentation ](https://strawberry.rocks/docs)</b> and using
