@@ -3,26 +3,34 @@ from typing import AsyncIterator, Annotated, Any
 
 from nestipy.common import UseGuards, Request
 from nestipy.graphql import Query, Resolver, Mutation
+from nestipy.graphql import ResolveField
 from nestipy.graphql.decorator import Subscription
 from nestipy.graphql.strawberry import Info
+from nestipy.graphql.strawberry import ObjectType
 from nestipy.ioc import Arg, Req
 from .user_guards import TestGuard, TestGuardMethod
 
 
-@Resolver()
+@ObjectType()
+class Test:
+    test1: str
+    test2: str
+
+
+@Resolver(of=Test)
 @UseGuards(TestGuard)
 class UserResolver:
 
-    @Query()
+    @Query(return_type=Test)
     @UseGuards(TestGuardMethod)
     def test_query(
             self,
             test: Annotated[str, Arg()],
             info: Annotated[Any, Info()],
             req: Annotated[Request, Req()]
-    ) -> str:
+    ):
         print(test, req, info)
-        return "Query"
+        return Test(test1="test1", test2="holla")
 
     @Mutation()
     def test_mutation(self) -> str:
@@ -33,3 +41,7 @@ class UserResolver:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)
+
+    @ResolveField()
+    async def test2(self, root: Test) -> str:
+        return 'test2 value ' + root.test1

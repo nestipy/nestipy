@@ -5,6 +5,8 @@ from nestipy.core.guards import GuardProcessor
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
+from nestipy.graphql.meta import NestipyGraphqlKey
+from nestipy.metadata import Reflect
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import Request, Response, HttpException, HttpStatus, HttpStatusMessages
@@ -21,26 +23,32 @@ class GraphqlProxy:
         self._adapter = adapter
         self.container = NestipyContainer.get_instance()
 
-    def apply_resolvers(self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]):
+    async def apply_resolvers(self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]):
 
         for module_ref in modules:
-            query, mutation, subscription = GraphqlExplorer.explore(module_ref)
+            query, mutation, subscription, field_resolver = GraphqlExplorer.explore(module_ref)
             for q in query:
-                name, return_type, resolver = self._create_graphql_query_handler(module_ref, q)
-                self._graphql_server.add_query_property(name, return_type, resolver)
+                name, resolver = self._create_graphql_query_handler(module_ref, q)
+                self._graphql_server.add_query_property(name, resolver)
             for m in mutation:
-                name, return_type, resolver = self._create_graphql_query_handler(module_ref, m)
-                self._graphql_server.add_mutation_property(name, return_type, resolver)
+                name, resolver = self._create_graphql_query_handler(module_ref, m)
+                self._graphql_server.add_mutation_property(name, resolver)
             for s in subscription:
-                name, return_type, resolver = self._create_graphql_query_handler(module_ref, s)
-                self._graphql_server.add_subscription_property(name, return_type, resolver)
+                name, resolver = self._create_graphql_query_handler(module_ref, s)
+                self._graphql_server.add_subscription_property(name, resolver)
+
+            for fr in field_resolver:
+                resolver_class = await self.container.get(fr["class"])
+                resolver = getattr(resolver_class, fr["handler_name"])
+                self._graphql_server.create_type_field_resolver(fr, resolver)
 
         self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
-    def _create_graphql_query_handler(self, module_ref: Union[Type, object], meta: dict) -> tuple[str, Type, Callable]:
+    def _create_graphql_query_handler(self, module_ref: Union[Type, object], meta: dict) -> tuple[str, Callable]:
         resolver: Union[object, Type] = meta['class']
         method_name: str = meta['handler_name']
         method = getattr(resolver, method_name)
+        default_return_type = Reflect.get_metadata(method, NestipyGraphqlKey.return_type, None)
 
         async def graphql_handler(*_args, **kwargs):
             context_container = RequestContextContainer.get_instance()
@@ -81,8 +89,8 @@ class GraphqlProxy:
                 context_container.destroy()
 
         # mutate handle inside adapter
-        return_type = self._graphql_server.mutate_handler(method, graphql_handler)
-        return method_name, return_type, graphql_handler,
+        self._graphql_server.mutate_handler(method, graphql_handler, default_return_type)
+        return method_name, graphql_handler,
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
         graphql_path = f"/{option.url.strip('/')}"
