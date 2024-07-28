@@ -5,7 +5,7 @@ from nestipy.common import UseGuards, Request
 from nestipy.graphql import Query, Resolver, Mutation
 from nestipy.graphql import ResolveField
 from nestipy.graphql.decorator import Subscription
-from nestipy.graphql.strawberry import Info
+from nestipy.graphql.strawberry import Info, Root
 from nestipy.graphql.strawberry import ObjectType
 from nestipy.ioc import Arg, Req
 from .user_guards import TestGuard, TestGuardMethod
@@ -43,5 +43,11 @@ class UserResolver:
             await asyncio.sleep(0.5)
 
     @ResolveField()
-    async def test2(self, root: Test) -> str:
+    async def test2(
+            self,
+            root: Annotated[Any, Root()],
+            info: Annotated[Any, Info()],
+            req: Annotated[Request, Req()],
+            test: Annotated[str, Arg()]
+    ) -> str:
         return 'test2 value ' + root.test1
