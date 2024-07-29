@@ -25,7 +25,7 @@ class GraphqlOption:
     ide: Literal['default', 'graphiql'] | None = 'default'
     schema_option: Optional[dict] = None
     asgi_option: AsgiOption = None
-    context_callback: Callable[[dict], dict] = None
+    context_callback: Callable[[...], dict] = None
 
 
 ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[GraphqlOption]().set_method(

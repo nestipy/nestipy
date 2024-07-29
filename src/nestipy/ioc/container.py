@@ -165,8 +165,12 @@ class NestipyContainer:
         origin.remove(service)
         self._services[key] = service
 
-    async def _get_method_dependency(self, method_to_resolve: Callable, search_scope: list,
-                                     disable_scope: bool = False):
+    async def _get_method_dependency(
+            self,
+            method_to_resolve: Callable,
+            search_scope: list,
+            disable_scope: bool = False
+    ):
         params = inspect.signature(method_to_resolve).parameters
         args = {}
         for name, param in params.items():
