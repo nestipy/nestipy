@@ -11,7 +11,7 @@ from strawberry.http.exceptions import HTTPException
 from strawberry.http.typevars import Context
 from strawberry.schema import BaseSchema
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
-
+from strawberry.printer import print_schema
 from ..graphql_asgi import GraphqlAsgi
 from ..graphql_module import GraphqlOption, AsgiOption
 
@@ -32,6 +32,9 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
             **asgi_option
         )
         self.set_graphql_option(option)
+
+    def print_schema(self) -> str:
+        return print_schema(self.schema)
 
     async def get_context(
             self, request: Union[Request, WebSocket], response: Response

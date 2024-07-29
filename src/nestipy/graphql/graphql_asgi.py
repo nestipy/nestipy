@@ -13,6 +13,10 @@ from nestipy.graphql.graphql_module import GraphqlOption
 class GraphqlAsgi:
     option: GraphqlOption = None
 
+    @abstractmethod
+    def print_schema(self) -> str:
+        pass
+
     def set_graphql_option(self, option: GraphqlOption):
         self.option = option
 
