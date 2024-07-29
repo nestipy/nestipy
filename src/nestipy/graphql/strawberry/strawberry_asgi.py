@@ -40,7 +40,7 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
             self, request: Union[Request, WebSocket], response: Response
     ) -> Context:
         context = {"request": request, "response": response}
-        return self.modify_default_context(context)
+        return await self.modify_default_context(context)
 
     async def render_graphql_ide(self, request: Union[Request, WebSocket]) -> Response:
         if self.option.ide:

@@ -4,7 +4,7 @@ from typing import Callable, cast
 
 import aiofiles
 
-from nestipy.ioc import RequestContextContainer
+from nestipy.ioc import RequestContextContainer, NestipyContainer
 
 from nestipy.common.http_ import Request, Response
 from nestipy.graphql.graphql_module import GraphqlOption
@@ -35,14 +35,16 @@ class GraphqlAsgi:
     async def handle(self, scope: dict, receive, send):
         self._setup_request(scope, receive, send)
 
-    def modify_default_context(self, context: dict) -> dict:
+    async def modify_default_context(self, context: dict) -> dict:
         if self.option.context_callback:
-            return self.option.context_callback(context)
+            return await NestipyContainer.get_instance().resolve_factory(
+                self.option.context_callback,
+                disable_scope=True
+            )
         return context
 
     @classmethod
     def _setup_request(cls, scope: dict, receive, send):
-        pass
         from nestipy.core import ExecutionContext
         req_container = RequestContextContainer.get_instance()
         req = Request(scope, receive, send)
