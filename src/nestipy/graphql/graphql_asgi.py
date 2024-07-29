@@ -39,6 +39,8 @@ class GraphqlAsgi:
         if self.option.context_callback:
             return await NestipyContainer.get_instance().resolve_factory(
                 self.option.context_callback,
+                inject=[],
+                search_scope=[],
                 disable_scope=True
             )
         return context
