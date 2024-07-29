@@ -14,7 +14,7 @@ from .user_guards import TestGuard, TestGuardMethod
 @ObjectType()
 class Test:
     test1: str
-    test2: str
+    test2_named: str
 
 
 @Resolver(of=Test)
@@ -30,7 +30,7 @@ class UserResolver:
             req: Annotated[Request, Req()]
     ):
         print(test, req, info)
-        return Test(test1="test1", test2="holla")
+        return Test(test1="test1", test2_named="holla")
 
     @Mutation()
     def test_mutation(self) -> str:
@@ -42,12 +42,12 @@ class UserResolver:
             yield i
             await asyncio.sleep(0.5)
 
-    @ResolveField()
+    @ResolveField(name="test2_named")
     async def test2(
             self,
             root: Annotated[Any, Root()],
             info: Annotated[Any, Info()],
             req: Annotated[Request, Req()],
-            test: Annotated[str, Arg()]
+            test: Annotated[str, Arg()],
     ) -> str:
         return 'test2 value ' + root.test1

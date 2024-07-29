@@ -21,6 +21,7 @@ class AsgiOption:
 class GraphqlOption:
     url: str = '/graphql'
     cors: bool = True
+    auto_schema_file: str = None
     ide: Literal['default', 'graphiql'] | None = 'default'
     schema_option: Optional[dict] = None
     asgi_option: AsgiOption = None

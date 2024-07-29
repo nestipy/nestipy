@@ -1,3 +1,4 @@
+import os.path
 import traceback
 from typing import Union, Type, Callable
 
@@ -97,13 +98,19 @@ class GraphqlProxy:
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
         graphql_path = f"/{option.url.strip('/')}"
+        gql_asgi = self._graphql_server.create_graphql_asgi_app(
+            option=option,
+            schema=self._graphql_server.create_schema(**(option.schema_option or {}))
+        )
+        if option.auto_schema_file:
+            schema_sdl = gql_asgi.print_schema()
+            with open(os.path.join(os.getcwd(), option.auto_schema_file), 'w+') as file:
+                file.write(schema_sdl)
+                file.close()
         # create graphql handler but using handle of graphql_adapter
         self._adapter.mount(
             graphql_path,
-            self._graphql_server.create_graphql_asgi_app(
-                option=option,
-                schema=self._graphql_server.create_schema(**(option.schema_option or {}))
-            ).handle
+            gql_asgi.handle
         )
 
         async def graphql_redirect(_req: Request, res: Response, _next_fn: NextFn):
