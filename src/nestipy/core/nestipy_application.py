@@ -24,6 +24,7 @@ from .instance_loader import InstanceLoader
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
+from .background import BackgroundTasks
 from .router.router_proxy import RouterProxy
 from ..graphql.graphql_proxy import GraphqlProxy
 from ..types_ import NextFn
@@ -53,6 +54,7 @@ class NestipyApplication:
     _prefix: Union[str | None] = None
     _debug: bool = True
     _ready: bool = False
+    _background_tasks: BackgroundTasks
 
     def __init__(self, config: NestipyConfig = None):
         config = config if config is not None else NestipyConfig()
@@ -62,7 +64,9 @@ class NestipyApplication:
         self._router_proxy = RouterProxy(self._http_adapter)
         self._middleware_container = MiddlewareContainer.get_instance()
         self.instance_loader = InstanceLoader()
+        self._background_tasks: BackgroundTasks = BackgroundTasks()
         self.process_config(config)
+        self.on_startup(self._startup)
         self.on_shutdown(self._destroy)
 
     def on_startup(self, callback: Callable):
@@ -96,6 +100,7 @@ class NestipyApplication:
     def init(self, root_module: Type):
         self._root_module = root_module
         self._add_root_module_provider(DiscoverService, _init=False)
+        self._add_root_module_provider(ModuleProviderDict(token=BackgroundTasks, value=self._background_tasks))
         self._set_metadata()
 
     def _set_metadata(self):
@@ -151,7 +156,11 @@ class NestipyApplication:
             await self.setup()
         return self._ready
 
+    async def _startup(self):
+        self._background_tasks.run()
+
     async def _destroy(self):
+        await self._background_tasks.shutdown()
         await self.instance_loader.destroy()
 
     def get_adapter(self) -> HttpAdapter:

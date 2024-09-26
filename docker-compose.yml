@@ -12,6 +12,7 @@ services:
     container_name: node_exporter
     ports:
       - "9100:9100"
+      
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -42,8 +43,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nestipy
-    depends_on:
-      - prometheus
     ports:
       - "8000:8000"
     volumes:

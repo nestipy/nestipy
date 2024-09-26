@@ -121,7 +121,7 @@ def websocket_data_callback(_name: str, _token: Optional[str], _type_ref: Type,
     return _request_context.execution_context.switch_to_websocket().get_data()
 
 
-Instance = create_type_annotated(instance_callback, 'instance')
+Default = create_type_annotated(instance_callback, 'instance')
 Inject = create_type_annotated(inject_callback, CtxDepKey.Service)
 Req = create_type_annotated(req_callback, CtxDepKey.Request)
 Res = create_type_annotated(res_callback, CtxDepKey.Response)

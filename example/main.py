@@ -61,7 +61,7 @@ app.use(session())
 
 @app.on_startup
 async def startup():
-    logger.info('Starting up ...')
+    logger.info('Starting up ...') 
 
 
 if __name__ == "__main__":
