@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union, Type, Callable, Literal
+from typing import Self, Union, Type, Callable, Literal
 
 from nestipy.metadata import Reflect, RouteKey, ClassMetadata
 
@@ -11,7 +11,8 @@ HTTPMethod = Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS',
 @dataclass
 class MiddlewareRouteConfig:
     method: list[HTTPMethod] = field(
-        default_factory=lambda: ['ALL'])
+        default_factory=lambda: ['ALL']
+    )
     url: str = field(default='/')
 
 
@@ -24,7 +25,7 @@ class MiddlewareProxy:
         self.route: MiddlewareRouteConfig = MiddlewareRouteConfig()
 
     @classmethod
-    def form_dict(cls, middleware: Union[Type, Callable], route: MiddlewareRouteConfig, path_excludes=None):
+    def form_dict(cls, middleware: Union[Type, Callable], route: MiddlewareRouteConfig, path_excludes=None)-> Self:
         if path_excludes is None:
             path_excludes = []
         m = MiddlewareProxy()
@@ -33,10 +34,10 @@ class MiddlewareProxy:
         m.path_excludes = path_excludes
         return m
 
-    def for_route(self, route: Union[Type, str], method: list[HTTPMethod] = ['ALL']):
+    def for_route(self, route: Union[Type, str], method: list[HTTPMethod] = ['ALL'])-> Self:
         self.route.method = method
         if isinstance(route, str):
-            self.route.url = MiddlewareRouteConfig
+            self.route.url = route
         else:
             self.route.url = f"/{Reflect.get_metadata(route, RouteKey.path, '').strip('/')}"
         return self
@@ -65,7 +66,7 @@ class MiddlewareContainer:
     def get_instance(cls, *args, **kwargs):
         return MiddlewareContainer(*args, **kwargs)
 
-    def add_singleton(self, proxy, module: Union[Type, object] = None):
+    def add_singleton(self, proxy: MiddlewareProxy, module: Union[Type, object] = None):
         if module is not None:
             for m in list(proxy.middlewares):
                 Reflect.set_metadata(m, ClassMetadata.Metadata, ClassMetadata(

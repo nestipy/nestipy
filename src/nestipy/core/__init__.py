@@ -10,6 +10,7 @@ from .on_destroy import OnDestroy
 from .platform import NestipyFastApiApplication, NestipyBlackSheepApplication
 from .template import MinimalJinjaTemplateEngine
 from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
+from .background import BackgroundTask, BackgroundTasks
 
 __all__ = [
     "NestipyFactory",
@@ -28,5 +29,7 @@ __all__ = [
     "OnInit",
     "OnDestroy",
     "NestipyMicroservice",
-    "NestipyConnectMicroservice"
+    "NestipyConnectMicroservice",
+    "BackgroundTask",
+    "BackgroundTasks"
 ]

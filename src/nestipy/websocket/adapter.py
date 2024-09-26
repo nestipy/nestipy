@@ -14,7 +14,6 @@ class IoAdapter(ABC):
     @abstractmethod
     def on(self, event: str, namespace: str = None) -> Callable[[Callable], Any]:
         pass
-
     @abstractmethod
     def emit(
             self,
