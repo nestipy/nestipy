@@ -8,7 +8,6 @@ from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflect
 
 
 class MetadataCreator(ABC):
-
     def __init__(self, module, global_data=None, is_root=False):
         self.module = self._dynamic_module_to_module(module)
         self.is_root = is_root
@@ -23,7 +22,9 @@ class MetadataCreator(ABC):
         pass
 
     def extract_providers(self) -> list:
-        return uniq_list(Reflect.get_metadata(self.module, ModuleMetadata.Providers, []))
+        return uniq_list(
+            Reflect.get_metadata(self.module, ModuleMetadata.Providers, [])
+        )
 
     def _put_dependency_metadata(self) -> None:
         data = self._extract()
@@ -34,10 +35,7 @@ class MetadataCreator(ABC):
                 Reflect.set_metadata(
                     p,
                     ClassMetadata.Metadata,
-                    ClassMetadata(
-                        self.module,
-                        global_providers=global_data
-                    )
+                    ClassMetadata(self.module, global_providers=global_data),
                 )
 
     def _extract_import(self) -> list:
@@ -46,7 +44,11 @@ class MetadataCreator(ABC):
         :return: list
         """
         return uniq_list(
-            [self._dynamic_module_to_module(m) for m in Reflect.get_metadata(self.module, ModuleMetadata.Imports, [])])
+            [
+                self._dynamic_module_to_module(m)
+                for m in Reflect.get_metadata(self.module, ModuleMetadata.Imports, [])
+            ]
+        )
 
     @classmethod
     def _dynamic_module_to_module(cls, im: Union[Type, object]):
@@ -80,12 +82,15 @@ class MetadataCreator(ABC):
                     import_providers_form_exports = []
                     for export in Reflect.get_metadata(im, ModuleMetadata.Exports, []):
                         # For module re-exporting
-                        is_module: bool = Reflect.get_metadata(export, ModuleMetadata.Module, False)
+                        is_module: bool = Reflect.get_metadata(
+                            export, ModuleMetadata.Module, False
+                        )
                         if is_module:
-                            import_providers_form_exports = import_providers_form_exports + Reflect.get_metadata(
-                                export,
-                                ModuleMetadata.Providers,
-                                []
+                            import_providers_form_exports = (
+                                import_providers_form_exports
+                                + Reflect.get_metadata(
+                                    export, ModuleMetadata.Providers, []
+                                )
                             )
                         else:
                             import_providers_form_exports.append(export)

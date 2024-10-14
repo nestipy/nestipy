@@ -20,34 +20,35 @@ class Test:
 @Resolver(of=Test)
 @UseGuards(TestGuard)
 class UserResolver:
-
     @Query(return_type=Test)
     @UseGuards(TestGuardMethod)
     def test_query(
-            self,
-            test: Annotated[str, Arg()],
-            info: Annotated[Any, Info()],
-            req: Annotated[Request, Req()]
+        self,
+        test: Annotated[str, Arg()],
+        info: Annotated[Any, Info()],
+        req: Annotated[Request, Req()],
     ):
         print(test, req, info)
         return Test(test1="test1", test2_named="holla")
 
     @Mutation()
     def test_mutation(self) -> str:
-        return 'Mutation'
+        return "Mutation"
 
     @Subscription()
-    async def test_subscription(self, count: Annotated[int, Arg()] = 1000) -> AsyncIterator[int]:
+    async def test_subscription(
+        self, count: Annotated[int, Arg()] = 1000
+    ) -> AsyncIterator[int]:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)
 
     @ResolveField(name="test2_named")
     async def test2(
-            self,
-            root: Annotated[Any, Root()],
-            info: Annotated[Any, Info()],
-            req: Annotated[Request, Req()],
-            test: Annotated[str, Arg()],
+        self,
+        root: Annotated[Any, Root()],
+        info: Annotated[Any, Info()],
+        req: Annotated[Request, Req()],
+        test: Annotated[str, Arg()],
     ) -> str:
-        return 'test2 value ' + root.test1
+        return "test2 value " + root.test1

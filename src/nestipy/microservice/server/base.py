@@ -51,21 +51,21 @@ class MicroServiceServer(ABC):
         # process pattern
         slave = await self._pubsub.slave()
         await slave.connect()
-        for (pattern, callback) in self._request_subscriptions:
+        for pattern, callback in self._request_subscriptions:
             if pattern == request.pattern:
                 # resolve dependencies
                 response = await callback(self, request)
                 rpc_response = RpcResponse(
-                    pattern=request.response_topic,
-                    data=response,
-                    status="success"
+                    pattern=request.response_topic, data=response, status="success"
                 )
                 await slave.send_response(
                     request.response_topic,
-                    await self._pubsub.option.serializer.serialize(asdict(rpc_response))
+                    await self._pubsub.option.serializer.serialize(
+                        asdict(rpc_response)
+                    ),
                 )
                 return
-        rpc_response = await self._pubsub.option.serializer.serialize(
+        rpc_response: Any = await self._pubsub.option.serializer.serialize(
             asdict(
                 RpcResponse(
                     pattern=request.pattern,
@@ -73,19 +73,16 @@ class MicroServiceServer(ABC):
                     status="error",
                     exception=RpcException(
                         status_code=RPCErrorCode.NOT_FOUND,
-                        message=RPCErrorMessage.NOT_FOUND
-                    )
+                        message=RPCErrorMessage.NOT_FOUND,
+                    ),
                 )
             )
         )
-        await slave.send_response(
-            request.response_topic,
-            rpc_response
-        )
+        await slave.send_response(request.response_topic, rpc_response)
         await slave.close()
 
     async def handle_event(self, request: RpcRequest):
         # process pattern
-        for (pattern, callback) in self._subscriptions:
+        for pattern, callback in self._subscriptions:
             if pattern == request.pattern:
                 await callback(self, request)

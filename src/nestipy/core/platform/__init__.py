@@ -1,6 +1,6 @@
-class NestipyFastApiApplication:
+class FastApiApplication:
     pass
 
 
-class NestipyBlackSheepApplication:
+class BlackSheepApplication:
     pass

@@ -48,10 +48,10 @@ This is how configure swagger with Nestipy.
 
 ```python
 from nestipy.core.nestipy_factory import NestipyFactory
-from nestipy.core.platform import NestipyFastApiApplication
+from nestipy.core.platform import FastApiApplication
 from nestipy.openapi import DocumentBuilder, SwaggerModule
 
-app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
+app = NestipyFactory[FastApiApplication].create(AppModule)
 
 # setup swagger
 document = DocumentBuilder().set_title('Example API').set_description('The API description').set_version(

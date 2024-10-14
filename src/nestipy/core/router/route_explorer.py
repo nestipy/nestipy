@@ -16,7 +16,7 @@ class RouteExplorer:
 
     @classmethod
     def _normalize_path(cls, path: str) -> str:
-        return path.strip('/')
+        return path.strip("/")
 
     @classmethod
     def explore(cls, module_ref: Union[Type, object]):
@@ -29,11 +29,12 @@ class RouteExplorer:
         return routes
 
     def explore_controller(self, controller: Type) -> List[dict]:
-
         docs, schemas = self._openapi_scanner.explore(controller)
         routes = []
         # need to extract middleware, guards, exception_handler,
-        controller_path = self._normalize_path(Reflect.get_metadata(controller, RouteKey.path, ''))
+        controller_path = self._normalize_path(
+            Reflect.get_metadata(controller, RouteKey.path, "")
+        )
         for method_name, _ in getmembers(controller, isfunction):
             if method_name.startswith("__"):
                 continue
@@ -51,30 +52,30 @@ class RouteExplorer:
                         name=name,
                         in_=ParameterLocation.PATH,
                         required=True,
-                        description='Route path',
-                        allow_empty_value=False
+                        description="Route path",
+                        allow_empty_value=False,
                     )
                     for name in params.keys()
                 ]
                 method_deps, method_schemas = self._openapi_scanner.explore(method)
-                method_docs = deep_merge(method_deps, {'parameters': parameters})
+                method_docs = deep_merge(method_deps, {"parameters": parameters})
                 merged_docs = deep_merge(docs, method_docs)
                 merger_schemas = deep_merge(schemas, method_schemas)
                 path_docs = deep_merge(
-                    {'tags': [controller.__name__.replace('Controller', '')]},
-                    merged_docs
+                    {"tags": [controller.__name__.replace("Controller", "")]},
+                    merged_docs,
                 )
-                path_docs['tags'] = [path_docs['tags'][0]]
+                path_docs["tags"] = [path_docs["tags"][0]]
 
-                # en open api
+                # end open api
 
                 route_info = {
-                    'path': path,
-                    'request_method': request_method,
-                    'method_name': method_name,
-                    'controller': controller,
-                    'openapi': path_docs,  # openapi docs
-                    'schemas': merger_schemas,
+                    "path": path,
+                    "request_method": request_method,
+                    "method_name": method_name,
+                    "controller": controller,
+                    "openapi": path_docs,  # openapi docs
+                    "schemas": merger_schemas,
                 }
                 routes.append(route_info)
         return routes

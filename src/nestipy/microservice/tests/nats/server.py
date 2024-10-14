@@ -6,9 +6,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 
 async def main():
     client = NatsClientProxy(
-        MicroserviceOption(
-            url="nats://localhost:4222"
-        ),
+        MicroserviceOption(url="nats://localhost:4222"),
     )
     server = MicroServiceServer(pubsub=client)
     print("Running server ...")

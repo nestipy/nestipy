@@ -40,13 +40,13 @@ class NatsClientProxy(ClientProxy):
     async def listen(self) -> AsyncIterator[str]:
         while True:
             async for msg in self.consumer.messages:
-                yield msg.data.decode('utf-8')
+                yield msg.data.decode("utf-8")
             await asyncio.sleep(0.01)
 
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
         while True:
             async for msg in self.consumer.messages:
-                return msg.data.decode('utf-8')
+                return msg.data.decode("utf-8")
             await asyncio.sleep(0.01)
 
     async def close(self):

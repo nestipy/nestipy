@@ -11,9 +11,7 @@ class MinimalJinjaTemplateEngine(TemplateEngine):
 
     def __init__(self, template_dir: str):
         super().__init__(template_dir)
-        self.env = Environment(
-            loader=self.loader
-        )
+        self.env = Environment(loader=self.loader)
 
     def loader(self, name):
         segments = []

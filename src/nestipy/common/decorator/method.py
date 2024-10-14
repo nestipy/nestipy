@@ -1,14 +1,18 @@
-from typing import Callable, Literal
+from typing import Callable, Literal, Union
 
 from nestipy.metadata import Reflect, RouteKey
 
-HTTPMethod = Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'ALL', 'ANY']
+HTTPMethod = Literal[
+    "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "ALL", "ANY"
+]
 
 
 class Route:
-    def __init__(self, path: str = '', method: list[HTTPMethod] = None, **kwargs):
+    def __init__(
+        self, path: str = "", method: Union[list[HTTPMethod], None] = None, **kwargs
+    ):
         if method is None:
-            method = ['GET']
+            method = ["GET"]
         self.path = path
         self.kwargs = kwargs
         self.method = method
@@ -21,21 +25,21 @@ class Route:
         return handler
 
 
-def Get(path: str = '', **kwargs):
-    return Route(path=path, method=['GET'], **kwargs)
+def Get(path: str = "", **kwargs):
+    return Route(path=path, method=["GET"], **kwargs)
 
 
-def Post(path: str = '', **kwargs):
-    return Route(path=path, method=['POST'], **kwargs)
+def Post(path: str = "", **kwargs):
+    return Route(path=path, method=["POST"], **kwargs)
 
 
-def Put(path: str = '', **kwargs):
-    return Route(path=path, method=['PUT'], **kwargs)
+def Put(path: str = "", **kwargs):
+    return Route(path=path, method=["PUT"], **kwargs)
 
 
-def Patch(path: str = '', **kwargs):
-    return Route(path=path, method=['PATCH'], **kwargs)
+def Patch(path: str = "", **kwargs):
+    return Route(path=path, method=["PATCH"], **kwargs)
 
 
-def Delete(path: str = '', **kwargs):
-    return Route(path=path, method=['DELETE'], **kwargs)
+def Delete(path: str = "", **kwargs):
+    return Route(path=path, method=["DELETE"], **kwargs)

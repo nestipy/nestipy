@@ -1,6 +1,7 @@
 """
 This module contains classes to generate representations of content types by mime type.
 """
+
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime

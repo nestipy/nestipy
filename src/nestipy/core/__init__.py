@@ -7,7 +7,7 @@ from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_factory import NestipyFactory
 from .on_init import OnInit
 from .on_destroy import OnDestroy
-from .platform import NestipyFastApiApplication, NestipyBlackSheepApplication
+from .platform import FastApiApplication, BlackSheepApplication
 from .template import MinimalJinjaTemplateEngine
 from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
 from .background import BackgroundTask, BackgroundTasks
@@ -20,8 +20,8 @@ __all__ = [
     "ExecutionContext",
     "ArgumentHost",
     "HttpArgumentHost",
-    "NestipyFastApiApplication",
-    "NestipyBlackSheepApplication",
+    "FastApiApplication",
+    "BlackSheepApplication",
     "MinimalJinjaTemplateEngine",
     "AppKey",
     "MiddlewareConsumer",
@@ -31,5 +31,5 @@ __all__ = [
     "NestipyMicroservice",
     "NestipyConnectMicroservice",
     "BackgroundTask",
-    "BackgroundTasks"
+    "BackgroundTasks",
 ]

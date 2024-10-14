@@ -28,19 +28,19 @@ QueryType = Union[None, bytes, str, dict, list]
 
 
 def get_example_scope(
-        method: str,
-        path: str,
-        extra_headers: HeadersType = None,
-        *,
-        query: QueryType = None,
-        scheme: str = "http",
-        server: Union[None, List, Tuple[str, int]] = None,
-        client: Union[None, List, Tuple[str, int]] = None,
-        user_agent: bytes = _DEFAULT_AGENT,
-        accept: bytes = _DEFAULT_ACCEPT,
-        accept_language: bytes = _DEFAULT_ACCEPT_LANGUAGE,
-        accept_encoding: bytes = _DEFAULT_ACCEPT_ENCODING,
-        cookies: CookiesType = None,
+    method: str,
+    path: str,
+    extra_headers: HeadersType = None,
+    *,
+    query: QueryType = None,
+    scheme: str = "http",
+    server: Union[None, List, Tuple[str, int]] = None,
+    client: Union[None, List, Tuple[str, int]] = None,
+    user_agent: bytes = _DEFAULT_AGENT,
+    accept: bytes = _DEFAULT_ACCEPT,
+    accept_language: bytes = _DEFAULT_ACCEPT_LANGUAGE,
+    accept_encoding: bytes = _DEFAULT_ACCEPT_ENCODING,
+    cookies: CookiesType = None,
 ):
     """Returns a mocked ASGI scope"""
     if "?" in path:
@@ -100,17 +100,17 @@ def get_example_scope(
             ]
 
     headers = (
-            [
-                (b"host", host.encode()),
-                (b"user-agent", user_agent),
-                (b"accept", accept),
-                (b"accept-language", accept_language),
-                (b"accept-encoding", accept_encoding),
-                (b"connection", b"keep-alive"),
-                (b"upgrade-insecure-requests", b"1"),
-            ]
-            + ([tuple(header) for header in extra_headers] if extra_headers else [])
-            + cookies_headers
+        [
+            (b"host", host.encode()),
+            (b"user-agent", user_agent),
+            (b"accept", accept),
+            (b"accept-language", accept_language),
+            (b"accept-encoding", accept_encoding),
+            (b"connection", b"keep-alive"),
+            (b"upgrade-insecure-requests", b"1"),
+        ]
+        + ([tuple(header) for header in extra_headers] if extra_headers else [])
+        + cookies_headers
     )
 
     return {
@@ -149,15 +149,12 @@ class TestResponse:
 
     @classmethod
     def from_dict(cls, response: List[Dict[str, Any]]) -> "TestResponse":
-        response_body = HTTPBody(
-            type=response[1]['type'],
-            body=response[1]['body']
-        )
+        response_body = HTTPBody(type=response[1]["type"], body=response[1]["body"])
         http_response = HTTPResponse(
-            type=response[0]['type'],
-            status=response[0]['status'],
-            headers=response[0]['headers'],
-            body=response_body
+            type=response[0]["type"],
+            status=response[0]["status"],
+            headers=response[0]["headers"],
+            body=response_body,
         )
         return cls(raw_response=response, response=http_response)
 
@@ -167,7 +164,7 @@ class TestResponse:
     def get_headers(self) -> Dict[str, str]:
         headers = {}
         for key, value in self.response.headers:
-            headers[key.decode('utf-8')] = value.decode('utf-8')
+            headers[key.decode("utf-8")] = value.decode("utf-8")
         return headers
 
     def body(self) -> bytes:

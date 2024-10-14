@@ -34,23 +34,25 @@ class ExceptionDetail:
     type: str
     message: str
     root: str
-    request: RequestTrack = field(default_factory=lambda: RequestTrack('GET', '0.0.0.0:8000'))
+    request: RequestTrack = field(
+        default_factory=lambda: RequestTrack("GET", "0.0.0.0:8000")
+    )
     traceback: List[Traceback] = field(default_factory=lambda: [])
     framework: FrameworkTrack = field(
         default_factory=lambda: FrameworkTrack(
-            platform.python_version(),
-            importlib.metadata.version('nestipy')
+            platform.python_version(), importlib.metadata.version("nestipy")
         )
     )
 
 
 class HttpException(Exception):
     def __init__(
-            self,
-            status_code: int,
-            message: str = None,
-            details: Union[dict, str] = None,
-            track_back: Union[ExceptionDetail, None] = None):
+        self,
+        status_code: int,
+        message: Union[str, None] = None,
+        details: Union[dict, str, None] = None,
+        track_back: Union[ExceptionDetail, None] = None,
+    ):
         self.status_code = status_code
         self.message = message
         self.details = details

@@ -17,21 +17,14 @@ from .user_service import UserService
 @Injectable()
 class TestMiddleware2(NestipyMiddleware):
     async def use(self, req: Request, res: Response, next_fn: NextFn):
-        print('TestMiddleware__2 called')
+        print("TestMiddleware__2 called")
         result = await next_fn()
-        print('TestMiddleware__2 called 2')
+        print("TestMiddleware__2 called 2")
         return result
 
 
 @Module(
-    providers=[
-        UserService,
-        UserResolver,
-        UserGateway
-    ],
-    controllers=[
-        UserController
-    ]
+    providers=[UserService, UserResolver, UserGateway], controllers=[UserController]
 )
 class UserModule(NestipyModule):
     discover: Annotated[DiscoverService, Inject()]

@@ -14,7 +14,7 @@ class RedisClientProxy(ClientProxy):
         super().__init__(option)
 
     async def connect(self):
-        url = f'redis://{self.option.option.host}:{self.option.option.port}'
+        url = f"redis://{self.option.option.host}:{self.option.option.port}"
         self.broker = Redis.from_url(url, max_connections=10, decode_responses=True)
         self.pubsub = self.broker.pubsub()
         await self.pubsub.connect()
@@ -36,8 +36,8 @@ class RedisClientProxy(ClientProxy):
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
         async for message in self.pubsub.listen():
             if message is not None:
-                if message['type'] == 'message':
-                    response = message['data']
+                if message["type"] == "message":
+                    response = message["data"]
                     return response
 
     async def close(self):

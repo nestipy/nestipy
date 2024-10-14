@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 def Catch(
-        *exceptions: Union[Type["HttpException"], "HttpException"]
+    *exceptions: Union[Type["HttpException"], "HttpException"],
 ) -> Callable[[Type["ExceptionFilter"]], Type["ExceptionFilter"]]:
     """
     Catch decorator

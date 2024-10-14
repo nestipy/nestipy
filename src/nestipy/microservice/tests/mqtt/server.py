@@ -8,10 +8,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 async def main():
     client = MqttClientProxy(
         MicroserviceOption(
-            option=MicroserviceClientOption(
-                host='localhost',
-                port=1883
-            )
+            option=MicroserviceClientOption(host="localhost", port=1883)
         ),
     )
     server = MicroServiceServer(pubsub=client)

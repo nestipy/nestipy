@@ -2,6 +2,7 @@
 This module provides common functions to handle Markdown.
 These functions apply to any kind of Markdown work.
 """
+
 from typing import Dict, Iterable
 
 

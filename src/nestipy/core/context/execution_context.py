@@ -9,8 +9,17 @@ from .websocket_argument_host import WebsocketArgumentHost
 
 
 class ExecutionContext(ArgumentHost):
-    def get_args(self) -> tuple[Union[Type, object], Callable, Union[Request, None], Union[Response, None]]:
-        return self.get_class(), self.get_handler(), self.get_request(), self.get_response()
+    def get_args(
+        self,
+    ) -> tuple[
+        Union[Type, object, None], Callable, Union[Request, None], Union[Response, None]
+    ]:
+        return (
+            self.get_class(),
+            self.get_handler(),
+            self.get_request(),
+            self.get_response(),
+        )
 
     def switch_to_http(self) -> HttpArgumentHost:
         return HttpArgumentHost(
@@ -19,7 +28,7 @@ class ExecutionContext(ArgumentHost):
             self.get_class(),
             self.get_handler(),
             self.get_request(),
-            self.get_response()
+            self.get_response(),
         )
 
     def switch_to_graphql(self) -> GraphqlArgumentHost:
@@ -59,7 +68,7 @@ class ExecutionContext(ArgumentHost):
             None,
             None,
             None,
-            self._socket_data
+            self._socket_data,
         )
 
     def get_context(self):

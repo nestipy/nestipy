@@ -1,6 +1,22 @@
-from blacksheep import Application, Response as BlackSheepResponse, Request as BlackSheepRequest
-from blacksheep import get, put, post, patch, head, options, delete, route as all_route, Content, ws as websocket, \
-    WebSocket as BSWebSocket, StreamedContent
+from blacksheep import (
+    Application,
+    Response as BlackSheepResponse,
+    Request as BlackSheepRequest,
+)
+from blacksheep import (
+    get,
+    put,
+    post,
+    patch,
+    head,
+    options,
+    delete,
+    route as all_route,
+    Content,
+    ws as websocket,
+    WebSocket as BSWebSocket,
+    StreamedContent,
+)
 
 from nestipy.common.http_ import Response
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
@@ -8,7 +24,6 @@ from .http_adapter import HttpAdapter
 
 
 class BlackSheepAdapter(HttpAdapter):
-
     def __init__(self):
         self.instance = Application()
         self.instance.on_start(self.on_startup)
@@ -28,7 +43,7 @@ class BlackSheepAdapter(HttpAdapter):
             max_age=300,
         )
 
-    def create_wichard(self, prefix: str = '/', name: str = 'full_path') -> str:
+    def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
         return f"/{prefix.strip('/')}" + "/{" + f"path:{name}" + "}"
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:
@@ -68,27 +83,33 @@ class BlackSheepAdapter(HttpAdapter):
     def _create_blacksheep_handler(self, callback: CallableHandler, _metadata: dict):
         # path = metadata['path']
         # params = RouteParamsExtractor.extract_params(path)
-        async def blacksheep_handler(_bs_request: BlackSheepRequest) -> BlackSheepResponse:
+        async def blacksheep_handler(
+            _bs_request: BlackSheepRequest,
+        ) -> BlackSheepResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
             if result.is_stream():
                 return BlackSheepResponse(
                     content=StreamedContent(
                         content_type=result.content_type().encode(),
-                        data_provider=result.get_stream
+                        data_provider=result.get_stream,
                     ),
                     headers=[(k.encode(), v.encode()) for k, v in result.headers()],
-                    status=result.status_code() or 200
+                    status=result.status_code() or 200,
                 )
             return BlackSheepResponse(
-                content=Content(data=result.content(), content_type=result.content_type().encode()),
+                content=Content(
+                    data=result.content(), content_type=result.content_type().encode()
+                ),
                 headers=[(k.encode(), v.encode()) for k, v in result.headers()],
-                status=result.status_code() or 200
+                status=result.status_code() or 200,
             )
 
         return blacksheep_handler
 
-    def _create_blacksheep_websocket_handler(self, callback: WebsocketHandler, metadata: dict):
+    def _create_blacksheep_websocket_handler(
+        self, callback: WebsocketHandler, metadata: dict
+    ):
         async def blacksheep_websocket_handler(bsw: BSWebSocket):
             wbs = self.create_websocket_parameter()
             return await callback(wbs)

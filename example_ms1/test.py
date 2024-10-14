@@ -1,17 +1,22 @@
 import asyncio
 import logging
 
+
 async def awaited():
     await asyncio.sleep(1)
+
+
 async def task1():
     while True:
         logging.info("Task 1 running...")
         await awaited()  # Non-blocking operation to yield control
 
+
 async def task2():
     while True:
         logging.info("Task 2 running...")
         await asyncio.sleep(2)  # Non-blocking operation to yield control
+
 
 async def main():
     logging.info("Starting tasks...")
@@ -31,6 +36,7 @@ async def main():
         # Cancel tasks if needed (optional)
         task1_handle.cancel()
         task2_handle.cancel()
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

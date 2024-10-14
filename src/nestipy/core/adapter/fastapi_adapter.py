@@ -22,12 +22,12 @@ class FastApiAdapter(HttpAdapter):
     def get_instance(self) -> any:
         return self.instance
 
-    def create_wichard(self, prefix: str = '/', name: str = 'full_path') -> str:
+    def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
         return f"/{prefix.strip('/')}" + "/{" + f"{name}:path" + "}"
 
     def use(self, callback: CallableHandler, metadata: dict) -> None:
         # need to transform if we use middleware from here
-        self.instance.middleware('http')
+        self.instance.middleware("http")
 
     def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
         self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
@@ -70,11 +70,8 @@ class FastApiAdapter(HttpAdapter):
 
     def enable_cors(self) -> None:
         self.instance.add_middleware(
-            typing.cast(
-                _MiddlewareClass[typing.Any],
-                CORSMiddleware
-            ),
-            allow_origins=['*'],
+            typing.cast(_MiddlewareClass[typing.Any], CORSMiddleware),
+            allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -90,12 +87,12 @@ class FastApiAdapter(HttpAdapter):
                 return FStreamingResponse(
                     content=result.get_stream(),
                     headers={k: v for k, v in result.headers()},
-                    status_code=result.status_code() or 200
+                    status_code=result.status_code() or 200,
                 )
             return FResponse(
                 content=result.content(),
                 headers={k: v for k, v in result.headers()},
-                status_code=result.status_code() or 200
+                status_code=result.status_code() or 200,
             )
 
         return fastapi_handler

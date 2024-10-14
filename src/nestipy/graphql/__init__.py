@@ -10,5 +10,5 @@ __all__ = [
     "GraphqlModule",
     "GraphqlOption",
     "PubSub",
-    "ResolveField"
+    "ResolveField",
 ]

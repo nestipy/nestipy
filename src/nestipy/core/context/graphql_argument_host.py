@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class GraphqlArgumentHost(ArgumentHost):
-
     def get_request(self) -> Request:
         return self._req
 

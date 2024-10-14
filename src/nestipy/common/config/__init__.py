@@ -6,8 +6,10 @@ from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.ioc import ModuleProviderDict, Inject
 from nestipy.metadata import Reflect
 
-Config = dict[Literal['folder'], str]
-ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[Config]().set_method('for_root').build()
+Config = dict[Literal["folder"], str]
+ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = (
+    ConfigurableModuleBuilder[Config]().set_method("for_root").build()
+)
 
 
 @Injectable()
@@ -16,25 +18,16 @@ class ConfigService:
 
 
 @Module(
-    providers=[
-        ConfigService,
-        ModuleProviderDict(value='hello', token='MyProvider')
-    ],
-    exports=[
-        ConfigService
-    ],
-    is_global=True
+    providers=[ConfigService, ModuleProviderDict(value="hello", token="MyProvider")],
+    exports=[ConfigService],
+    is_global=True,
 )
-class ConfigModule(ConfigurableModuleClass):
-    ...
+class ConfigModule(ConfigurableModuleClass): ...
 
 
-if __name__ == '__main__':
-    d = ConfigModule.for_root({'folder': './config'})
+if __name__ == "__main__":
+    d = ConfigModule.for_root({"folder": "./config"})
     meta = Reflect.get(d)
-    print(meta, {k: v for k, v in asdict(d).items() if k != 'module'})
+    print(meta, {k: v for k, v in asdict(d).items() if k != "module"})
 
-__all__ = [
-    "ConfigService",
-    "ConfigModule"
-]
+__all__ = ["ConfigService", "ConfigModule"]

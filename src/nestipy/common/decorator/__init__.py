@@ -23,5 +23,5 @@ __all__ = [
     "Put",
     "Patch",
     "Delete",
-    "apply_decorators"
+    "apply_decorators",
 ]

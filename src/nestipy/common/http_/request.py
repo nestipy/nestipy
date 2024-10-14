@@ -55,8 +55,10 @@ class Request:
     @property
     def query_params(self) -> dict:
         if self._query_params is None:
-            self._query_params = {k.decode(): v.decode() for k, v in
-                                  dict(parse_qsl(self.scope["query_string"])).items()}
+            self._query_params = {
+                k.decode(): v.decode()
+                for k, v in dict(parse_qsl(self.scope["query_string"])).items()
+            }
         return self._query_params
 
     @property
@@ -66,13 +68,13 @@ class Request:
     @property
     def path(self) -> str:
         if self._path is None:
-            self._path = self.scope.get('raw_path').decode()
+            self._path = self.scope.get("raw_path").decode()
         return self._path
 
     @property
     def method(self) -> str:
         if self._method is None:
-            self._method = self.scope.get('method')
+            self._method = self.scope.get("method")
         return self._method
 
     @property
@@ -86,7 +88,7 @@ class Request:
     @property
     def host(self) -> str:
         if self._host is None:
-            host: tuple[str, int] = self.scope.get('server')
+            host: tuple[str, int] = self.scope.get("server")
             self._host = f"{self.scope.get('scheme')}://{host[0]}:{host[1]}"
         return self._host
 
@@ -160,7 +162,7 @@ class Request:
         if self._json is None:
             body = await self.body()
             try:
-                self._json = ujson.loads('{}' if body == '' else body)
+                self._json = ujson.loads("{}" if body == "" else body)
             except ujson.JSONDecodeError:
                 self._json = {}
         return self._json
@@ -173,23 +175,21 @@ class Request:
             content_type: Content-Type of request body
         """
         _content_type = self.headers.get("content-type", "")
-        return parse_content_header(
-            _content_type
-        )
+        return parse_content_header(_content_type)
 
     def form(
-            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+        self, *, max_files: int | float = 1000, max_fields: int | float = 1000
     ) -> AwaitableOrContextManager[FormData]:
         return AwaitableOrContextManagerWrapper(
             self._get_form(max_files=max_files, max_fields=max_fields)
         )
 
     async def _get_form(
-            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+        self, *, max_files: int | float = 1000, max_fields: int | float = 1000
     ) -> FormData:
         if self._form is None:
             assert (
-                    parse_options_header is not None
+                parse_options_header is not None
             ), "The `python-multipart` library must be installed to use form parsing."
             content_type_header = self.headers.get("content-type")
             content_type: bytes

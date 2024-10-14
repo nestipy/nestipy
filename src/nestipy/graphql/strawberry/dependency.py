@@ -5,8 +5,13 @@ from nestipy.ioc.context_container import RequestContextContainer
 from nestipy.metadata import CtxDepKey
 
 
-def args_callback(_name: str, _token: Optional[str], _type_ref: Type, _request_context: RequestContextContainer):
-    args = _request_context.execution_context.switch_to_graphql().get_args()
+def args_callback(
+    _name: str,
+    _token: Optional[str],
+    _type_ref: Type,
+    _request_context: RequestContextContainer,
+):
+    args: dict = _request_context.execution_context.switch_to_graphql().get_args()
     return args.get(_token or _name)
 
 

@@ -4,7 +4,6 @@ from .dependency import TypeAnnotated, Default
 
 
 class ContainerHelper:
-
     @classmethod
     def get_type_from_annotation(cls, annotation: Any) -> tuple[Type, TypeAnnotated]:
         args: tuple = get_args(annotation)

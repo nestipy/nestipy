@@ -7,7 +7,6 @@ if TYPE_CHECKING:
 
 
 class NestipyInterceptor(ABC):
-
     @abstractmethod
     async def intercept(self, context: "ExecutionContext", next_fn: "NextFn"):
         """

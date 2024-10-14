@@ -1,6 +1,7 @@
 """
 This module provides functions to generate Markdown for OpenAPI Version 3.
 """
+
 import copy
 import os
 import warnings
@@ -35,7 +36,7 @@ def _can_simplify_xml(content_type) -> bool:
 
 class ExpandContext:
     def __init__(self) -> None:
-        self.expanded_refs = set()
+        self.expanded_refs: set = set()
 
 
 @dataclass

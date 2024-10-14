@@ -2,7 +2,7 @@ import dataclasses
 
 
 class EventMetadata:
-    Event: str = '__event_listener__'
+    Event: str = "__event_listener__"
 
 
 @dataclasses.dataclass

@@ -15,6 +15,7 @@ def UseGuards(*guards: Union[Type, CanActivate]):
         decorator(): UseGuards decorator
     """
     return SetMetadata(
-        GuardKey.Meta, [g for g in guards if issubclass(g, CanActivate) or callable(g)],
-        as_list=True
+        GuardKey.Meta,
+        [g for g in guards if issubclass(g, CanActivate) or callable(g)],
+        as_list=True,
     )

@@ -13,21 +13,23 @@ class ClientsConfig:
     option: MicroserviceOption
 
 
-ConfigurableModuleClass, CLIENT_OPTION = ConfigurableModuleBuilder[list[ClientsConfig]]().build()
+ConfigurableModuleClass, CLIENT_OPTION = ConfigurableModuleBuilder[
+    list[ClientsConfig]
+]().build()
 
 
 @Module()
 class ClientsModule(ConfigurableModuleClass):
-
     @classmethod
     def register(cls, option: list[ClientsConfig]):
-        dynamic_module: DynamicModule = getattr(ConfigurableModuleClass, "register")(option)
+        dynamic_module: DynamicModule = getattr(ConfigurableModuleClass, "register")(
+            option
+        )
         providers = []
         for opt in option:
             providers.append(
                 ModuleProviderDict(
-                    token=opt.name,
-                    value=ClientModuleFactory.create(opt.option)
+                    token=opt.name, value=ClientModuleFactory.create(opt.option)
                 )
             )
         dynamic_module.providers = dynamic_module.providers + providers

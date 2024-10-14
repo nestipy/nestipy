@@ -69,7 +69,7 @@ from typing import Annotated
 import pytest
 
 from nestipy.common import Injectable, Controller, Get, Response, Post
-from nestipy.core import NestipyBlackSheepApplication
+from nestipy.core import BlackSheepApplication
 from nestipy.ioc import Inject, Res, Body
 from nestipy.testing import Test, TestingModuleRef, TestClient
 
@@ -105,7 +105,7 @@ def module_ref() -> TestingModuleRef:
 @pytest.fixture
 def app(module_ref: TestingModuleRef) -> TestClient:
     # return module_ref.create_nestipy_client() # for FastAPI
-    return module_ref.create_nestipy_client(NestipyBlackSheepApplication)  # for blacksheep
+    return module_ref.create_nestipy_client(BlackSheepApplication)  # for blacksheep
 
 
 @pytest.mark.asyncio

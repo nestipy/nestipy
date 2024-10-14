@@ -36,7 +36,9 @@ class NestipyMicroservice:
         # create all instance if not
         await self.app.setup()
         # get server module
-        server_module: MicroserviceServerModule = await self.app.get(MicroserviceServerModule)
+        server_module: MicroserviceServerModule = await self.app.get(
+            MicroserviceServerModule
+        )
         controllers = server_module.discover.get_all_controller()
         for server in self.servers:
             MicroserviceProxy(server).apply_routes(controllers)
@@ -65,18 +67,24 @@ class NestipyMicroservice:
                 pass
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
-        if scope.get('type') == 'lifespan':
+        if scope.get("type") == "lifespan":
+
             def create_task():
                 asyncio.create_task(self.start())
 
             create_task()
-            console.print("[INFO]    Microservice startup completed", style=Style(color="green", bold=True))
+            console.print(
+                "[INFO]    Microservice startup completed",
+                style=Style(color="green", bold=True),
+            )
 
 
 class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
     _running: bool = False
 
-    def __init__(self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]):
+    def __init__(
+        self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]
+    ):
         NestipyMicroservice.__init__(self, module, option)
         NestipyApplication.__init__(self, config)
         self.app = self

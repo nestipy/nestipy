@@ -13,12 +13,12 @@ from nestipy.metadata import ClassMetadata, Reflect
 
 @Injectable()
 class GuardProcessor(SpecialProviderExtractor):
-
     def __init__(self):
         self.container = NestipyContainer.get_instance()
 
-    async def process(self, context: ExecutionContext, is_http: bool = True) -> tuple[bool, Union[Type, None]]:
-
+    async def process(
+        self, context: ExecutionContext, is_http: bool = True
+    ) -> tuple[bool, Union[Type, None]]:
         handler_module_class = context.get_module()
         handler_class = context.get_class()
         handler = context.get_handler()
@@ -26,9 +26,7 @@ class GuardProcessor(SpecialProviderExtractor):
         if is_http:
             global_guards = context.get_adapter().get_global_guards()
         module_guards = self.extract_special_providers(
-            handler_module_class,
-            CanActivate,
-            APP_GUARD
+            handler_module_class, CanActivate, APP_GUARD
         )
         handler_class_guards = Reflect.get_metadata(handler_class, GuardKey.Meta, [])
         handler_guards = Reflect.get_metadata(handler, GuardKey.Meta, [])
@@ -38,8 +36,9 @@ class GuardProcessor(SpecialProviderExtractor):
                 services = self.container.get_all_services()
                 # Put dependency
                 Reflect.set_metadata(
-                    g, ClassMetadata.Metadata,
-                    ClassMetadata(handler_class, global_providers=services)
+                    g,
+                    ClassMetadata.Metadata,
+                    ClassMetadata(handler_class, global_providers=services),
                 )
                 #  load instance from container
                 instance: CanActivate = await self.container.get(g)

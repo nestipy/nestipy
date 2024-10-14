@@ -43,7 +43,7 @@ def _to_form_data(items: list[tuple[str, str | UploadFile]]):
         if isinstance(value, str):
             try:
                 form_data[key] = json.loads(value)
-            except:
+            except json.JSONDecodeError:
                 form_data[key] = value
         else:
             form_data[key] = value
@@ -65,10 +65,10 @@ class MultiPartException(Exception):
 
 class FormParser:
     def __init__(
-            self, headers: dict[str, typing.Any], stream: typing.AsyncGenerator[bytes, None]
+        self, headers: dict[str, typing.Any], stream: typing.AsyncGenerator[bytes, None]
     ) -> None:
         assert (
-                multipart is not None
+            multipart is not None
         ), "The `python-multipart` library must be installed to use form parsing."
         self.headers = headers
         self.stream = stream
@@ -139,15 +139,15 @@ class MultiPartParser:
     max_file_size = 1024 * 1024
 
     def __init__(
-            self,
-            headers: dict[str, typing.Any],
-            stream: typing.AsyncGenerator[bytes, None],
-            *,
-            max_files: int | float = 1000,
-            max_fields: int | float = 1000,
+        self,
+        headers: dict[str, typing.Any],
+        stream: typing.AsyncGenerator[bytes, None],
+        *,
+        max_files: int | float = 1000,
+        max_fields: int | float = 1000,
     ) -> None:
         assert (
-                multipart is not None
+            multipart is not None
         ), "The `python-multipart` library must be installed to use form parsing."
         self.headers = headers
         self.stream = stream
@@ -230,7 +230,10 @@ class MultiPartParser:
                 file=temp_file,  # type: ignore[arg-type]
                 size=0,
                 filename=filename,
-                headers={key.decode('utf-8'): value.decode('utf-8') for key, value in self._current_part.item_headers},
+                headers={
+                    key.decode("utf-8"): value.decode("utf-8")
+                    for key, value in self._current_part.item_headers
+                },
             )
         else:
             self._current_fields += 1

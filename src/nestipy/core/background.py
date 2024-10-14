@@ -20,12 +20,14 @@ def is_async_callable(obj: typing.Any) -> typing.Any:
         obj = obj.func
 
     return asyncio.iscoroutinefunction(obj) or (
-            callable(obj) and asyncio.iscoroutinefunction(getattr(obj, '__call__'))
+        callable(obj) and asyncio.iscoroutinefunction(getattr(obj, "__call__"))
     )
 
 
 class BackgroundTask:
-    def __init__(self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs) -> None:
+    def __init__(
+        self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
+    ) -> None:
         self.func = func
         self.args = args
         self.kwargs = kwargs
@@ -44,7 +46,9 @@ class BackgroundTasks:
         self.is_running = False
         self.worker_task = None
 
-    def add_task(self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs) -> None:
+    def add_task(
+        self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
+    ) -> None:
         task = BackgroundTask(func, *args, **kwargs)
         self.add(task)
 

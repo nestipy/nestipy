@@ -15,5 +15,5 @@ __all__ = [
     "NatsClientProxy",
     "ClientsModule",
     "ClientsConfig",
-    "ClientModuleFactory"
+    "ClientModuleFactory",
 ]

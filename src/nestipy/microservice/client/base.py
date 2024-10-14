@@ -3,7 +3,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from dataclasses import field, dataclass
-from typing import AsyncIterator
+from typing import AsyncIterator, Any
 from typing import Optional
 
 import async_timeout
@@ -25,7 +25,6 @@ class MicroserviceOption:
 
 
 class ClientProxy(ABC):
-
     def __init__(self, option: MicroserviceOption):
         self.option = option
 
@@ -53,30 +52,32 @@ class ClientProxy(ABC):
     async def send_response(self, topic, data):
         pass
 
-    async def send(self, topic, data: any, headers: dict[str, str] = None) -> RpcResponse:
+    async def send(
+        self, topic, data: Any, headers: dict[str, str] = None
+    ) -> RpcResponse:
         await self.connect()
         response_topic = uuid.uuid4().hex
         request = RpcRequest(
             pattern=topic,
             data=data,
             response_topic=response_topic,
-            headers=headers or {}
+            headers=headers or {},
         )
         await self.subscribe(response_topic)
         await self._publish(
             MICROSERVICE_CHANNEL,
-            await self.option.serializer.serialize(
-                asdict(request)
-            )
+            await self.option.serializer.serialize(asdict(request)),
         )
         #  add timeout
         try:
             with async_timeout.timeout(self.option.timeout):
-                rpc_response = await self.listen_response(response_topic, self.option.timeout)
+                rpc_response = await self.listen_response(
+                    response_topic, self.option.timeout
+                )
         except asyncio.TimeoutError:
             raise RpcException(
                 status_code=RPCErrorCode.DEADLINE_EXCEEDED,
-                message=RPCErrorMessage.DEADLINE_EXCEEDED
+                message=RPCErrorMessage.DEADLINE_EXCEEDED,
             )
         await self.unsubscribe(response_topic)
         await self.close()
@@ -87,18 +88,9 @@ class ClientProxy(ABC):
         return response
 
     async def emit(self, topic, data, headers: dict[str, str] = None):
-        request = RpcRequest(
-            pattern=topic,
-            data=data,
-            headers=headers or {}
-        )
-        json_req = await self.option.serializer.serialize(
-            asdict(request)
-        )
-        await self._publish(
-            topic,
-            json_req
-        )
+        request = RpcRequest(pattern=topic, data=data, headers=headers or {})
+        json_req = await self.option.serializer.serialize(asdict(request))
+        await self._publish(topic, json_req)
 
     @abstractmethod
     def listen(self) -> AsyncIterator[str]:

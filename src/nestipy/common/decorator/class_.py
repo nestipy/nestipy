@@ -1,5 +1,5 @@
 import enum
-from typing import Type, Callable, Union
+from typing import Type, Callable, Union, Optional
 
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer, ModuleProviderDict
@@ -7,13 +7,13 @@ from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 
 
 class Scope(enum.Enum):
-    Request = 'Request'
-    Transient = 'Transient'
-    Singleton = 'Singleton'
+    Request = "Request"
+    Transient = "Transient"
+    Singleton = "Singleton"
 
 
 class Injectable:
-    scope: Scope = None
+    scope: Optional[Scope] = None
 
     def __init__(self, scope: Scope = Scope.Singleton):
         self.scope = scope
@@ -31,7 +31,7 @@ class Injectable:
 
 
 class Controller:
-    def __init__(self, path: str = '/', **kwargs):
+    def __init__(self, path: str = "/", **kwargs):
         self.path = path
         self.kwargs = kwargs
         self.container = NestipyContainer.get_instance()
@@ -52,12 +52,14 @@ class Module:
     is_global: bool = False
 
     def __init__(
-            self,
-            providers: list[Callable | ModuleProviderDict] = None,
-            controllers: list[Callable] = None,
-            imports: list[Union[Type, Callable, ModuleProviderDict, DynamicModule]] = None,
-            exports: list[Union[Type, Callable, str]] = None,
-            is_global: bool = False
+        self,
+        providers: Optional[list[Callable | ModuleProviderDict]] = None,
+        controllers: Optional[list[Callable]] = None,
+        imports: Optional[
+            list[Union[Type, Callable, ModuleProviderDict, DynamicModule]]
+        ] = None,
+        exports: Optional[list[Union[Type, Callable, str]]] = None,
+        is_global: bool = False,
     ):
         self.providers = providers or []
         self.controllers = controllers or []
@@ -67,15 +69,31 @@ class Module:
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls: Type):
-        Reflect.set_metadata(cls, ModuleMetadata.Providers, self.providers + getattr(cls, ModuleMetadata.Providers, []))
+        Reflect.set_metadata(
+            cls,
+            ModuleMetadata.Providers,
+            self.providers + getattr(cls, ModuleMetadata.Providers, []),
+        )
         Reflect.set_metadata(
             cls,
             ModuleMetadata.Controllers,
-            self.controllers + getattr(cls, ModuleMetadata.Controllers, [])
+            self.controllers + getattr(cls, ModuleMetadata.Controllers, []),
         )
-        Reflect.set_metadata(cls, ModuleMetadata.Imports, self.imports + getattr(cls, ModuleMetadata.Imports, []))
-        Reflect.set_metadata(cls, ModuleMetadata.Exports, self.exports + getattr(cls, ModuleMetadata.Exports, []))
-        Reflect.set_metadata(cls, ModuleMetadata.Global, self.is_global or getattr(cls, ModuleMetadata.Global, False))
+        Reflect.set_metadata(
+            cls,
+            ModuleMetadata.Imports,
+            self.imports + getattr(cls, ModuleMetadata.Imports, []),
+        )
+        Reflect.set_metadata(
+            cls,
+            ModuleMetadata.Exports,
+            self.exports + getattr(cls, ModuleMetadata.Exports, []),
+        )
+        Reflect.set_metadata(
+            cls,
+            ModuleMetadata.Global,
+            self.is_global or getattr(cls, ModuleMetadata.Global, False),
+        )
         Reflect.set_metadata(cls, ModuleMetadata.Module, True)
         self.container.add_singleton(cls)
         return cls

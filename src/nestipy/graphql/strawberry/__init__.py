@@ -1,5 +1,10 @@
 from strawberry import directive as Directive, schema_directive as SchemaDirective
-from strawberry import field as Field, lazy as Lazy, parent as Parent, argument as Argument
+from strawberry import (
+    field as Field,
+    lazy as Lazy,
+    parent as Parent,
+    argument as Argument,
+)
 from strawberry import input as Input, scalar as Scalar, enum as Enum
 from strawberry import type as ObjectType, interface as Interface
 
@@ -23,5 +28,5 @@ __all__ = [
     "Parent",
     "Argument",
     "Root",
-    "Info"
+    "Info",
 ]

@@ -1,5 +1,3 @@
 from .processor import ExceptionFilterHandler
 
-__all__ = [
-    "ExceptionFilterHandler"
-]
+__all__ = ["ExceptionFilterHandler"]

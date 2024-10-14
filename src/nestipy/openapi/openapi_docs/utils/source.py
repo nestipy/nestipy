@@ -1,6 +1,7 @@
 """
 This module provides methods to obtain OpenAPI Documentation from file or web sources.
 """
+
 import json
 from pathlib import Path
 

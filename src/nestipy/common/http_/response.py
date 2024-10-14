@@ -19,7 +19,7 @@ class Response:
     _cookies: set[tuple[str, str]] = set()
     _content: Union[bytes, None]
 
-    def __init__(self, template_engine: "TemplateEngine" = None) -> None:
+    def __init__(self, template_engine: Union["TemplateEngine", None] = None) -> None:
         self._headers = set()
         self._status_code = 200
         self._content = None
@@ -57,15 +57,17 @@ class Response:
 
     def header(self, name: str, value: str) -> "Response":
         """
-            Add header
-            Args:
-                name(str): Header name
-                value (str): Header value
+        Add header
+        Args:
+            name(str): Header name
+            value (str): Header value
 
-            Returns:
-                response(Response): An instance of response
+        Returns:
+            response(Response): An instance of response
         """
-        self._headers = set([(k, v) for k, v in self._headers if k.lower() != name.lower])
+        self._headers = set(
+            [(k, v) for k, v in self._headers if k.lower() != name.lower]
+        )
         self._headers.add((name, value))
         return self
 
@@ -79,7 +81,9 @@ class Response:
         Returns:
             response(Response): An instance of response
         """
-        self._cookies = set([(k, v) for k, v in self._cookies if k.lower() != name.lower])
+        self._cookies = set(
+            [(k, v) for k, v in self._cookies if k.lower() != name.lower]
+        )
         self._cookies.add((name, value))
         return self
 
@@ -96,7 +100,7 @@ class Response:
         await self.status(status_code)._write(content.encode())
         return self
 
-    async def html(self, content: str, status_code: int = None):
+    async def html(self, content: str, status_code: Union[int, None] = None):
         """
         Render html
         Args:
@@ -107,7 +111,7 @@ class Response:
             response(Response): An instance of response
         """
         self.header("Content-Type", "text/html")
-        self.header('max-age', '0')
+        self.header("max-age", "0")
         if status_code is not None:
             self.status(status_code)
         await self._write(content.encode())
@@ -128,7 +132,9 @@ class Response:
         await self._write(b"")
         return self
 
-    async def json(self, content: dict, status_code: int = None) -> "Response":
+    async def json(
+        self, content: dict, status_code: Union[int, None] = None
+    ) -> "Response":
         """
         Send json
         Args:
@@ -159,8 +165,11 @@ class Response:
             return self
         file_name = os.path.basename(file_path)
         mimetype, _ = mimetypes.guess_type(file_name)
-        self.header('Content-Type', mimetype or 'application/octet-stream')
-        self.header("Content-Disposition", f"{'attachment; ' if attachment else ''}filename={file_name}")
+        self.header("Content-Type", mimetype or "application/octet-stream")
+        self.header(
+            "Content-Disposition",
+            f"{'attachment; ' if attachment else ''}filename={file_name}",
+        )
         async with aiofiles.open(file_path, "rb") as file:
             content = await file.read()
             self.header("Content-Length", str(len(content)))
@@ -199,7 +208,7 @@ class Response:
                 # no benefit because we don't send response directly
                 while chunk:
                     yield chunk
-                    chunk: bytes = await file.read(chunk_size)
+                    chunk = await file.read(chunk_size)
 
         return await self.stream(_get_stream)
 
@@ -222,15 +231,15 @@ class Response:
             raise HttpException(
                 HttpStatus.BAD_GATEWAY,
                 HttpStatusMessages.BAD_GATEWAY,
-                'Template engine not configured'
+                "Template engine not configured",
             )
         return self
 
     def content_type(self) -> str:
         for key, value in self._headers:
-            if str(key).lower() == 'content-type':
+            if str(key).lower() == "content-type":
                 return value
-        return 'text/plain'
+        return "text/plain"
 
     def status_code(self) -> int:
         return self._status_code

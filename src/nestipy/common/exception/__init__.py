@@ -12,5 +12,5 @@ __all__ = [
     "UseFilters",
     "Catch",
     "ExceptionKey",
-    "ExceptionFilter"
+    "ExceptionFilter",
 ]

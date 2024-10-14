@@ -14,7 +14,7 @@ from nestipy.types_ import NextFn
 
 @dataclasses.dataclass
 class SessionOption:
-    secret_key: str = ''
+    secret_key: str = ""
     session_cookie: str = "session"
     max_age: Union[int, None] = 14 * 24 * 60 * 60
     path: str = "/"
@@ -26,7 +26,6 @@ class SessionOption:
 def session(option: SessionOption = SessionOption()) -> Type:
     @Injectable()
     class SessionMiddleware(NestipyMiddleware):
-
         async def use(self, req: Request, res: Response, next_fn: NextFn):
             initial_session_was_empty = True
             signer = itsdangerous.TimestampSigner(str(option.secret_key))
@@ -47,10 +46,12 @@ def session(option: SessionOption = SessionOption()) -> Type:
                 req.session = {}
             result = await next_fn()
             cookie_max_age = f"Max-Age={option.max_age}; " if option.max_age else ""
-            header_value = ", ".join([
-                f"{key}={value}; path={option.path}; {cookie_max_age}{security_flags}"
-                for (key, value) in res.cookies()
-            ])
+            header_value = ", ".join(
+                [
+                    f"{key}={value}; path={option.path}; {cookie_max_age}{security_flags}"
+                    for (key, value) in res.cookies()
+                ]
+            )
             if header_value:
                 header_value += ", "
             if req.session:
@@ -63,7 +64,7 @@ def session(option: SessionOption = SessionOption()) -> Type:
                     max_age=f"Max-Age={option.max_age}; " if option.max_age else "",
                     security_flags=security_flags,
                 )
-                res.header('Set-Cookie', header_value)
+                res.header("Set-Cookie", header_value)
             elif initial_session_was_empty:
                 header_value += "{session_cookie}={data}; path={path}; {expires}{security_flags}".format(  # noqa E501
                     session_cookie=option.session_cookie,
