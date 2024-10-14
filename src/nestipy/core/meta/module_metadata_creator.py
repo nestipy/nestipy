@@ -19,8 +19,5 @@ class ModuleMetadataCreator(MetadataCreator):
             Reflect.set_metadata(
                 im,
                 ClassMetadata.Metadata,
-                ClassMetadata(
-                    im,
-                    global_providers=providers
-                )
+                ClassMetadata(im, global_providers=providers),
             )

@@ -19,17 +19,18 @@ class AsgiOption:
 
 @dataclasses.dataclass
 class GraphqlOption:
-    url: str = '/graphql'
+    url: str = "/graphql"
     cors: bool = True
-    auto_schema_file: str = None
-    ide: Literal['default', 'graphiql'] | None = 'default'
+    auto_schema_file: Optional[str] = None
+    ide: Literal["default", "graphiql"] = "default"
     schema_option: Optional[dict] = None
-    asgi_option: AsgiOption = None
-    context_callback: Callable[[...], dict] = None
+    asgi_option: Optional[AsgiOption] = None
+    context_callback: Optional[Callable[[...], dict]] = None
 
 
-ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = ConfigurableModuleBuilder[GraphqlOption]().set_method(
-    'for_root').build()
+ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = (
+    ConfigurableModuleBuilder[GraphqlOption]().set_method("for_root").build()
+)
 
 
 @Module()

@@ -6,7 +6,6 @@ from nestipy.core.context.execution_context import ExecutionContext
 
 @Injectable()
 class TestGuard(CanActivate):
-
     def can_activate(self, context: ExecutionContext) -> bool:
         headers = context.switch_to_http().get_request().headers
         print("TestGuard called with headers::: ", headers)
@@ -15,7 +14,6 @@ class TestGuard(CanActivate):
 
 @Injectable()
 class TestGuardMethod(CanActivate):
-
     def can_activate(self, context: ExecutionContext) -> bool:
         print("TestGuardMethod called")
         return True

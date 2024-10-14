@@ -9,4 +9,4 @@ from nestipy.core import ArgumentHost
 class NotFoundHandler(ExceptionFilter):
     async def catch(self, exception: "HttpException", host: "ArgumentHost") -> Any:
         if exception.status_code == HttpStatus.NOT_FOUND:
-            return await host.get_response().status(200).render('index.html')
+            return await host.get_response().status(200).render("index.html")

@@ -3,7 +3,7 @@ from typing import Annotated
 import pytest
 
 from nestipy.common import Injectable, Controller, Get, Response, Post
-from nestipy.core import NestipyBlackSheepApplication
+from nestipy.core import BlackSheepApplication
 from nestipy.ioc import Inject, Res, Body
 from nestipy.testing import Test, TestingModuleRef, TestClient
 
@@ -31,26 +31,25 @@ class AppController:
 @pytest.fixture
 def module_ref() -> TestingModuleRef:
     return Test.create_testing_module(
-        providers=[AppProvider],
-        controllers=[AppController]
+        providers=[AppProvider], controllers=[AppController]
     )
 
 
 @pytest.fixture
 def app(module_ref: TestingModuleRef) -> TestClient:
     # return module_ref.create_nestipy_client() # for FastAPI
-    return module_ref.create_nestipy_client(NestipyBlackSheepApplication)  # for blacksheep
+    return module_ref.create_nestipy_client(BlackSheepApplication)  # for blacksheep
 
 
 @pytest.mark.asyncio
 async def test_get_request(app: TestClient):
-    res = await app.get('/')
+    res = await app.get("/")
     assert res.status() == 200
     assert res.body() == b"test"
 
 
 @pytest.mark.asyncio
 async def test_post_request(app: TestClient):
-    res = await app.post('/', body=b'{"ok":"ok"}')
+    res = await app.post("/", body=b'{"ok":"ok"}')
     assert res.status() == 200
     assert res.body() == b'{"ok":"ok"}'

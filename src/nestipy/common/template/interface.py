@@ -3,7 +3,6 @@ from typing import Any
 
 
 class TemplateEngine(ABC):
-
     def __init__(self, template_dir: str):
         self.template_dir = template_dir
 

@@ -8,10 +8,10 @@ from nestipy.core import OnInit, OnDestroy
 
 @Injectable()
 class UserService(OnInit, OnDestroy):
-    tes: Annotated[str, Inject('TEST')]
+    tes: Annotated[str, Inject("TEST")]
 
     async def on_startup(self):
-        logger.info('On init service')
+        logger.info("On init service")
 
     async def on_shutdown(self):
         pass

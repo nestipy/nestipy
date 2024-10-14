@@ -20,8 +20,14 @@ class MicroserviceData:
 
 
 def MessagePattern(pattern: Any, transport: Union[Transport, None] = None):
-    return SetMetadata(MICROSERVICE_LISTENER, MicroserviceData(pattern, MicroserviceMetadata.Message, transport))
+    return SetMetadata(
+        MICROSERVICE_LISTENER,
+        MicroserviceData(pattern, MicroserviceMetadata.Message, transport),
+    )
 
 
 def EventPattern(pattern: Any, transport: Union[Transport, None] = None):
-    return SetMetadata(MICROSERVICE_LISTENER, MicroserviceData(pattern, MicroserviceMetadata.Event, transport))
+    return SetMetadata(
+        MICROSERVICE_LISTENER,
+        MicroserviceData(pattern, MicroserviceMetadata.Event, transport),
+    )

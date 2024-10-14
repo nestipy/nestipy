@@ -14,9 +14,9 @@ from ..graphql.graphql_module import GraphqlModule
 
 
 class InstanceType(enum.Enum):
-    providers: str = 'Provider'
-    controller: str = 'Controller',
-    module: str = 'Module'
+    providers: str = "Provider"
+    controller: str = ("Controller",)
+    module: str = "Module"
 
 
 class InstanceLoader:
@@ -24,13 +24,20 @@ class InstanceLoader:
     Create all instance of controller and providers, resolvers, middleware
     use before route mapper
     """
+
     _is_controller: bool = False
     _module_instances: list = []
     graphql_instance: GraphqlModule = None
     discover: DiscoverService = DiscoverService()
 
     async def create_instances(self, modules: list[Type]) -> GraphqlModule:
-        from nestipy.common import NestipyInterceptor, CanActivate, NestipyMiddleware, ExceptionFilter
+        from nestipy.common import (
+            NestipyInterceptor,
+            CanActivate,
+            NestipyMiddleware,
+            ExceptionFilter,
+        )
+
         self.discover = await NestipyContainer.get_instance().get(DiscoverService)
         for module in modules:
             if isinstance(module, DynamicModule):
@@ -54,12 +61,12 @@ class InstanceLoader:
         container = NestipyContainer.get_instance()
         all_services = container.get_all_services()
         for service in [
-            s for s in all_services if inspect.isclass(s) and issubclass(s, (
-                    NestipyInterceptor,
-                    CanActivate,
-                    NestipyMiddleware,
-                    ExceptionFilter
-            ))
+            s
+            for s in all_services
+            if inspect.isclass(s)
+            and issubclass(
+                s, (NestipyInterceptor, CanActivate, NestipyMiddleware, ExceptionFilter)
+            )
         ]:
             await self.create_instance(service, with_scope=False)
         return self.graphql_instance
@@ -81,7 +88,9 @@ class InstanceLoader:
         return controller_instance
 
     async def create_instance(self, class_ref: Type, with_scope: bool = True) -> object:
-        instance = await NestipyContainer.get_instance().get(class_ref, disable_scope=not with_scope)
+        instance = await NestipyContainer.get_instance().get(
+            class_ref, disable_scope=not with_scope
+        )
         await self.initialize_instance(class_ref, instance)
         return instance
 
@@ -98,7 +107,6 @@ class InstanceLoader:
             await ins.on_startup()
 
     async def destroy(self):
-
         for provider in self.discover.get_all_provider():
             if isinstance(provider, OnDestroy):
                 await provider.on_shutdown()

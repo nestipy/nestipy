@@ -3,7 +3,6 @@ from .argument_host import ArgumentHost
 
 
 class HttpArgumentHost(ArgumentHost):
-
     def get_request(self) -> Request:
         return self._req
 

@@ -10,17 +10,17 @@ class ModuleProviderDict:
     value: Any = None
     factory: Callable[..., Union[Awaitable, Any]] = None
     existing: Union[Type, str] = None
-    use_class: Type = None
+    use_class: Union[Type] = None
 
     def __init__(
-            self,
-            token: Union[str, Type],
-            value: Any = None,
-            factory: Callable[..., Union[Awaitable, Any]] = None,
-            existing: Union[Type, str] = None,
-            use_class: Type = None,
-            inject: list = None,
-            imports: Union[list[Type], None] = None
+        self,
+        token: Union[str, Type],
+        value: Any = None,
+        factory: Union[Callable[..., Union[Awaitable, Any]], None] = None,
+        existing: Union[Type, str, None] = None,
+        use_class: Union[Type, None] = None,
+        inject: Union[list, None] = None,
+        imports: Union[list[Type], None] = None,
     ):
         self.token = token
         self.value = value

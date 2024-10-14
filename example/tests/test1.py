@@ -27,8 +27,7 @@ class AppController:
 @pytest.fixture
 def module_ref() -> TestingModuleRef:
     return Test.create_testing_module(
-        providers=[AppProvider],
-        controllers=[AppController]
+        providers=[AppProvider], controllers=[AppController]
     )
 
 

@@ -39,18 +39,19 @@ if __name__ == '__main__':
 ## Platform
 In essence, Nestipy can function with any ASGI framework once an adapter is developed. It inherently supports two ASGI platforms: <strong>FastAPI</strong> and <strong>BlackSheep</strong>. You have the freedom to select the one that aligns most closely with your requirements.
 By default, Nestipy use FastAPI adapter.  We can specify platform from NestipyFactory.
-```python
-from nestipy.core import NestipyFastApiApplication
 
-app = NestipyFactory[NestipyFastApiApplication].create(AppModule)
+```python
+from nestipy.core import FastApiApplication
+
+app = NestipyFactory[FastApiApplication].create(AppModule)
 
 ```
 Or with blacksheep
 
 ```python
-from nestipy.core import NestipyBlackSheepApplication
+from nestipy.core import BlackSheepApplication
 
-app = NestipyFactory[NestipyBlackSheepApplication].create(AppModule)
+app = NestipyFactory[BlackSheepApplication].create(AppModule)
 ```
 
 ## Running the application#

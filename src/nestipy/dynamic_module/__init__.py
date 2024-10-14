@@ -5,5 +5,5 @@ __all__ = [
     "DynamicModule",
     "ConfigurableModuleBuilder",
     "NestipyModule",
-    "MiddlewareConsumer"
+    "MiddlewareConsumer",
 ]

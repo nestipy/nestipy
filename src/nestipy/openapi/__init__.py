@@ -3,7 +3,13 @@ from dataclasses import dataclass
 from pydantic import create_model
 
 from .decorator import ApiBearerAuth, ApiBasicAuth, ApiSecurity, NoSwagger
-from .decorator import ApiResponse, ApiCreatedResponse, ApiOkResponse, ApiNotFoundResponse, ApiConsumer
+from .decorator import (
+    ApiResponse,
+    ApiCreatedResponse,
+    ApiOkResponse,
+    ApiNotFoundResponse,
+    ApiConsumer,
+)
 from .decorator import ApiTags, ApiId, ApiBody, ApiParameter
 from .document_builder import DocumentBuilder
 from .swagger_module import SwaggerModule
@@ -18,12 +24,11 @@ def ApiSchema(cls):
     return create_model(data_cls.__name__, **fields)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Example usage:
     @ApiSchema
     class TestDto:
         name: str
-
 
     @ApiSchema
     class CreateCatDto:
@@ -32,9 +37,10 @@ if __name__ == '__main__':
         breed: str
         test: TestDto
 
+
 __all__ = [
-    'DocumentBuilder',
-    'SwaggerModule',
+    "DocumentBuilder",
+    "SwaggerModule",
     "ApiResponse",
     "ApiCreatedResponse",
     "ApiOkResponse",
@@ -47,5 +53,5 @@ __all__ = [
     "ApiBasicAuth",
     "ApiSecurity",
     "NoSwagger",
-    "ApiConsumer"
+    "ApiConsumer",
 ]

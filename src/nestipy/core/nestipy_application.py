@@ -15,7 +15,12 @@ from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.dynamic_module import DynamicModule
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
-from nestipy.ioc import MiddlewareContainer, MiddlewareProxy, NestipyContainer, ModuleProviderDict
+from nestipy.ioc import (
+    MiddlewareContainer,
+    MiddlewareProxy,
+    NestipyContainer,
+    ModuleProviderDict,
+)
 from nestipy.metadata import ModuleMetadata, Reflect
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
@@ -42,24 +47,26 @@ install(console=console, width=200)
 
 @dataclasses.dataclass
 class NestipyConfig:
-    adapter: HttpAdapter = None
-    cors: bool = None
+    adapter: Optional[HttpAdapter] = None
+    cors: Optional[bool] = None
     debug: bool = True
 
 
 class NestipyApplication:
-    _root_module: Type = None
-    _openapi_paths = {}
-    _openapi_schemas = {}
+    _root_module: Optional[Type] = None
+    _openapi_paths: dict = {}
+    _openapi_schemas: dict = {}
     _prefix: Union[str | None] = None
     _debug: bool = True
     _ready: bool = False
     _background_tasks: BackgroundTasks
 
-    def __init__(self, config: NestipyConfig = None):
+    def __init__(self, config: Optional[NestipyConfig] = None):
         config = config if config is not None else NestipyConfig()
         # self._http_adapter: HttpServer = FastAPIAdapter()
-        self._http_adapter: HttpAdapter = config.adapter if config.adapter is not None else FastApiAdapter()
+        self._http_adapter: HttpAdapter = (
+            config.adapter if config.adapter is not None else FastApiAdapter()
+        )
         self._graphql_builder = StrawberryAdapter()
         self._router_proxy = RouterProxy(self._http_adapter)
         self._middleware_container = MiddlewareContainer.get_instance()
@@ -100,14 +107,20 @@ class NestipyApplication:
     def init(self, root_module: Type):
         self._root_module = root_module
         self._add_root_module_provider(DiscoverService, _init=False)
-        self._add_root_module_provider(ModuleProviderDict(token=BackgroundTasks, value=self._background_tasks))
+        self._add_root_module_provider(
+            ModuleProviderDict(token=BackgroundTasks, value=self._background_tasks)
+        )
         self._set_metadata()
 
     def _set_metadata(self):
-        provider_metadata_maker = ProviderMetadataCreator(self._root_module, is_root=True)
+        provider_metadata_maker = ProviderMetadataCreator(
+            self._root_module, is_root=True
+        )
         provider_metadata_maker.create()
 
-        controller_metadata_maker = ControllerMetadataCreator(self._root_module, is_root=True)
+        controller_metadata_maker = ControllerMetadataCreator(
+            self._root_module, is_root=True
+        )
         controller_metadata_maker.create()
 
         # optional
@@ -117,20 +130,26 @@ class NestipyApplication:
     async def setup(self):
         try:
             modules = self._get_modules(self._root_module)
-            graphql_module_instance = await self.instance_loader.create_instances(modules)
+            graphql_module_instance = await self.instance_loader.create_instances(
+                modules
+            )
             # create and register route to platform adapter
-            self._openapi_paths, self._openapi_schemas = self._router_proxy.apply_routes(modules, self._prefix)
+            self._openapi_paths, self._openapi_schemas = (
+                self._router_proxy.apply_routes(modules, self._prefix)
+            )
             # check if graphql is enabled
             if graphql_module_instance is not None:
-                await GraphqlProxy(self._http_adapter, self._graphql_builder).apply_resolvers(
-                    graphql_module_instance,
-                    modules
-                )
+                await GraphqlProxy(
+                    self._http_adapter, self._graphql_builder
+                ).apply_resolvers(graphql_module_instance, modules)
             if self._http_adapter.get_io_adapter() is not None:
                 IoSocketProxy(self._http_adapter).apply_routes(modules)
             # Register open api catch asynchronously
             from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
-            openapi_register: Callable = Reflect.get_metadata(self, OPENAPI_HANDLER_METADATA, None)
+
+            openapi_register: Callable = Reflect.get_metadata(
+                self, OPENAPI_HANDLER_METADATA, None
+            )
             if openapi_register is not None:
                 openapi_register()
 
@@ -143,13 +162,23 @@ class NestipyApplication:
         finally:
             # Register devtools static path
             self.use_static_assets(
-                os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'devtools', 'frontend', 'static')),
-                '_devtools/static'
+                os.path.realpath(
+                    os.path.join(
+                        os.path.dirname(__file__),
+                        "..",
+                        "devtools",
+                        "frontend",
+                        "static",
+                    )
+                ),
+                "_devtools/static",
             )
             if self._debug:
                 # Not found
-                not_found_path = self._http_adapter.create_wichard().lstrip('/')
-                self._http_adapter.get(not_found_path, self._router_proxy.render_not_found, {})
+                not_found_path = self._http_adapter.create_wichard().lstrip("/")
+                self._http_adapter.get(
+                    not_found_path, self._router_proxy.render_not_found, {}
+                )
 
     async def ready(self) -> bool:
         if not self._ready:
@@ -176,7 +205,7 @@ class NestipyApplication:
         return self._openapi_schemas
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
-        if scope.get('type') == 'lifespan':
+        if scope.get("type") == "lifespan":
             await self.ready()
         await self.get_adapter()(scope, receive, send)
 
@@ -190,13 +219,14 @@ class NestipyApplication:
     def enable_cors(self):
         self._http_adapter.enable_cors()
 
-    def use_static_assets(self, assets_path: str, url: str = '/static'):
-        async def render_asset_file(req: "Request", res: "Response", _next_fn: "NextFn") -> Response:
-            file_path = os.path.join(assets_path, req.path.replace(f'/{url.strip("/")}', '').strip('/'))
-            return await res.download(
-                file_path=file_path,
-                attachment=False
+    def use_static_assets(self, assets_path: str, url: str = "/static"):
+        async def render_asset_file(
+            req: "Request", res: "Response", _next_fn: "NextFn"
+        ) -> Response:
+            file_path = os.path.join(
+                assets_path, req.path.replace(f'/{url.strip("/")}', "").strip("/")
             )
+            return await res.download(file_path=file_path, attachment=False)
 
         static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
         self._http_adapter.get(static_path, render_asset_file, {})
@@ -204,7 +234,7 @@ class NestipyApplication:
     def set_base_view_dir(self, view_dir: str):
         self._setup_template_engine(view_dir)
 
-    def set_view_engine(self, engine: Union[Literal['minijinja'], TemplateEngine]):
+    def set_view_engine(self, engine: Union[Literal["minijinja"], TemplateEngine]):
         if isinstance(engine, TemplateEngine):
             self._http_adapter.set(TemplateKey.MetaEngine, engine)
         else:
@@ -216,9 +246,11 @@ class NestipyApplication:
         self._http_adapter.set(TemplateKey.MetaEngine, engine)
 
     def get_template_engine(self) -> Union[TemplateEngine, None]:
-        engine: Union[TemplateEngine, None] = self._http_adapter.get_state(TemplateKey.MetaEngine)
+        engine: Union[TemplateEngine, None] = self._http_adapter.get_state(
+            TemplateKey.MetaEngine
+        )
         if engine is None:
-            raise Exception('Template engine not configured')
+            raise Exception("Template engine not configured")
         return engine
 
     def use_global_interceptors(self, *interceptors: Union[Type, "NestipyInterceptor"]):
@@ -236,16 +268,24 @@ class NestipyApplication:
     def use_global_prefix(self, prefix: str = ""):
         self._prefix = prefix or ""
 
-    def _add_root_module_provider(self, *providers: Union[ModuleProviderDict, Type], _init: bool = True):
-        root_providers: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Providers, [])
+    def _add_root_module_provider(
+        self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
+    ):
+        root_providers: list = Reflect.get_metadata(
+            self._root_module, ModuleMetadata.Providers, []
+        )
         root_providers = root_providers + list(providers)
-        Reflect.set_metadata(self._root_module, ModuleMetadata.Providers, root_providers)
+        Reflect.set_metadata(
+            self._root_module, ModuleMetadata.Providers, root_providers
+        )
         #  re init setting metadata
         if _init:
             self._set_metadata()
 
     def add_module_root_module(self, *modules: Type, _init: bool = True):
-        root_imports: list = Reflect.get_metadata(self._root_module, ModuleMetadata.Imports, [])
+        root_imports: list = Reflect.get_metadata(
+            self._root_module, ModuleMetadata.Imports, []
+        )
         root_imports = root_imports + list(modules)
         Reflect.set_metadata(self._root_module, ModuleMetadata.Imports, root_imports)
         #  re init setting metadata
@@ -256,6 +296,8 @@ class NestipyApplication:
         # edit root module provider
         # TODO refactor
         NestipyContainer.get_instance().add_singleton_instance(IoAdapter, io_adapter)
-        self._add_root_module_provider(ModuleProviderDict(token=IoAdapter, value=io_adapter))
+        self._add_root_module_provider(
+            ModuleProviderDict(token=IoAdapter, value=io_adapter)
+        )
         # setup io adapter to http_adapter
         self._http_adapter.use_io_adapter(io_adapter=io_adapter)

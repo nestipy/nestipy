@@ -12,15 +12,8 @@ from .event_metadata import EventMetadata, EventData
 
 
 @Module(
-    providers=[
-        ModuleProviderDict(
-            token=EventEmitter,
-            value=EventEmitter()
-        )
-    ],
-    exports=[
-        EventEmitter
-    ]
+    providers=[ModuleProviderDict(token=EventEmitter, value=EventEmitter())],
+    exports=[EventEmitter],
 )
 class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
     _discovery: Annotated[DiscoverService, Inject()]
@@ -33,8 +26,7 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
 
     def _register_listener(self, method: callable):
         event_data: Union[EventData, None] = Reflect.get_metadata(
-            method, EventMetadata.Event,
-            None
+            method, EventMetadata.Event, None
         )
         if event_data:
             callback = self._create_async_handler(method)
@@ -54,12 +46,19 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
         return async_handler
 
     def _register_listeners(self):
-        instances = self._discovery.get_all_controller() + self._discovery.get_all_provider()
+        instances = (
+            self._discovery.get_all_controller() + self._discovery.get_all_provider()
+        )
         for p in instances:
-            elements = inspect.getmembers(p, lambda a: inspect.isfunction(a) or inspect.iscoroutinefunction(
-                a) or inspect.ismethod(a))
+            elements = inspect.getmembers(
+                p,
+                lambda a: inspect.isfunction(a)
+                or inspect.iscoroutinefunction(a)
+                or inspect.ismethod(a),
+            )
             methods = [
-                method for (method, _) in elements
+                method
+                for (method, _) in elements
                 if not method.startswith("__") and self._is_listener(getattr(p, method))
             ]
             for m in methods:
@@ -73,4 +72,4 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
 
     @classmethod
     def for_root(cls, is_global: bool = True):
-        return cls.register(EventOption(), extras={'is_global': is_global})
+        return cls.register(EventOption(), extras={"is_global": is_global})

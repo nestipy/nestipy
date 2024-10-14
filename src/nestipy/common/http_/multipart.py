@@ -22,7 +22,8 @@ def parse_content_header(value: str) -> tuple[str, dict[str, str]]:
         options: dict[str, str] = {}
     else:
         options = {
-            m.group(1).lower(): m.group(2) or m.group(3).replace("%22", '"') for m in _param.finditer(value[pos:])
+            m.group(1).lower(): m.group(2) or m.group(3).replace("%22", '"')
+            for m in _param.finditer(value[pos:])
         }
         value = value[:pos]
     return value.strip().lower(), options

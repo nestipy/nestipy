@@ -3,6 +3,7 @@ This module defines classes that can be used to generate OpenAPI Documentation
 version 3.
 https://swagger.io/specification/
 """
+
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum

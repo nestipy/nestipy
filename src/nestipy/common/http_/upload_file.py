@@ -16,7 +16,7 @@ T = typing.TypeVar("T")
 
 
 async def run_in_thread_pool(
-        func: typing.Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    func: typing.Callable[P, T], *args: P.args, **kwargs: P.kwargs
 ) -> T:
     if kwargs:  # pragma: no cover
         func = functools.partial(func, **kwargs)
@@ -24,16 +24,15 @@ async def run_in_thread_pool(
 
 
 class UploadFile(bytes):
-
     def __new__(
-            cls,
-            file: typing.BinaryIO,
-            *,
-            size: int | None = None,
-            filename: str | None = None,
-            headers: dict[str, str] | None = None,
+        cls,
+        file: typing.BinaryIO,
+        *,
+        size: int | None = None,
+        filename: str | None = None,
+        headers: dict[str, str] | None = None,
     ) -> bytes:
-        obj = super().__new__(cls, file or b'')
+        obj = super().__new__(cls, file or b"")
         obj.filename = filename
         obj.size = size
         obj.headers = headers or {}
@@ -106,16 +105,14 @@ class UploadFile(bytes):
 
     @classmethod
     def __get_pydantic_json_schema__(
-            cls,
-            _core_schema: core_schema.CoreSchema,
-            _handler: GetJsonSchemaHandler
+        cls, _core_schema: core_schema.CoreSchema, _handler: GetJsonSchemaHandler
     ) -> JsonSchemaValue:
         return {"type": "string", "format": "binary"}
 
     @classmethod
     def __get_pydantic_core_schema__(
-            cls,
-            _source_type: Any,
-            _handler: Any,
+        cls,
+        _source_type: Any,
+        _handler: Any,
     ) -> core_schema.CoreSchema:
         return core_schema.bytes_schema()

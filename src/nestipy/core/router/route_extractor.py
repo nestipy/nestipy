@@ -9,6 +9,8 @@ class RouteParamsExtractor:
         matches = re.findall(regex_pattern, route_path)
         for match in matches:
             param_name = match[0]
-            param_type = match[1][1] if match[1] else 'str'  # Default to str if type not specified
+            param_type = (
+                match[1][1] if match[1] else "str"
+            )  # Default to str if type not specified
             params[param_name] = param_type
         return params

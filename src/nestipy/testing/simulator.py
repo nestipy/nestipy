@@ -1,8 +1,15 @@
 import asyncio
+from typing import Optional
 from urllib.parse import urlparse, parse_qs
 
 from nestipy.core.nestipy_application import NestipyApplication
-from .helpers import HeadersType, QueryType, CookiesType, get_example_scope, TestResponse
+from .helpers import (
+    HeadersType,
+    QueryType,
+    CookiesType,
+    get_example_scope,
+    TestResponse,
+)
 
 
 class TestSimulator:
@@ -16,12 +23,12 @@ class TestSimulator:
 
     @classmethod
     def _create_scope(
-            cls,
-            method: str,
-            path: str,
-            headers: HeadersType = None,
-            query: QueryType = None,
-            cookies: CookiesType = None,
+        cls,
+        method: str,
+        path: str,
+        headers: Optional[HeadersType] = None,
+        query: Optional[QueryType] = None,
+        cookies: Optional[CookiesType] = None,
     ) -> dict:
         """Creates a mocked ASGI scope"""
         return get_example_scope(
@@ -39,16 +46,24 @@ class TestSimulator:
         parsed_url = urlparse(path)
         return parse_qs(parsed_url.query)
 
-    async def make_request(self, method: str, path: str, headers: dict[str, str] = None, body=b''):
+    async def make_request(
+        self, method: str, path: str, headers: Optional[dict[str, str]] = None, body=b""
+    ):
         if headers is not None:
-            headers = [(key.encode('utf-8'), value.encode('utf-8')) for key, value in headers]
+            headers = [
+                (key.encode("utf-8"), value.encode("utf-8")) for key, value in headers
+            ]
         # app request
-        self.scope = self._create_scope(method, urlparse(path).path, headers, query=self._extract_query_params(path))
-        await self.receive_queue.put({
-            'type': 'http.request',
-            'body': body,
-            'more_body': False,
-        })
+        self.scope = self._create_scope(
+            method, urlparse(path).path, headers, query=self._extract_query_params(path)
+        )
+        await self.receive_queue.put(
+            {
+                "type": "http.request",
+                "body": body,
+                "more_body": False,
+            }
+        )
         await self.app.setup()
         await self.app(self.scope, self._simulate_receive, self._simulate_send)
         response = []

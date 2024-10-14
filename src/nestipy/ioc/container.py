@@ -1,8 +1,23 @@
 import inspect
 from functools import lru_cache
-from typing import ForwardRef, Type, Union, Any, Optional, Callable, Awaitable, TYPE_CHECKING, get_type_hints
+from typing import (
+    ForwardRef,
+    Type,
+    Union,
+    Any,
+    Optional,
+    Callable,
+    Awaitable,
+    TYPE_CHECKING,
+)
 
-from nestipy.metadata import ClassMetadata, CtxDepKey, ModuleMetadata, ProviderToken, Reflect
+from nestipy.metadata import (
+    ClassMetadata,
+    CtxDepKey,
+    ModuleMetadata,
+    ProviderToken,
+    Reflect,
+)
 from .context_container import RequestContextContainer
 from .dependency import TypeAnnotated
 from .helper import ContainerHelper
@@ -21,11 +36,12 @@ class NestipyContainer:
     This container allows the registration and resolution of services (both transient and singleton),
     manages singleton instances, and handles dependency injection for classes and functions.
     """
-    _instance: "NestipyContainer" = None
-    _services = {}
-    _global_service_instances = {}
-    _singleton_instances = {}
-    _singleton_classes = set()
+
+    _instance: Union["NestipyContainer", None] = None
+    _services: dict = {}
+    _global_service_instances: dict = {}
+    _singleton_instances: dict = {}
+    _singleton_classes: set = set()
 
     def __new__(cls, *args, **kwargs):
         """
@@ -69,7 +85,9 @@ class NestipyContainer:
         """
         return list(self._services.keys())
 
-    def add_singleton_instance(self, service: Union[Type, str], service_instance: object):
+    def add_singleton_instance(
+        self, service: Union[Type, str], service_instance: object
+    ):
         """
         Registers an instance of a singleton service.
 
@@ -98,12 +116,20 @@ class NestipyContainer:
         for service in cls._services:
             if service in global_providers:
                 continue
-            metadata: ClassMetadata = Reflect.get_metadata(service, ClassMetadata.Metadata, None)
+            metadata: Union[ClassMetadata | None] = Reflect.get_metadata(
+                service, ClassMetadata.Metadata, None
+            )
             if metadata is not None:
-                is_global = Reflect.get_metadata(metadata.get_module(), ModuleMetadata.Global, False)
-                is_root = Reflect.get_metadata(metadata.get_module(), ModuleMetadata.Root, False)
+                is_global = Reflect.get_metadata(
+                    metadata.get_module(), ModuleMetadata.Global, False
+                )
+                is_root = Reflect.get_metadata(
+                    metadata.get_module(), ModuleMetadata.Root, False
+                )
                 if is_global or is_root:
-                    global_providers += Reflect.get_metadata(metadata.get_module(), ModuleMetadata.Providers, [])
+                    global_providers += Reflect.get_metadata(
+                        metadata.get_module(), ModuleMetadata.Providers, []
+                    )
         return uniq(global_providers)
 
     @classmethod
@@ -111,22 +137,29 @@ class NestipyContainer:
         """
         Retrieves the metadata for the dependencies of a given service.
 
-        :param service: The service class or instance.
+        :param service: The service class to resolve.
         :return: List of metadata related to the service's dependencies.
         """
         from .provider import ModuleProviderDict
+
         # extract global data from _service, not from module because all provider is already saved in _services of
         # container
-        metadata: ClassMetadata = Reflect.get_metadata(service, ClassMetadata.Metadata, None)
+        metadata: Union[ClassMetadata | None] = Reflect.get_metadata(
+            service, ClassMetadata.Metadata, None
+        )
         if metadata is not None:
             global_providers = cls.get_global_providers()
             providers, import_providers = metadata.get_service_providers()
             uniq_providers = []
             for m in uniq(providers + global_providers + import_providers):
                 if isinstance(m, ModuleProviderDict):
-                    for my in m.imports:
-                        m_provider, m_import_providers = metadata.get_service_providers(my)
-                        uniq_providers = uniq(uniq_providers + m_import_providers + m_provider)
+                    for imported_module in m.imports:
+                        m_provider, m_import_providers = metadata.get_service_providers(
+                            imported_module
+                        )
+                        uniq_providers = uniq(
+                            uniq_providers + m_import_providers + m_provider
+                        )
                     uniq_providers.append(m.token)
                 else:
                     uniq_providers.append(m)
@@ -135,7 +168,9 @@ class NestipyContainer:
         return []
 
     @classmethod
-    async def _resolve_context_service(cls, name: str, dep_key: TypeAnnotated, annotation: Union[Type, Any]):
+    async def _resolve_contextual_service(
+        cls, name: str, dep_key: TypeAnnotated, annotation: Union[Type, Any]
+    ):
         """
         Resolves a context-specific service based on the provided dependency key.
 
@@ -147,18 +182,22 @@ class NestipyContainer:
         context_container = RequestContextContainer.get_instance()
         callback = dep_key.metadata.callback
         if inspect.iscoroutinefunction(callback):
-            return await callback(name, dep_key.metadata.token, annotation, context_container)
+            return await callback(
+                name, dep_key.metadata.token, annotation, context_container
+            )
         else:
             return callback(name, dep_key.metadata.token, annotation, context_container)
 
-    async def _resolve_module_provider_dict(self, instance: "ModuleProviderDict", search_scope: list):
+    async def _resolve_module_provider_dict(
+        self, instance: "ModuleProviderDict", search_scope: list
+    ):
         """
-       Resolves a service instance from a ModuleProviderDict.
+        Resolves a service instance from a ModuleProviderDict.
 
-       :param instance: The ModuleProviderDict instance.
-       :param search_scope: The search scope for resolving dependencies.
-       :return: The resolved service instance or None.
-       """
+        :param instance: The ModuleProviderDict instance.
+        :param search_scope: The search scope for resolving dependencies.
+        :return: The resolved service instance or None.
+        """
         if instance.value:
             return instance.value
         elif instance.existing:
@@ -172,7 +211,7 @@ class NestipyContainer:
             return await self.resolve_factory(
                 factory=instance.factory,
                 inject=instance.inject,
-                search_scope=search_scope
+                search_scope=search_scope,
             )
 
         else:
@@ -186,25 +225,30 @@ class NestipyContainer:
         :return: The singleton instance if it exists, otherwise None.
         """
         from .provider import ModuleProviderDict
+
         if key in self._singleton_instances:
             instance = self._singleton_instances[key]
             # to keep improve
             if isinstance(instance, ModuleProviderDict):
                 search_scope = self.get_dependency_metadata(instance)
                 if instance.token in search_scope:
-                    value = await self._resolve_module_provider_dict(instance, search_scope=search_scope)
+                    value = await self._resolve_module_provider_dict(
+                        instance, search_scope=search_scope
+                    )
                     # update singleton instance to have the async value from ModuleProviderDict
                     self._singleton_instances[key] = value
                     return value
                 else:
                     raise ValueError(
-                        f"Service {instance.__class__.__name__} "
-                        f"not found in scope")
+                        f"Service {instance.__class__.__name__} " f"not found in scope"
+                    )
             else:
                 return instance
         return None
 
-    def _check_service(self, key: Union[Type, str], origin: Optional[list] = None) -> tuple:
+    def _check_service(
+        self, key: Union[Type, str], origin: Optional[list] = None
+    ) -> tuple:
         """
         Checks if a service is registered and detects circular dependencies.
 
@@ -217,14 +261,16 @@ class NestipyContainer:
             raise ValueError(f"Service {key} not found")
         service = self._services[key]
         if service in (origin or []):
-            raise ValueError(f"Circular dependency found  for {service.__name__} service ")
+            raise ValueError(
+                f"Circular dependency found  for {service.__name__} service "
+            )
         return service, origin or set()
 
     async def _resolve_property(
-            self,
-            key: Union[Type, str],
-            origin: Optional[list] = None,
-            disable_scope: bool = False
+        self,
+        key: Union[Type, str],
+        origin: Optional[list] = None,
+        disable_scope: bool = False,
     ):
         """
         Resolves dependencies for the properties of a service.
@@ -236,30 +282,46 @@ class NestipyContainer:
         service, origin = self._check_service(key, origin)
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
-        annotations: dict = getattr(service, '__annotations__', {})
+        annotations: dict = getattr(service, "__annotations__", {})
         for name, param_annotation in annotations.items():
-            annotation, dep_key = ContainerHelper.get_type_from_annotation(param_annotation)
+            annotation, dep_key = ContainerHelper.get_type_from_annotation(
+                param_annotation
+            )
             if dep_key.metadata.key is not CtxDepKey.Service:
-                dependency = await self._resolve_context_service(name, dep_key, annotation)
-                setattr(service, name, dependency)
-            elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
-                key = dep_key.metadata.token or annotation
-                # A modifier
-                if isinstance(key, ForwardRef):
-                    key = eval(key.__forward_arg__,globals(), locals())
-                dependency = await self.get(key)
+                dependency = await self._resolve_contextual_service(
+                    name, dep_key, annotation
+                )
                 setattr(service, name, dependency)
             else:
-                _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                raise ValueError(f"Service {_name} not found in scope {search_scope}")
+                # check token
+                if (
+                    dep_key.metadata.token in search_scope
+                    or annotation in search_scope
+                    or disable_scope
+                ):
+                    key = dep_key.metadata.token or annotation
+                    # A modifier
+                    if isinstance(key, ForwardRef):
+                        key = eval(key.__forward_arg__, globals(), locals())
+                    dependency = await self.get(key)
+                    setattr(service, name, dependency)
+                else:
+                    _name: str = (
+                        annotation.__name__
+                        if not isinstance(annotation, str)
+                        else annotation
+                    )
+                    raise ValueError(
+                        f"Service {_name} not found in scope {search_scope}"
+                    )
         origin.remove(service)
         self._services[key] = service
 
     async def _get_method_dependency(
-            self,
-            method_to_resolve: Callable,
-            search_scope: list,
-            disable_scope: bool = False
+        self,
+        method_to_resolve: Callable,
+        search_scope: list,
+        disable_scope: bool = False,
     ):
         """
         Resolves dependencies for a method's parameters.
@@ -272,17 +334,31 @@ class NestipyContainer:
         params = inspect.signature(method_to_resolve).parameters
         args = {}
         for name, param in params.items():
-            if name != 'self' and param.annotation is not inspect.Parameter.empty:
-                annotation, dep_key = ContainerHelper.get_type_from_annotation(param.annotation)
+            if name != "self" and param.annotation is not inspect.Parameter.empty:
+                annotation, dep_key = ContainerHelper.get_type_from_annotation(
+                    param.annotation
+                )
                 if dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_context_service(name, dep_key, annotation)
+                    dependency = await self._resolve_contextual_service(
+                        name, dep_key, annotation
+                    )
                     args[name] = dependency
-                elif dep_key.metadata.token in search_scope or annotation in search_scope or disable_scope:
+                elif (
+                    dep_key.metadata.token in search_scope
+                    or annotation in search_scope
+                    or disable_scope
+                ):
                     dependency = await self.get(dep_key.metadata.token or annotation)
                     args[name] = dependency
                 else:
-                    _name: str = annotation.__name__ if not isinstance(annotation, str) else annotation
-                    raise ValueError(f"Service {_name} not found in scope {search_scope}")
+                    _name: str = (
+                        annotation.__name__
+                        if not isinstance(annotation, str)
+                        else annotation
+                    )
+                    raise ValueError(
+                        f"Service {_name} not found in scope {search_scope}"
+                    )
         return args
 
     @classmethod
@@ -291,7 +367,13 @@ class NestipyContainer:
             return await method(**args)
         return method(**args)
 
-    async def resolve_factory(self, factory: Callable, inject: list, search_scope: list, disable_scope: bool = False):
+    async def resolve_factory(
+        self,
+        factory: Callable,
+        inject: list,
+        search_scope: list,
+        disable_scope: bool = False,
+    ):
         """
         Resolves dependencies and calls a factory function to create an instance.
 
@@ -305,25 +387,26 @@ class NestipyContainer:
         args = await self._get_method_dependency(
             method_to_resolve=factory,
             search_scope=search_scope_by_inject,
-            disable_scope=disable_scope
+            disable_scope=disable_scope,
         )
         return await self._call_method(method=factory, args=args)
 
     async def _resolve_method(
-            self,
-            key: Union[Type, str, object],
-            method: str = _INIT,
-            origin: Optional[list] = None,
-            disable_scope: bool = False
+        self,
+        key: Union[Type, str, object],
+        method: str = _INIT,
+        origin: Optional[list] = None,
+        disable_scope: bool = False,
     ):
-
         service, origin = self._check_service(key, origin)
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
         method_to_resolve = getattr(service, method, None)
         if not method_to_resolve:
             raise Exception(f"Method {method} not found in {service.__name__} service ")
-        args = await self._get_method_dependency(method_to_resolve, search_scope, disable_scope=disable_scope)
+        args = await self._get_method_dependency(
+            method_to_resolve, search_scope, disable_scope=disable_scope
+        )
         if method == _INIT:
             result = service(**args)
             if service in self._singleton_classes:
@@ -338,11 +421,11 @@ class NestipyContainer:
         return result
 
     async def get(
-            self,
-            key: Union[Type, str],
-            method: str = _INIT,
-            origin: Optional[list] = None,
-            disable_scope: Optional[bool] = False
+        self,
+        key: Union[Type, str],
+        method: str = _INIT,
+        origin: Optional[list] = None,
+        disable_scope: Optional[bool] = False,
     ) -> Awaitable[object]:
         """
         Retrieves an instance of a service, creating it if necessary.
@@ -358,5 +441,9 @@ class NestipyContainer:
             if method == _INIT:
                 return in_singleton
         else:
-            await self._resolve_property(key, origin=origin, disable_scope=disable_scope)
-        return await self._resolve_method(key, method=method, origin=origin, disable_scope=disable_scope)
+            await self._resolve_property(
+                key, origin=origin, disable_scope=disable_scope
+            )
+        return await self._resolve_method(
+            key, method=method, origin=origin, disable_scope=disable_scope
+        )

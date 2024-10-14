@@ -3,7 +3,6 @@ from nestipy.common import Injectable
 
 @Injectable()
 class AppService:
-
     @classmethod
     async def get(cls):
         return "test"

@@ -1,6 +1,7 @@
 """
 This module provides a Jinja2 environment.
 """
+
 import os
 from enum import Enum
 

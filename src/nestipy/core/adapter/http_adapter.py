@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class HttpAdapter(ABC):
-    STATE_KEY: str = '__state__'
+    STATE_KEY: str = "__state__"
 
     _global_interceptors: list = []
     _global_filters: list = []
@@ -37,7 +37,7 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def create_wichard(self, prefix: str = '/') -> str:
+    def create_wichard(self, prefix: str = "/") -> str:
         pass
 
     @abstractmethod
@@ -159,55 +159,58 @@ class HttpAdapter(ABC):
             await self.get_instance()(scope, receive, send)
 
     def create_websocket_parameter(self) -> Websocket:
-        return Websocket(
-            self.scope,
-            self.receive,
-            self.send
-        )
+        return Websocket(self.scope, self.receive, self.send)
 
     def create_handler_parameter(self) -> Tuple[Request, Response, NextFn]:
-        req = Request(
-            self.scope,
-            self.receive,
-            self.send
-        )
+        req = Request(self.scope, self.receive, self.send)
         res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))
 
         async def next_fn(error: Union[HttpException | None] = None):
             #  catch error
             if error is not None:
-                accept = req.headers.get('accept')
-                if 'application/json' in accept:
-                    return await res.status(error.status_code).json({
-                        "message": error.message,
-                        "status": error.status_code,
-                        "details": error.details
-                    })
+                accept = req.headers.get("accept")
+                if "application/json" in accept:
+                    return await res.status(error.status_code).json(
+                        {
+                            "message": error.message,
+                            "status": error.status_code,
+                            "details": error.details,
+                        }
+                    )
                 else:
                     if self.debug:
                         jinja = MinimalJinjaTemplateEngine(
                             os.path.realpath(
-                                os.path.join(os.path.dirname(__file__), '..', '..', 'devtools', 'frontend', 'templates')
+                                os.path.join(
+                                    os.path.dirname(__file__),
+                                    "..",
+                                    "..",
+                                    "devtools",
+                                    "frontend",
+                                    "templates",
+                                )
                             )
                         )
                         dict_value = asdict(error.track_back)
                         json_data = json.dumps(dict_value)
-                        content = jinja.render('error.html', {
-                            'json_data': json_data,
-                            'status_code': error.status_code,
-                            'status_message': error.message
-                        })
+                        content = jinja.render(
+                            "error.html",
+                            {
+                                "json_data": json_data,
+                                "status_code": error.status_code,
+                                "status_message": error.message,
+                            },
+                        )
                         return await (
-                            res
-                            .header("Expire", "0")
-                            .header("Cache-Control", 'max-age=0, must-revalidate')
-                            .header('Content-Type', 'text/html;charset=utf-8').status(error.status_code)
+                            res.header("Expire", "0")
+                            .header("Cache-Control", "max-age=0, must-revalidate")
+                            .header("Content-Type", "text/html;charset=utf-8")
+                            .status(error.status_code)
                             .send(content)
                         )
                     else:
                         return await (
-                            res
-                            .header('Content-Type', 'text/html;charset=utf-8')
+                            res.header("Content-Type", "text/html;charset=utf-8")
                             .status(error.status_code)
                             .send(str(error))
                         )

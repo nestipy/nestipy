@@ -1,2 +1,2 @@
 class GuardKey:
-    Meta: str = '__guards__'
+    Meta: str = "__guards__"

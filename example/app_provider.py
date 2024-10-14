@@ -7,5 +7,5 @@ from nestipy.common import Injectable
 
 @Injectable()
 class AppProvider:
-    tes: Annotated[str, Inject('TEST')]
+    tes: Annotated[str, Inject("TEST")]
     pass

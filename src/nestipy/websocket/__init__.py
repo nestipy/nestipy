@@ -9,5 +9,5 @@ __all__ = [
     "SuccessEvent",
     "SubscribeMessage",
     "ErrorEvent",
-    "Websocket"
+    "Websocket",
 ]

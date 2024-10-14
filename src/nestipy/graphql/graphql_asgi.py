@@ -1,6 +1,6 @@
 import os
 from abc import abstractmethod
-from typing import Callable, cast
+from typing import Callable, cast, Optional
 
 import aiofiles
 
@@ -11,7 +11,7 @@ from nestipy.graphql.graphql_module import GraphqlOption
 
 
 class GraphqlAsgi:
-    option: GraphqlOption = None
+    option: Optional[GraphqlOption] = None
 
     @abstractmethod
     def print_schema(self) -> str:
@@ -23,10 +23,10 @@ class GraphqlAsgi:
     async def get_graphql_ide(self) -> str:
         playground_path = os.path.join(
             os.path.dirname(__file__),
-            'playground',
-            f'graphql-playground-{self.option.ide}.html'
+            "playground",
+            f"graphql-playground-{self.option.ide}.html",
         )
-        file = await aiofiles.open(playground_path, 'r')
+        file = await aiofiles.open(playground_path, "r")
         content = await file.read()
         await file.close()
         return content
@@ -41,23 +41,19 @@ class GraphqlAsgi:
                 self.option.context_callback,
                 inject=[],
                 search_scope=[],
-                disable_scope=True
+                disable_scope=True,
             )
         return context
 
     @classmethod
     def _setup_request(cls, scope: dict, receive, send):
         from nestipy.core import ExecutionContext
+
         req_container = RequestContextContainer.get_instance()
         req = Request(scope, receive, send)
         res = Response()
-        req_container.set_execution_context(ExecutionContext(
-            None,
-            None,
-            None,
-            cast(Callable, None),
-            req,
-            res,
-            None,
-            None
-        ))
+        req_container.set_execution_context(
+            ExecutionContext(
+                None, None, None, cast(Callable, None), req, res, None, None
+            )
+        )

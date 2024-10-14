@@ -1,7 +1,5 @@
 from dataclasses import asdict
-from typing import (
-    Union, Callable
-)
+from typing import Union, Callable, MutableMapping, Any, Awaitable
 
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
@@ -17,27 +15,27 @@ from ..graphql_module import GraphqlOption, AsgiOption
 
 
 class StrawberryAsgi(GraphQL, GraphqlAsgi):
-
     def __init__(
-            self,
-            schema: BaseSchema,
-            option: GraphqlOption,
+        self,
+        schema: BaseSchema,
+        option: GraphqlOption,
     ):
         asgi_option = asdict(option.asgi_option or AsgiOption())
-        asgi_option["subscription_protocols"] = asgi_option["subscription_protocols"] or (
-            GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL,)
-
-        super().__init__(
-            schema=schema,
-            **asgi_option
+        asgi_option["subscription_protocols"] = asgi_option[
+            "subscription_protocols"
+        ] or (
+            GRAPHQL_TRANSPORT_WS_PROTOCOL,
+            GRAPHQL_WS_PROTOCOL,
         )
+
+        super().__init__(schema=schema, **asgi_option)
         self.set_graphql_option(option)
 
     def print_schema(self) -> str:
         return print_schema(self.schema)
 
     async def get_context(
-            self, request: Union[Request, WebSocket], response: Response
+        self, request: Union[Request, WebSocket], response: Response
     ) -> Context:
         context = {"request": request, "response": response}
         return await self.modify_default_context(context)
@@ -53,10 +51,10 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
         await self.__call__(scope, receive, send)
 
     async def handle_http(
-            self,
-            scope: dict,
-            receive: Callable,
-            send: Callable,
+        self,
+        scope: MutableMapping[str, Any],
+        receive: Callable[[], Awaitable[Any]],
+        send: Callable[[...], Awaitable[None]],
     ) -> None:
         request = Request(scope=scope, receive=receive)
         try:
@@ -64,10 +62,12 @@ class StrawberryAsgi(GraphQL, GraphqlAsgi):
         except HTTPException as e:
             response = PlainTextResponse(e.reason, status_code=e.status_code)
         # Apply cors to graphql
-        if self.option.cors:
-            response.headers.update({
-                'access-control-allow-origin': '*',
-                'access-control-allow-headers': 'Content-Type',
-                'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS'
-            })
+        if self.option and self.option.cors:
+            response.headers.update(
+                {
+                    "access-control-allow-origin": "*",
+                    "access-control-allow-headers": "Content-Type",
+                    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+                }
+            )
         await response(scope, receive, send)

@@ -4,6 +4,7 @@ Specification V3, to create examples of values from schemas. These are used to p
 basic examples of request and response bodies from schemas, when specific examples are
 not included in documentation files.
 """
+
 import random
 from abc import ABC, abstractmethod
 from typing import Any, Callable, ClassVar, Dict, Iterable, List, Type

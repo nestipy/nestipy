@@ -5,9 +5,7 @@ from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
 
 async def main():
     client = NatsClientProxy(
-        MicroserviceOption(
-            url="nats://localhost:4222"
-        ),
+        MicroserviceOption(url="nats://localhost:4222"),
     )
     await client.send("topic", "request")
 

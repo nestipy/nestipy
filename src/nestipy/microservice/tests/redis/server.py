@@ -8,10 +8,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 async def main():
     client = RedisClientProxy(
         MicroserviceOption(
-            option=MicroserviceClientOption(
-                host='localhost',
-                port=6379
-            )
+            option=MicroserviceClientOption(host="localhost", port=6379)
         ),
     )
     server = MicroServiceServer(pubsub=client)

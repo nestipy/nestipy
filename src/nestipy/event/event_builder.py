@@ -10,11 +10,10 @@ class EventOption:
 
 
 def extract_callback(dynamic_module: DynamicModule, extras: dict[str, Any]):
-    if extras.get('is_global'):
-        dynamic_module.is_global = cast(bool, extras.get('is_global'))
+    if extras.get("is_global"):
+        dynamic_module.is_global = cast(bool, extras.get("is_global"))
 
 
-ConfigurableClassBuilder, EVENT_CONFIG = ConfigurableModuleBuilder[EventOption]().set_extras(
-    {},
-    extract_callback
-).build()
+ConfigurableClassBuilder, EVENT_CONFIG = (
+    ConfigurableModuleBuilder[EventOption]().set_extras({}, extract_callback).build()
+)

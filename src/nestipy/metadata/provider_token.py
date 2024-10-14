@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass
 class ProviderToken:
-    key: str = None
+    key: Union[str, None] = None

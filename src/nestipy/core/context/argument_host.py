@@ -7,20 +7,19 @@ if TYPE_CHECKING:
 
 
 class ArgumentHost(ABC):
-
     def __init__(
-            self,
-            adapter: Union["HttpAdapter", None],
-            module: Union[Type, object],
-            class_handler: Union[Type, object],
-            handler: Callable,
-            req: Union["Request", None],
-            res: Union["Response", None],
-            graphql_args: Optional[dict] = None,
-            graphql_context: Optional[any] = None,
-            socket_server:  Optional[any] = None,
-            socket_client:  Optional[any] = None,
-            socket_data:  Optional[any] = None,
+        self,
+        adapter: Union["HttpAdapter", None],
+        module: Union[Type, object],
+        class_handler: Union[Type, object],
+        handler: Callable,
+        req: Union["Request", None],
+        res: Union["Response", None],
+        graphql_args: Optional[dict] = None,
+        graphql_context: Optional[any] = None,
+        socket_server: Optional[any] = None,
+        socket_client: Optional[any] = None,
+        socket_data: Optional[any] = None,
     ):
         self._adapter = adapter
         self._module = module

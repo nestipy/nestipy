@@ -1,2 +1,2 @@
 class InterceptorKey:
-    Meta = '__interceptors__'
+    Meta = "__interceptors__"

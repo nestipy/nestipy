@@ -17,7 +17,9 @@ class TemplateRendererProcessor:
         self.context = {}
 
     def can_process(self, method: Callable, context: Any) -> bool:
-        self.template_engine: Union[TemplateEngine, None] = self.adapter.get_state(TemplateKey.MetaEngine)
+        self.template_engine: Union[TemplateEngine, None] = self.adapter.get_state(
+            TemplateKey.MetaEngine
+        )
         self.template = Reflect.get_metadata(method, TemplateKey.MetaRender, None)
         self.context = context
         if self.template_engine is None:
@@ -29,14 +31,13 @@ class TemplateRendererProcessor:
             return True
 
     def render(self) -> Union[str, None]:
-        template_engine: Union[TemplateEngine, None] = self.adapter.get_state(TemplateKey.MetaEngine)
+        template_engine: Union[TemplateEngine, None] = self.adapter.get_state(
+            TemplateKey.MetaEngine
+        )
         if template_engine is None:
             return None
         else:
             return template_engine.render(self.template, self.context)
 
 
-__all__ = [
-    "MinimalJinjaTemplateEngine",
-    "TemplateRendererProcessor"
-]
+__all__ = ["MinimalJinjaTemplateEngine", "TemplateRendererProcessor"]

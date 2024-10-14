@@ -1,12 +1,10 @@
-from typing import Annotated, ForwardRef
+from typing import Annotated
 
 import pytest
-import inspect
-from nestipy.metadata import ClassMetadata, CtxDepKey
-from unittest.mock import AsyncMock
 
-from nestipy.ioc import NestipyContainer, Inject
 from nestipy.common import Injectable
+from nestipy.ioc import NestipyContainer, Inject
+
 
 @pytest.fixture
 def container():
@@ -30,7 +28,9 @@ async def test_singleton_instance(container):
     container.add_singleton_instance(DummyService, service_instance)
 
     retrieved_instance = await container.get(DummyService)
-    assert retrieved_instance is service_instance, "Singleton instance should be the same."
+    assert (
+        retrieved_instance is service_instance
+    ), "Singleton instance should be the same."
 
 
 @pytest.mark.asyncio
@@ -47,7 +47,9 @@ async def test_transient_service(container):
     instance1 = await container.get(TransientService)
     instance2 = await container.get(TransientService)
 
-    assert instance1 is not instance2, "Transient service should create a new instance each time."
+    assert (
+        instance1 is not instance2
+    ), "Transient service should create a new instance each time."
 
 
 # @pytest.mark.asyncio
@@ -66,6 +68,7 @@ async def test_transient_service(container):
 #     assert GlobalService in global_providers, "Global providers should include GlobalService."
 #
 
+
 @pytest.mark.asyncio
 async def test_dependency_injection(container):
     """
@@ -79,8 +82,6 @@ async def test_dependency_injection(container):
     @Injectable()
     class ServiceB:
         service_a: Annotated[ServiceA, Inject()]
-        
-
 
     service_b_instance = await container.get(ServiceB, disable_scope=True)
     serv = service_b_instance.service_a
@@ -101,7 +102,6 @@ async def test_circular_dependency(container):
     class ServiceB:
         service_a: Annotated[ServiceA, Inject()]
 
-
     globals()["ServiceA"] = ServiceA
     globals()["ServiceB"] = ServiceB
 
@@ -115,8 +115,6 @@ async def test_factory_resolution(container):
     Test resolving a service using a factory function.
     """
 
-    
-
     @Injectable()
     class ServiceA:
         pass
@@ -129,10 +127,12 @@ async def test_factory_resolution(container):
     async def factory_func(service_a: Annotated[ServiceA, Inject()]):
         return ServiceB(service_a)
 
-
-
-    service_b_instance = await container.resolve_factory(factory_func, [], [], disable_scope=True)
-    assert isinstance(service_b_instance, ServiceB), "Factory function should return an instance of ServiceB."
+    service_b_instance = await container.resolve_factory(
+        factory_func, [], [], disable_scope=True
+    )
+    assert isinstance(
+        service_b_instance, ServiceB
+    ), "Factory function should return an instance of ServiceB."
 
 
 @pytest.mark.asyncio
@@ -149,9 +149,10 @@ async def test_resolve_property(container):
     class ServiceB:
         service_a: Annotated[ServiceA, Inject()]
 
-
     service_b_instance = await container.get(ServiceB, disable_scope=True)
-    assert isinstance(service_b_instance.service_a, ServiceA), "ServiceB should have ServiceA resolved as property."
+    assert isinstance(
+        service_b_instance.service_a, ServiceA
+    ), "ServiceB should have ServiceA resolved as property."
 
 
 @pytest.mark.asyncio
@@ -169,10 +170,15 @@ async def test_get_method_dependency(container):
     container.add_singleton(ServiceA)
     container.add_singleton(ServiceB)
 
-    async def test_method(service_a: Annotated[ServiceA, Inject()], service_b: Annotated[ServiceB, Inject()]):
+    async def test_method(
+        service_a: Annotated[ServiceA, Inject()],
+        service_b: Annotated[ServiceB, Inject()],
+    ):
         return service_a, service_b
 
-    method_dependencies = await container._get_method_dependency(test_method, [ServiceA, ServiceB])
+    method_dependencies = await container._get_method_dependency(
+        test_method, [ServiceA, ServiceB]
+    )
 
     assert isinstance(method_dependencies["service_a"], ServiceA)
     assert isinstance(method_dependencies["service_b"], ServiceB)

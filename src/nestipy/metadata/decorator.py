@@ -4,7 +4,9 @@ from .reflect import Reflect
 
 
 class SetMetadata:
-    def __init__(self, key: str, data: Any, as_list: bool = False, as_dict: bool = False):
+    def __init__(
+        self, key: str, data: Any, as_list: bool = False, as_dict: bool = False
+    ):
         self.key = key
         self.data = data
         self.as_list = as_list

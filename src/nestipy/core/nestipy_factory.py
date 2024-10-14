@@ -10,16 +10,17 @@ from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservic
 
 class _NestipyFactoryMeta(type):
     def __getitem__(self, item) -> "NestipyFactory":
-        setattr(self, '__generic_type__', item.__name__)
+        setattr(self, "__generic_type__", item.__name__)
         return typing.cast(NestipyFactory, self)
 
 
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
-
     @classmethod
-    def create(cls, module: Type, config: NestipyConfig = None) -> NestipyApplication:
+    def create(
+        cls, module: Type, config: typing.Optional[NestipyConfig] = None
+    ) -> NestipyApplication:
         cls._setup_log()
-        if getattr(cls, '__generic_type__', None) == 'NestipyBlackSheepApplication':
+        if getattr(cls, "__generic_type__", None) == "NestipyBlackSheepApplication":
             if not config:
                 config = NestipyConfig(adapter=BlackSheepAdapter())
         application = NestipyApplication(config=config)
@@ -27,15 +28,17 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         return application
 
     @classmethod
-    def create_microservice(cls, module: Type, option: list[MicroserviceOption]) -> NestipyMicroservice:
+    def create_microservice(
+        cls, module: Type, option: list[MicroserviceOption]
+    ) -> NestipyMicroservice:
         return NestipyMicroservice(module, option)
 
     @classmethod
     def connect_microservice(
-            cls,
-            module: Type,
-            option: list[MicroserviceOption],
-            config: NestipyConfig = None
+        cls,
+        module: Type,
+        option: list[MicroserviceOption],
+        config: typing.Optional[NestipyConfig] = None,
     ) -> NestipyConnectMicroservice:
         return NestipyConnectMicroservice(module, config, option)
 

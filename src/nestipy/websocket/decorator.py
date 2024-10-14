@@ -3,13 +3,13 @@ from typing import Type
 from nestipy.common.decorator import Injectable
 from nestipy.metadata import SetMetadata
 
-GATEWAY_KEY = '__GATEWAY__'
-EVENT_KEY = '__GATEWAY_EVENT__'
-SUCCESS_EVENT_KEY = '__GATEWAY_SUCCESS_EVENT__'
-ERROR_EVENT_KEY = '__GATEWAY_ERROR_EVENT__'
+GATEWAY_KEY = "__GATEWAY__"
+EVENT_KEY = "__GATEWAY_EVENT__"
+SUCCESS_EVENT_KEY = "__GATEWAY_SUCCESS_EVENT__"
+ERROR_EVENT_KEY = "__GATEWAY_ERROR_EVENT__"
 
 
-def Gateway(namespace: str = '/'):
+def Gateway(namespace: str = "/"):
     meta_decorator = SetMetadata(GATEWAY_KEY, namespace)
 
     def decorator(cls: Type):

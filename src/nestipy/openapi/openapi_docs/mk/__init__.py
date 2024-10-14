@@ -2,6 +2,7 @@
 This module provides common functions to generate other kinds of representations from
 source OpenAPI Documentation files.
 """
+
 import re
 from http import HTTPStatus
 

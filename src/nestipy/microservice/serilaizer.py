@@ -5,7 +5,6 @@ import ujson
 
 
 class Serializer(ABC):
-
     @abstractmethod
     async def serialize(self, data: Any) -> str:
         pass
