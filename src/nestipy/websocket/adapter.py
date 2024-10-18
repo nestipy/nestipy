@@ -50,8 +50,8 @@ class IoAdapter(ABC):
 class SocketIoAdapter(IoAdapter):
     def __init__(self, io: AsyncServer, path: str = "socket.io"):
         super().__init__(path=path)
-        self._io = io
-        self._connected = []
+        self._io: AsyncServer = io
+        self._connected: list = []
 
     def on(self, event: str, namespace: str = None):
         def decorator(handler: Callable):

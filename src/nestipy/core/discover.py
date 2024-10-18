@@ -6,9 +6,9 @@ from nestipy.common.utils import uniq_list
 
 @Injectable()
 class DiscoverService:
-    _modules: list = []
-    _providers: list = []
-    _controllers: list = []
+    _modules = []
+    _providers = []
+    _controllers = []
 
     def get_all_controller(self) -> list[Type]:
         return uniq_list(self._controllers)
@@ -22,8 +22,8 @@ class DiscoverService:
     def add_controller(self, *ctrl: object):
         self._controllers += list(ctrl)
 
-    def add_provider(self, *service: object):
-        self._providers += list(service)
+    def add_provider(self, *services: object):
+        self._providers += list(services)
 
     def add_module(self, *module_ref: object):
         self._modules += list(module_ref)

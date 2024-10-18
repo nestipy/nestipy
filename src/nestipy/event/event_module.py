@@ -1,5 +1,5 @@
 import inspect
-from typing import Annotated, Union
+from typing import Annotated, Union, Callable
 
 from nestipy.common import Module
 from nestipy.core import DiscoverService
@@ -36,7 +36,7 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
                 self._event_emitter.add_listener(event_data.name, callback)
 
     @classmethod
-    def _create_async_handler(cls, callback: callable) -> callable:
+    def _create_async_handler(cls, callback: Callable) -> callable:
         async def async_handler(*args, **kwargs):
             if inspect.iscoroutinefunction(callback):
                 return await callback(*args, **kwargs)

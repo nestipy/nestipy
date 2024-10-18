@@ -38,7 +38,7 @@ class InstanceLoader:
             ExceptionFilter,
         )
 
-        self.discover = await NestipyContainer.get_instance().get(DiscoverService)
+        self.discover: DiscoverService = await NestipyContainer.get_instance().get(DiscoverService)
         for module in modules:
             if isinstance(module, DynamicModule):
                 module = module.module
@@ -72,7 +72,7 @@ class InstanceLoader:
         return self.graphql_instance
 
     async def _create_providers(self, module: Type) -> list:
-        provider_instance = []
+        provider_instance: list = []
         for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
             if isinstance(provider, ModuleProviderDict):
                 continue

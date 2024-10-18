@@ -19,7 +19,7 @@ class Injectable:
         self.scope = scope
         self.container = NestipyContainer.get_instance()
 
-    def __call__(self, cls: Type) -> Type:
+    def __call__(self, cls: Union[Type, Callable]) -> Type:
         match self.scope:
             case Scope.Transient:
                 self.container.add_transient(cls)

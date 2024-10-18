@@ -16,15 +16,17 @@ def helmet() -> Type:
     @Injectable()
     class HelmetMiddleware(NestipyMiddleware):
         async def use(self, req: Request, res: Response, next_fn: NextFn):
-            result = await next_fn()
-            res.header("X-Content-Type-Options", "nosniff")
-            res.header("X-Frame-Options", "DENY")
-            res.header("X-XSS-Protection", "1; mode=block")
-            res.header(
-                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
-            )
-            res.header("Content-Security-Policy", "default-src 'self'")
-            res.header("Referrer-Policy", "no-referrer")
+            try:
+                result = await next_fn()
+            finally:
+                res.header("X-Content-Type-Options", "nosniff")
+                res.header("X-Frame-Options", "DENY")
+                res.header("X-XSS-Protection", "1; mode=block")
+                res.header(
+                    "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+                )
+                res.header("Content-Security-Policy", "default-src 'self'")
+                res.header("Referrer-Policy", "no-referrer")
             return result
 
     return HelmetMiddleware

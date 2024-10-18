@@ -1,5 +1,38 @@
-@import "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap";
-@import "https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap";
+/* Source Sans 3 - Local */
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url('./fonts/SourceSans3/SourceSans3-VariableFont_wght.ttf') format('truetype');
+}
+
+
+@font-face {
+    font-family: 'Source Sans 3';
+    font-style: italic;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url('./fonts/SourceSans3/SourceSans3-Italic-VariableFont_wght.ttf') format('truetype');
+}
+
+
+@font-face {
+    font-family: 'Source Code Pro';
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url('./fonts/SourceCodePro/SourceCodePro-VariableFont_wght.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Source Code Pro';
+    font-style: italic;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url('./fonts/SourceCodePro/SourceCodePro-Italic-VariableFont_wght.ttf') format('truetype');
+}
+
 :root {
     --md-primary-fg-color: #090909;
     --md-accent-fg-color: #ed2945;
@@ -33,6 +66,7 @@ body {
     font-weight: 400;
 
 }
+
 code {
     font-family: 'Source Code Pro', 'Source Sans 3', Montserrat, monospace, -apple-system, Serif;
 }
@@ -133,6 +167,7 @@ code {
     padding-top: 12px;
     padding-bottom: 12px;
 }
+
 .md-footer-meta__inner .md-social__link:hover {
     color: #ed2945 !important;
 }
