@@ -26,6 +26,7 @@ from .http_ import Request, Response, Websocket, UploadFile
 from .interceptor import NestipyInterceptor, UseInterceptors
 from .logger import logger, console
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
+from .middleware import cookie_session, SessionCookieOption, SessionStore
 from .template import Render, TemplateEngine
 
 __all__ = [
@@ -66,4 +67,7 @@ __all__ = [
     "logger",
     "console",
     "apply_decorators",
+    "cookie_session",
+    "SessionStore",
+    "SessionCookieOption"
 ]

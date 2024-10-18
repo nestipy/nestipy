@@ -18,7 +18,7 @@ class TemplateEngine(ABC):
         Returns:
             str: The rendered template.
         """
-        pass
+        raise NotImplemented("Method not implemented")
 
     @abstractmethod
     def render_str(self, string: str, context: dict) -> str:
@@ -29,8 +29,8 @@ class TemplateEngine(ABC):
         Returns:
             str: The rendered string .
         """
-        pass
+        raise NotImplemented("Method not implemented")
 
     @abstractmethod
     def get_env(self) -> Any:
-        pass
+        raise NotImplemented("Method not implemented")

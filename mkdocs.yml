@@ -23,9 +23,9 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-  font:
-    text: Montserrat
-    size: 400
+  font: false
+#    text: Montserrat
+#    size: 400
   logo: images/nestipy.png
   favicon: images/nestipy.png
   features:

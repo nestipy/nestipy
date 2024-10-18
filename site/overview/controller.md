@@ -1,5 +1,4 @@
-Controller in <strong>Nestipy</strong> look like
-
+In **Nestipy**, controllers help organize routes and handle incoming requests. Here's an example of a basic controller.
 ```python
 from nestipy.common import Controller, Get
 
@@ -11,10 +10,14 @@ class CatsController:
         return 'This action returns all cats'
 
 ```
+In this example:
+
+* The `@Controller('cats')` decorator binds this controller to the /cats route.
+* The `@Get()` decorator defines a route for GET /cats.
+* The `find_all` method handles the request and returns a response.
 
 ## Request and Response object
-We can access Request and Response object from handler bu using annotation type Req and Res respectively.
-
+You can access the Request and Response objects in your handler by using the Req and Res annotations:
 ```python
 from typing import Annotated
 from nestipy.ioc import Req, Res
@@ -29,10 +32,12 @@ class CatsController:
         return await res.send('This action returns all cats')
 
 ```
+### **Key Points**:
+* `Req()` binds the Request object to the method parameter req.
+* `Res()` binds the Response object to res, allowing you to send custom responses.
 
 ## Full resource sample
-Below is a sample illustrating how different decorators are employed to create a basic controller. This controller furnishes methods for accessing and modifying internal data.
-
+Below is a more comprehensive example of how you can use different decorators to handle requests and pass data (via body, query, parameters, etc.).
 ```python
 from dataclasses import dataclass
 from typing import Annotated
@@ -72,8 +77,16 @@ class CatsController:
 
 
 ```
+
+### **Breakdown**:
+
+* Body: The `@Body()` decorator binds request body data to the method parameter data.
+* Query: The `@Query()` decorator retrieves query parameters (limit in this case).
+* Param: The `@Param()` decorator retrieves route parameters like cat_id.
+* Session: Binds session data to a method parameter.
+* Header: Binds request headers to a method parameter.
 ## Getting up and running
-Similar to NestJs, registering controllers within modules is required.
+Just like NestJS, you need to register controllers within modules in Nestipy. Here's how:
 
 ```python
 from nestipy.common import Module
@@ -88,5 +101,8 @@ from .cats_controller import CatsController
 class AppModule:
     pass
 ```
-Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-request-params)** for an  example.
+This module declares the CatsController to handle routes starting with /cats.
+
+## **Explore More**
+Check out the [sample repository](https://github.com/nestipy/sample/tree/main/sample-app-request-params) for an example of how request parameters work in Nestipy.
 <br/>
