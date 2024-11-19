@@ -3,7 +3,7 @@ import typing
 from fastapi import Response as FResponse, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
-from starlette.middleware import _MiddlewareClass
+from starlette.middleware import _MiddlewareFactory
 from starlette.types import ASGIApp
 
 from nestipy.common.http_ import Response
@@ -70,7 +70,7 @@ class FastApiAdapter(HttpAdapter):
 
     def enable_cors(self) -> None:
         self.instance.add_middleware(
-            typing.cast(_MiddlewareClass[typing.Any], CORSMiddleware),
+            typing.cast(_MiddlewareFactory[typing.Any], CORSMiddleware),
             allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],

@@ -91,6 +91,7 @@ nav:
       - Database: technique/database.md
       - Task scheduling: technique/schedule.md
       - Events: technique/event.md
+      - Inertia: technique/inertia.md
   #  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md

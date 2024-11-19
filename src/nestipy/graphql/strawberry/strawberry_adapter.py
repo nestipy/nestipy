@@ -9,7 +9,7 @@ from strawberry import (
     subscription,
     Schema,
 )
-from strawberry.field import StrawberryField
+from strawberry.types.field import StrawberryField
 
 from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey

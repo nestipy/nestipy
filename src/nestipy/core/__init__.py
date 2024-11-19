@@ -9,7 +9,13 @@ from .on_init import OnInit
 from .on_destroy import OnDestroy
 from .platform import FastApiApplication, BlackSheepApplication
 from .template import MinimalJinjaTemplateEngine
-from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
+
+try:
+    from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
+except ImportError:
+    NestipyMicroservice = None
+    NestipyConnectMicroservice = None
+
 from .background import BackgroundTask, BackgroundTasks
 
 __all__ = [
