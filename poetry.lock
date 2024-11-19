@@ -1538,11 +1538,9 @@ multidict = ">=4.0"
 propcache = ">=0.2.0"
 
 [extras]
-all = ["fastapi", "httpx", "python-multipart", "python-multipart"]
 blacksheep = []
-ms = ["async-timeout"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "c100a66a7e1aae6240638311fd3b0258847fa4cb3292fe5281133bf55ab86050"
+content-hash = "cc6c9378c962b9bbff7ad2198db40f4ea7af4974908296605385a33bc1c9a68e"
