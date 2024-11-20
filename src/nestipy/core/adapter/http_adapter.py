@@ -168,7 +168,7 @@ class HttpAdapter(ABC):
         async def next_fn(error: Union[HttpException | None] = None):
             #  catch error
             if error is not None:
-                accept = req.headers.get("accept")
+                accept = req.headers.get("accept", [])
                 if "application/json" in accept:
                     return await res.status(error.status_code).json(
                         {

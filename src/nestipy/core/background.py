@@ -4,6 +4,7 @@ import asyncio
 import functools
 import sys
 import typing
+from asyncio import Task
 
 if sys.version_info >= (3, 10):  # pragma: no cover
     from typing import ParamSpec
@@ -20,13 +21,13 @@ def is_async_callable(obj: typing.Any) -> typing.Any:
         obj = obj.func
 
     return asyncio.iscoroutinefunction(obj) or (
-        callable(obj) and asyncio.iscoroutinefunction(getattr(obj, "__call__"))
+            callable(obj) and asyncio.iscoroutinefunction(getattr(obj, "__call__"))
     )
 
 
 class BackgroundTask:
     def __init__(
-        self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
+            self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
     ) -> None:
         self.func = func
         self.args = args
@@ -44,10 +45,10 @@ class BackgroundTasks:
     def __init__(self) -> None:
         self.queue = asyncio.Queue()
         self.is_running = False
-        self.worker_task = None
+        self.worker_task: typing.Union[Task, None] = None
 
     def add_task(
-        self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
+            self, func: typing.Callable[P, typing.Any], *args: P.args, **kwargs: P.kwargs
     ) -> None:
         task = BackgroundTask(func, *args, **kwargs)
         self.add(task)
@@ -74,5 +75,5 @@ class BackgroundTasks:
     async def shutdown(self) -> None:
         self.is_running = False
         if self.worker_task:
-            await self.worker_task
+            self.worker_task.cancel()
         await self.queue.join()

@@ -221,7 +221,7 @@ class NestipyApplication:
 
     def use_static_assets(self, assets_path: str, url: str = "/static"):
         async def render_asset_file(
-            req: "Request", res: "Response", _next_fn: "NextFn"
+                req: "Request", res: "Response", _next_fn: "NextFn"
         ) -> Response:
             file_path = os.path.join(
                 assets_path, req.path.replace(f'/{url.strip("/")}', "").strip("/")
@@ -269,7 +269,7 @@ class NestipyApplication:
         self._prefix = prefix or ""
 
     def _add_root_module_provider(
-        self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
+            self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
     ):
         root_providers: list = Reflect.get_metadata(
             self._root_module, ModuleMetadata.Providers, []
