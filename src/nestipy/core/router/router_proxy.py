@@ -30,8 +30,8 @@ from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiRespo
 
 class RouterProxy:
     def __init__(
-        self,
-        router: HttpAdapter,
+            self,
+            router: HttpAdapter,
     ):
         self.router = router
         self._template_processor = TemplateRendererProcessor(router)
@@ -80,7 +80,7 @@ class RouterProxy:
         return paths, json_schemas
 
     def create_request_handler(
-        self, module_ref: Type, controller: Union[object, Type], method_name: str
+            self, module_ref: Type, controller: Union[object, Type], method_name: str
     ) -> CallableHandler:
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
             context_container = RequestContextContainer.get_instance()
@@ -93,47 +93,48 @@ class RouterProxy:
             context_container.set_execution_context(execution_context)
             handler_response: Response
             try:
-                # TODO : Refactor
-                guard_processor: GuardProcessor = (
-                    await NestipyContainer.get_instance().get(GuardProcessor)
-                )
-                can_activate = await guard_processor.process(execution_context)
-                if not can_activate[0]:
-                    # Raise error
-                    raise HttpException(
-                        HttpStatus.UNAUTHORIZED,
-                        HttpStatusMessages.UNAUTHORIZED,
-                        details=f"Not authorized from guard {can_activate[1]}",
-                    )
-
-                # create next_function that call catch
-                async def next_fn_middleware(ex: typing.Any = None):
-                    if ex is not None:
-                        return await self._ensure_response(res, await next_fn(ex))
-                    return await container.get(controller, method_name)
 
                 async def next_fn_interceptor(ex: typing.Any = None):
                     if ex is not None:
                         return await self._ensure_response(res, await next_fn(ex))
-                    return await MiddlewareExecutor(
-                        req, res, next_fn_middleware
-                    ).execute()
+                    return await container.get(controller, method_name)
 
-                #  execute Interceptor by using middleware execution as next_handler
-                interceptor: RequestInterceptor = await container.get(
-                    RequestInterceptor
-                )
-                result = await interceptor.intercept(
-                    execution_context, next_fn_interceptor
-                )
-                if result is None:
-                    raise HttpException(
-                        HttpStatus.BAD_REQUEST,
-                        "Handler not called because of interceptor: Invalid Request",
+                async def next_fn_middleware(ex: typing.Any = None):
+                    if ex is not None:
+                        raise ex
+                    g_processor: GuardProcessor = (
+                        await NestipyContainer.get_instance().get(GuardProcessor)
                     )
+                    passed = await g_processor.process(execution_context)
+                    if not passed[0]:
+                        raise HttpException(
+                            HttpStatus.UNAUTHORIZED,
+                            HttpStatusMessages.UNAUTHORIZED,
+                            details=f"Not authorized from guard {passed[1]}",
+                        )
+
+                    interceptor: RequestInterceptor = await container.get(
+                        RequestInterceptor
+                    )
+                    resp = await interceptor.intercept(
+                        execution_context, next_fn_interceptor
+                    )
+                    #  execute Interceptor by using middleware execution as next_handler
+                    if resp is None:
+                        raise HttpException(
+                            HttpStatus.BAD_REQUEST,
+                            "Handler not called because of interceptor: Invalid Request",
+                        )
+                    return resp
+
+                # Call middleware before all
+                result = await MiddlewareExecutor(
+                    req, res, next_fn_middleware
+                ).execute()
+
                 # process template rendering
                 if self._template_processor.can_process(
-                    controller_method_handler, result
+                        controller_method_handler, result
                 ):
                     result = await res.html(self._template_processor.render())
                 # transform result to response
@@ -167,7 +168,7 @@ class RouterProxy:
 
     @classmethod
     async def _ensure_response(
-        cls, res: "Response", result: Union["Response", str, dict, list]
+            cls, res: "Response", result: Union["Response", str, dict, list]
     ) -> "Response":
         if isinstance(result, (str, int, float)):
             return await res.send(content=str(result))
@@ -208,7 +209,7 @@ class RouterProxy:
             return f"Could not read file {filename}: {str(e)}"
 
     async def render_not_found(
-        self, _req: "Request", _res: "Response", _next_fn: "NextFn"
+            self, _req: "Request", _res: "Response", _next_fn: "NextFn"
     ) -> Response:
         try:
             raise HttpException(
@@ -240,7 +241,7 @@ class RouterProxy:
 
     @classmethod
     def get_full_traceback_details(
-        cls, req: Request, exception: typing.Any, file_path: str
+            cls, req: Request, exception: typing.Any, file_path: str
     ):
         exc_type, exc_value, exc_tb = sys.exc_info()
         traceback_details = []

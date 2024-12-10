@@ -1,7 +1,8 @@
 import dataclasses
+import inspect
 from abc import ABC, abstractmethod
 from base64 import b64decode, b64encode
-from typing import Type, Union, Literal, Any
+from typing import Type, Union, Literal, Any, Callable
 from uuid import uuid4
 
 import itsdangerous
@@ -128,6 +129,13 @@ class SessionOption:
     store: SessionStore = InMemoryStore()
 
 
+async def call(callback: Callable, *args, **kwargs):
+    if inspect.iscoroutinefunction(callback):
+        return await callback(*args, **kwargs)
+    else:
+        return callback(*args, **kwargs)
+
+
 def session(option: SessionOption = SessionOption()):
     @Injectable()
     class SessionMiddleware(NestipyMiddleware):
@@ -142,7 +150,8 @@ def session(option: SessionOption = SessionOption()):
             session_id = req.cookies.get(option.session_key)
 
             if session_id and session_id in option.store.store:
-                req.session = {**req.session, **option.store.get(session_id)}
+                sessions = await call(option.store.get, session_id)
+                req.session = {**req.session, **sessions}
                 initial_session_was_empty = False
             else:
                 session_id = str(uuid4())
@@ -159,7 +168,7 @@ def session(option: SessionOption = SessionOption()):
                 if header_value:
                     header_value += ", "
 
-                option.store.set(session_id, req.session)
+                await call(option.store.set, session_id, req.session)
                 if req.session:
                     header_value += "{session_key}={data}; path={path}; {max_age}{security_flags}".format(
                         session_key=option.session_key,
