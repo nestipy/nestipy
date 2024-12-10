@@ -27,6 +27,7 @@ class ModuleGuard(CanActivate):
     async def can_activate(
         self, context: ExecutionContext
     ) -> Union[Awaitable[bool], bool]:
+        print("Guarded")
         return True
 
 
