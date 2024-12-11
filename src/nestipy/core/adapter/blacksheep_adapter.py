@@ -93,7 +93,7 @@ class BlackSheepAdapter(HttpAdapter):
                 return BlackSheepResponse(
                     content=StreamedContent(
                         content_type=result.content_type().encode(),
-                        data_provider=result.get_stream,
+                        data_provider=result.stream_content,
                     ),
                     headers=[(k.encode(), v.encode()) for k, v in result.headers()],
                     status=result.status_code() or 200,
