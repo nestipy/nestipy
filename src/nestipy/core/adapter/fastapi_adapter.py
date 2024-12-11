@@ -85,7 +85,7 @@ class FastApiAdapter(HttpAdapter):
             result: Response = await callback(req, res, next_fn)
             if result.is_stream():
                 return FStreamingResponse(
-                    content=result.get_stream(),
+                    content=result.stream_content(),
                     headers={k: v for k, v in result.headers()},
                     status_code=result.status_code() or 200,
                 )

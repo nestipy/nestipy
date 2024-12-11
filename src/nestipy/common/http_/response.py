@@ -23,7 +23,7 @@ class Response:
         self._headers = set()
         self._status_code = 200
         self._content = None
-        self._stream_content = None
+        self.stream_content = None
         self.template_engine = template_engine
 
     async def _start(self) -> None:
@@ -133,7 +133,7 @@ class Response:
         return self
 
     async def json(
-        self, content: dict, status_code: Union[int, None] = None
+            self, content: dict, status_code: Union[int, None] = None
     ) -> "Response":
         """
         Send json
@@ -184,7 +184,7 @@ class Response:
         Returns:
             response(Response):Response instance
         """
-        self._stream_content = callback
+        self.stream_content = callback
         return self
 
     async def stream_file(self, file_path: str, chunk_size: int = 4096) -> "Response":
@@ -254,8 +254,4 @@ class Response:
         return self._cookies
 
     def is_stream(self) -> bool:
-        return self._stream_content is not None
-
-    async def get_stream(self) -> AsyncIterator[bytes]:
-        if self._stream_content is not None:
-            yield self._stream_content()
+        return self.stream_content is not None
