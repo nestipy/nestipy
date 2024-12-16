@@ -45,6 +45,10 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
+    def static(self, route: str, directory: str, name: str = None, option: dict = None) -> None:
+        pass
+
+    @abstractmethod
     def get(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
         pass
 
@@ -145,6 +149,9 @@ class HttpAdapter(ABC):
 
     def get_global_guards(self):
         return self._global_guards
+
+    def get_template_engine(self):
+        return self.get_state(TemplateKey.MetaEngine)
 
     async def __call__(self, scope, receive, send):
         self.scope = scope

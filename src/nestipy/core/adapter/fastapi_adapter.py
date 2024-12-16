@@ -4,6 +4,7 @@ from fastapi import Response as FResponse, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
 from starlette.middleware import _MiddlewareFactory
+from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp
 
 from nestipy.common.http_ import Response
@@ -12,6 +13,7 @@ from .http_adapter import HttpAdapter
 
 
 class FastApiAdapter(HttpAdapter):
+
     def __init__(self):
         self.instance = FastAPI(
             on_startup=[self.on_startup],
@@ -28,6 +30,9 @@ class FastApiAdapter(HttpAdapter):
     def use(self, callback: CallableHandler, metadata: dict) -> None:
         # need to transform if we use middleware from here
         self.instance.middleware("http")
+
+    def static(self, route: str, directory: str, name: str = None, option: dict = None) -> None:
+        self.instance.mount(route, StaticFiles(directory=directory, **(option or {})), name=name)
 
     def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
         self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
