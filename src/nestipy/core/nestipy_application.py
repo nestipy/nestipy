@@ -67,7 +67,7 @@ class NestipyApplication:
         self._http_adapter: HttpAdapter = (
             config.adapter if config.adapter is not None else FastApiAdapter()
         )
-        self._graphql_builder = StrawberryAdapter()
+        self._graphql_adapter = StrawberryAdapter()
         self._router_proxy = RouterProxy(self._http_adapter)
         self._middleware_container = MiddlewareContainer.get_instance()
         self.instance_loader = InstanceLoader()
@@ -110,6 +110,12 @@ class NestipyApplication:
         self._add_root_module_provider(
             ModuleProviderDict(token=BackgroundTasks, value=self._background_tasks)
         )
+        self._add_root_module_provider(
+            ModuleProviderDict(token=HttpAdapter, value=self._http_adapter)
+        )
+        self._add_root_module_provider(
+            ModuleProviderDict(token=GraphqlAdapter, value=self._graphql_adapter)
+        )
         self._set_metadata()
 
     def _set_metadata(self):
@@ -140,7 +146,7 @@ class NestipyApplication:
             # check if graphql is enabled
             if graphql_module_instance is not None:
                 await GraphqlProxy(
-                    self._http_adapter, self._graphql_builder
+                    self._http_adapter, self._graphql_adapter
                 ).apply_resolvers(graphql_module_instance, modules)
             if self._http_adapter.get_io_adapter() is not None:
                 IoSocketProxy(self._http_adapter).apply_routes(modules)
@@ -171,7 +177,7 @@ class NestipyApplication:
                         "static",
                     )
                 ),
-                "_devtools/static",
+                "/_devtools/static",
             )
             if self._debug:
                 # Not found
@@ -196,7 +202,7 @@ class NestipyApplication:
         return self._http_adapter
 
     def get_graphql_adapter(self) -> GraphqlAdapter:
-        return self._graphql_builder
+        return self._graphql_adapter
 
     def get_openapi_paths(self) -> dict[Any, PathItem]:
         return self._openapi_paths
@@ -220,18 +226,20 @@ class NestipyApplication:
         self._http_adapter.enable_cors()
 
     def use_static_assets(self, assets_path: str, url: str = "/static"):
-        async def render_asset_file(
-                req: "Request", res: "Response", _next_fn: "NextFn"
-        ) -> Response:
-            file_path = os.path.join(
-                assets_path, req.path.replace(f'/{url.strip("/")}', "").strip("/")
-            )
-            return await res.download(file_path=file_path, attachment=False)
-
-        static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
-        self._http_adapter.get(static_path, render_asset_file, {})
+        # async def render_asset_file(
+        #         req: "Request", res: "Response", _next_fn: "NextFn"
+        # ) -> Response:
+        #     file_path = os.path.join(
+        #         assets_path, req.path.replace(f'/{url.strip("/")}', "").strip("/")
+        #     )
+        #     return await res.download(file_path=file_path, attachment=False)
+        #
+        # static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
+        # self._http_adapter.get(static_path, render_asset_file, {})
+        self._http_adapter.static(f'/{url.strip("/")}', assets_path)
 
     def set_base_view_dir(self, view_dir: str):
+        self._http_adapter.set(TemplateKey.MetaBaseView, view_dir)
         self._setup_template_engine(view_dir)
 
     def set_view_engine(self, engine: Union[Literal["minijinja"], TemplateEngine]):
@@ -246,9 +254,7 @@ class NestipyApplication:
         self._http_adapter.set(TemplateKey.MetaEngine, engine)
 
     def get_template_engine(self) -> Union[TemplateEngine, None]:
-        engine: Union[TemplateEngine, None] = self._http_adapter.get_state(
-            TemplateKey.MetaEngine
-        )
+        engine: Union[TemplateEngine, None] = self._http_adapter.get_template_engine()
         if engine is None:
             raise Exception("Template engine not configured")
         return engine

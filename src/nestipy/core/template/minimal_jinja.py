@@ -11,9 +11,9 @@ class MinimalJinjaTemplateEngine(TemplateEngine):
 
     def __init__(self, template_dir: str):
         super().__init__(template_dir)
-        self.env = Environment(loader=self.loader)
+        self.env = Environment(loader=self._template_loader, reload_before_render=True)
 
-    def loader(self, name):
+    def _template_loader(self, name):
         segments = []
         for segment in name.split("/"):
             if "\\" in segment or segment in (".", ".."):
