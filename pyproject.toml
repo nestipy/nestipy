@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nestipy"
-version = "0.6.4"
+version = "0.6.5"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = ["tsiresymila <tsiresymila@gmail.com>"]
 readme = "README.md"
@@ -30,6 +30,7 @@ nats-py = "^2.9.0"
 aiomqtt = "^2.3.0"
 redis = "^5.2.0"
 aio-pika = "^9.4.3"
+asyncclick = "^8.1.7.2"
 
 [tool.poetry.extras]
 blacksheep = ["blacksheep"]
@@ -42,3 +43,6 @@ pytest-coverage = "^0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+
