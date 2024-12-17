@@ -8,6 +8,7 @@ from nestipy.common.template import TemplateEngine
 
 class MinimalJinjaTemplateEngine(TemplateEngine):
     env: Environment
+    name: str = "minijinja"
 
     def __init__(self, template_dir: str):
         super().__init__(template_dir)

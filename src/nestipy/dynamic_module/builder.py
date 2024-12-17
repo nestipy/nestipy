@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
-from typing import TypeVar, Generic, Optional, Any, Callable, Union, Type, Awaitable
+from typing import TypeVar, Generic, Optional, Any, Callable, Union, Type, Awaitable, Dict, List
 
 from nestipy.ioc.provider import ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect
@@ -27,9 +27,9 @@ class ConfigurableModuleBuilder(Generic[T]):
         ] = None
 
     def set_extras(
-        self,
-        extras: dict[str, Any],
-        extras_callback: Callable[[DynamicModule, dict[str, Any]], None],
+            self,
+            extras: dict[str, Any],
+            extras_callback: Callable[[DynamicModule, dict[str, Any]], None],
     ):
         self._extras = extras
         self._extras_process_callback = extras_callback
@@ -45,12 +45,12 @@ class ConfigurableModuleBuilder(Generic[T]):
         return dynamic_module
 
     def _create_dynamic_module(
-        self, obj: Any, imports: list, provider: list
+            self, obj: Any, imports: list, provider: list
     ) -> DynamicModule:
         dynamic_module = DynamicModule(
             obj,
             providers=provider
-            + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
+                      + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
             exports=Reflect.get_metadata(obj, ModuleMetadata.Exports, []),
             imports=imports + Reflect.get_metadata(obj, ModuleMetadata.Imports, []),
             controllers=Reflect.get_metadata(obj, ModuleMetadata.Controllers, []),
@@ -62,7 +62,7 @@ class ConfigurableModuleBuilder(Generic[T]):
         MODULE_OPTION_TOKEN = f"{uuid.uuid4().hex}_TOKEN"
 
         def register(
-            cls_: Any, options: Optional[T], extras: Optional[dict] = None
+                cls_: Any, options: Optional[T], extras: Optional[dict] = None
         ) -> DynamicModule:
             if extras is not None:
                 self._extras = extras
@@ -70,14 +70,14 @@ class ConfigurableModuleBuilder(Generic[T]):
             return self._create_dynamic_module(cls_, [], [provider])
 
         def register_async(
-            cls_: Any,
-            value: Optional[T] = None,
-            factory: Optional[Callable[..., Union[Awaitable, Any]]] = None,
-            existing: Optional[Union[Type, str]] = None,
-            use_class: Optional[Type] = None,
-            inject: Optional[list] = None,
-            imports: Optional[list] = None,
-            extras: Optional[dict] = None,
+                cls_: Any,
+                value: Optional[T] = None,
+                factory: Optional[Callable[..., Union[Awaitable, Any]]] = None,
+                existing: Optional[Union[Type, str]] = None,
+                use_class: Optional[Type] = None,
+                inject: Optional[list] = None,
+                imports: Optional[list] = None,
+                extras: Optional[dict] = None,
         ) -> DynamicModule:
             if extras is not None:
                 self._extras = extras
@@ -92,10 +92,28 @@ class ConfigurableModuleBuilder(Generic[T]):
             )
             return self._create_dynamic_module(cls_, imports or [], [provider])
 
+        annotations = {
+            self._method_name: Callable[[Any, Optional[T], Optional[Dict[str, Any]]], DynamicModule],
+            f"{self._method_name}_async": Callable[
+                [
+                    Any,
+                    Optional[T],
+                    Optional[Callable[..., Union[Awaitable[Any], Any]]],
+                    Optional[Union[Type, str]],
+                    Optional[Type],
+                    Optional[List[Any]],
+                    Optional[List[Any]],
+                    Optional[Dict[str, Any]],
+                ],
+                DynamicModule,
+            ],
+        }
+
         cls = type(
             "ConfigurableModuleClass",
             (object,),
             {
+                "__annotations__": annotations,
                 self._method_name: classmethod(register),
                 f"{self._method_name}_async": classmethod(register_async),
             },

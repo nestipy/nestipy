@@ -1,7 +1,8 @@
 import traceback
 from typing import Type, Optional, cast
 
-from nestipy.common import logger
+from .style import echo
+
 from nestipy.common.utils import uniq_list
 from nestipy.core.instance_loader import InstanceLoader
 from nestipy.core.meta.controller_metadata_creator import ControllerMetadataCreator
@@ -34,7 +35,7 @@ class NestipyCommander(object):
         self._root_module = root_module
         self._set_metadata()
 
-    async def run(self, command_name: str, context: dict):
+    async def run(self, command_name: str, context: tuple):
         try:
             modules = self._get_modules(self._root_module)
             await self.instance_loader.create_instances(
@@ -48,15 +49,16 @@ class NestipyCommander(object):
 
             command = commands.get(command_name, None)
             if command is not None:
-                await command.run(context)
+                command.init(context)
+                await command.run()
             else:
-                logger.error(f"Command '{command_name}' not found ")
+                echo.error(f"Command '{command_name}' not found ")
             await self.instance_loader.destroy()
 
         except Exception as e:
             _tb = traceback.format_exc()
-            logger.error(e)
-            logger.error(_tb)
+            echo.error(e)
+            echo.error(_tb)
 
     def _set_metadata(self):
         provider_metadata_maker = ProviderMetadataCreator(
