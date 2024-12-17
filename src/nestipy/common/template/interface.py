@@ -6,6 +6,11 @@ class TemplateEngine(ABC):
     def __init__(self, template_dir: str):
         self.template_dir = template_dir
 
+    @property
+    @abstractmethod
+    def name(self):
+        pass
+
     @abstractmethod
     def render(self, template: str, context: dict) -> str:
         """

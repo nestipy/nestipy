@@ -17,5 +17,5 @@ class Command:
             "name": self.name,
             "description": self.desc
         }
-        deco = SetMetadata(CommanderMeta.Meta, data)
-        return deco(Injectable()(func))
+        decorator = SetMetadata(CommanderMeta.Meta, data)
+        return decorator(Injectable()(func))

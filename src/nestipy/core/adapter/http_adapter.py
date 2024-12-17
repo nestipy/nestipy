@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 
+from nestipy.common.template.interface import TemplateEngine
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
@@ -150,7 +151,7 @@ class HttpAdapter(ABC):
     def get_global_guards(self):
         return self._global_guards
 
-    def get_template_engine(self):
+    def get_template_engine(self) -> TemplateEngine:
         return self.get_state(TemplateKey.MetaEngine)
 
     async def __call__(self, scope, receive, send):
