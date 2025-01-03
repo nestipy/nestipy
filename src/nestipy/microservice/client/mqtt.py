@@ -1,25 +1,23 @@
 import asyncio
+import typing
+from dataclasses import asdict
 from typing import Any, AsyncIterator
 
 from aiomqtt import Client
 
-from .base import ClientProxy, MicroserviceOption
+from .base import ClientProxy, MicroserviceOption, MqttClientOption
 
 
 class MqttClientProxy(ClientProxy):
     client: Client
 
     def __init__(
-        self,
-        option: MicroserviceOption,
+            self,
+            option: MicroserviceOption,
     ):
         super().__init__(option)
-        self.client = Client(
-            self.option.option.host,
-            port=self.option.option.port,
-            max_queued_incoming_messages=10,
-            max_queued_outgoing_messages=10,
-        )
+        _option = typing.cast(MqttClientOption, self.option.option or MqttClientOption())
+        self.client = Client(**asdict(_option))
 
     async def slave(self) -> "ClientProxy":
         return MqttClientProxy(
@@ -34,11 +32,9 @@ class MqttClientProxy(ClientProxy):
 
     async def subscribe(self, *args, **kwargs):
         await self.client.subscribe(*args, **kwargs)
-        pass
 
     async def unsubscribe(self, *args):
         await self.client.unsubscribe(*args)
-        pass
 
     async def send_response(self, topic, data):
         await self._publish(topic, data)

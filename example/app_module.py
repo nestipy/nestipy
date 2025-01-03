@@ -1,7 +1,5 @@
 from typing import Union, Awaitable
 
-from nestipy.dynamic_module.module import NestipyModule
-
 from app_controller import AppController
 from app_provider import AppProvider
 from nestipy.common import (
@@ -16,8 +14,10 @@ from nestipy.common import (
 from nestipy.common import ModuleProviderDict
 from nestipy.core import AppKey, MiddlewareConsumer
 from nestipy.core import ExecutionContext
+from nestipy.dynamic_module.module import NestipyModule
 from nestipy.event import EventEmitterModule
 from nestipy.graphql import GraphqlModule, GraphqlOption
+from nestipy.router import RouterModule, RouteItem
 from nestipy.types_ import NextFn
 from user.user_module import UserModule
 
@@ -25,7 +25,7 @@ from user.user_module import UserModule
 @Injectable()
 class ModuleGuard(CanActivate):
     async def can_activate(
-        self, context: ExecutionContext
+            self, context: ExecutionContext
     ) -> Union[Awaitable[bool], bool]:
         print("Guarded")
         return True
@@ -46,10 +46,19 @@ class TestMiddleware(NestipyMiddleware):
         GraphqlModule.for_root(GraphqlOption(url="/graphql", ide="default")),
         EventEmitterModule.for_root(is_global=True),
         UserModule,
+        RouterModule.register(
+            config=[
+                RouteItem(
+                    module=UserModule,
+                    path="test"
+                )
+            ]
+        )
+
     ],
     providers=[
-        ModuleProviderDict(value="Test", token="TEST"),
-        ModuleProviderDict(use_class=ModuleGuard, token=AppKey.APP_GUARD),
+        ModuleProviderDict(token="TEST", value="Test"),
+        ModuleProviderDict(token=AppKey.APP_GUARD, use_class=ModuleGuard),
         AppProvider,
     ],
     controllers=[AppController],

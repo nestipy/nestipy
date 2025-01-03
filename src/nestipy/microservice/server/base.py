@@ -9,16 +9,17 @@ from nestipy.microservice.exception import RpcException, RPCErrorCode, RPCErrorM
 
 
 class MicroServiceServer(ABC):
-    def __init__(self, pubsub: ClientProxy):
-        self._pubsub = pubsub
+    def __init__(self, pub_sub: ClientProxy):
+        self._pub_sub = pub_sub
         self._subscriptions: list[tuple[str, Callable]] = []
         self._request_subscriptions: list[tuple[str, Callable]] = []
 
     async def listen(self):
-        await self._pubsub.connect()
-        await self._pubsub.subscribe(MICROSERVICE_CHANNEL)
-        async for data in self._pubsub.listen():
-            json_rep = await self._pubsub.option.serializer.deserialize(data)
+        await self._pub_sub.before_start()
+        await self._pub_sub.connect()
+        await self._pub_sub.subscribe(f"{MICROSERVICE_CHANNEL}:{self._pub_sub.option.channel_key}")
+        async for data in self._pub_sub.listen():
+            json_rep = await self._pub_sub.option.serializer.deserialize(data)
             request = RpcRequest(**json_rep)
             if request.is_event():
                 await self.handle_event(request)
@@ -26,10 +27,11 @@ class MicroServiceServer(ABC):
                 await self.handle_request(request=request)
 
     def get_transport(self) -> Transport:
-        return self._pubsub.option.transport
+        return self._pub_sub.option.transport
 
     async def close(self):
-        await self._pubsub.close()
+        await self._pub_sub.before_close()
+        await self._pub_sub.close()
 
     def subscribe(self, topic: str, callback: Callable):
         self._subscriptions.append((topic, callback))
@@ -49,7 +51,7 @@ class MicroServiceServer(ABC):
 
     async def handle_request(self, request: RpcRequest) -> Any:
         # process pattern
-        slave = await self._pubsub.slave()
+        slave = await self._pub_sub.slave()
         await slave.connect()
         for pattern, callback in self._request_subscriptions:
             if pattern == request.pattern:
@@ -59,13 +61,13 @@ class MicroServiceServer(ABC):
                     pattern=request.response_topic, data=response, status="success"
                 )
                 await slave.send_response(
-                    request.response_topic,
-                    await self._pubsub.option.serializer.serialize(
+                    f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
+                    await self._pub_sub.option.serializer.serialize(
                         asdict(rpc_response)
                     ),
                 )
                 return
-        rpc_response: Any = await self._pubsub.option.serializer.serialize(
+        rpc_response: Any = await self._pub_sub.option.serializer.serialize(
             asdict(
                 RpcResponse(
                     pattern=request.pattern,
@@ -78,7 +80,7 @@ class MicroServiceServer(ABC):
                 )
             )
         )
-        await slave.send_response(request.response_topic, rpc_response)
+        await slave.send_response(f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}", rpc_response)
         await slave.close()
 
     async def handle_event(self, request: RpcRequest):

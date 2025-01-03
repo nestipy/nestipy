@@ -14,15 +14,15 @@ To use the `RabbitMQ` transporter, pass the following options object to the `cre
 from app_module import AppModule
 
 from nestipy.core import NestipyFactory
-from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
+from nestipy.microservice import MicroserviceOption, Transport, RabbitMQClientOption
 
 app = NestipyFactory.create_microservice(
     AppModule, [
         MicroserviceOption(
             transport=Transport.RABBITMQ,
-            option=MicroserviceClientOption(
+            option=RabbitMQClientOption(
                 host="localhost",
-                port=5672
+                port=1883
             )
         )
     ]
@@ -33,7 +33,7 @@ app = NestipyFactory.create_microservice(
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClientOption, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig, RabbitMQClientOption, MicroserviceOption, Transport
 
 
 @Module(
@@ -43,9 +43,9 @@ from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClien
                 name="MATH_SERVICE",
                 option=MicroserviceOption(
                     transport=Transport.RABBITMQ,
-                    option=MicroserviceClientOption(
+                    option=RabbitMQClientOption(
                         host="localhost",
-                        port=5672
+                        port=1883
                     )
                 )
             )

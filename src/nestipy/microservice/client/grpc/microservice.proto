@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ms;
+
+// Request and Response Messages
+message SubRequest {
+  string topic = 1;
+}
+
+message UnsubRequest {
+  string topic = 1;
+}
+
+message DataRequest {
+  string topic = 1;
+  string data = 2;
+}
+
+message DataResponse {
+  string data = 1;
+  string topic = 2;
+}
+
+message Empty {}
+
+
+service Grpc {
+  rpc Subscribe(SubRequest) returns (stream DataResponse);
+  rpc Unsubscribe(UnsubRequest) returns (Empty);
+  rpc SendData(DataRequest) returns (Empty);
+}
+
+

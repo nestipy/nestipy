@@ -10,17 +10,17 @@ from strawberry.http.typevars import Context
 from strawberry.schema import BaseSchema
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
 from strawberry.printer import print_schema
-from ..graphql_asgi import GraphqlAsgi
-from ..graphql_module import GraphqlOption, AsgiOption
+from ..graphql_asgi import GraphqlASGI
+from ..graphql_module import GraphqlOption, ASGIOption
 
 
-class StrawberryAsgi(GraphQL, GraphqlAsgi):
+class StrawberryASGI(GraphQL, GraphqlASGI):
     def __init__(
         self,
         schema: BaseSchema,
         option: GraphqlOption,
     ):
-        asgi_option = asdict(option.asgi_option or AsgiOption())
+        asgi_option = asdict(option.asgi_option or ASGIOption())
         asgi_option["subscription_protocols"] = asgi_option[
             "subscription_protocols"
         ] or (

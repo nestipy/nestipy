@@ -8,7 +8,7 @@ from nestipy.metadata.decorator import SetMetadata
 
 
 class Command:
-    def __init__(self, name: str, desc: str):
+    def __init__(self, name: str, desc: str = ""):
         self.name = name
         self.desc = desc
 

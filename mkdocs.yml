@@ -24,8 +24,8 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
   font: false
-#    text: Montserrat
-#    size: 400
+  #    text: Montserrat
+  #    size: 400
   logo: images/nestipy.png
   favicon: images/nestipy.png
   features:
@@ -90,6 +90,7 @@ nav:
       - Configuration: technique/configuration.md
       - Database: technique/database.md
       - Task scheduling: technique/schedule.md
+      - Background Tasks: technique/background_task.md
       - Events: technique/event.md
       - Inertia: technique/inertia.md
   #  - Security: plugin.md
@@ -108,6 +109,11 @@ nav:
       - MQTT: microservice/mqtt.md
       - NATS: microservice/nats.md
       - RabbitMQ: microservice/rabbitmq.md
+      - GRPC: microservice/grpc.md
   - Openapi: openapi/start.md
+  - Recipes:
+      - REPL: recipes/repl.md
+      - Router module : recipes/router.md
+      - Commander: recipes/commander.md
   - Cli: cli.md
   - Utils: util.md

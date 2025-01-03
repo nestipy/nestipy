@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Type, Union
 
-from .graphql_asgi import GraphqlAsgi
+from .graphql_asgi import GraphqlASGI
 from .graphql_module import GraphqlOption
 
 
@@ -65,7 +65,7 @@ class GraphqlAdapter(ABC):
         pass
 
     @abstractmethod
-    def mutate_handler(
+    def modify_handler_signature(
         self,
         original_handler: Callable,
         wrapper_handler: Callable,
@@ -76,5 +76,5 @@ class GraphqlAdapter(ABC):
     @abstractmethod
     def create_graphql_asgi_app(
         self, schema: Any, option: GraphqlOption
-    ) -> GraphqlAsgi:
+    ) -> GraphqlASGI:
         pass

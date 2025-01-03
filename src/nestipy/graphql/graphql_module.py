@@ -8,7 +8,7 @@ from nestipy.ioc import Inject
 
 
 @dataclasses.dataclass
-class AsgiOption:
+class ASGIOption:
     allow_queries_via_get: bool = True
     keep_alive: bool = False
     keep_alive_interval: float = 1
@@ -24,8 +24,12 @@ class GraphqlOption:
     auto_schema_file: Optional[str] = None
     ide: Literal["default", "graphiql"] = "default"
     schema_option: Optional[dict] = None
-    asgi_option: Optional[AsgiOption] = None
+    asgi_option: Optional[ASGIOption] = None
     context_callback: Optional[Callable[[...], dict]] = None
+
+    def __post_init__(self):
+        if self.ide not in ["default", "graphiql"]:
+            raise ValueError("ide value must be one of 'default', 'graphiql'")
 
 
 ConfigurableModuleClass, CONFIG_MODULE_OPTION_TOKEN = (

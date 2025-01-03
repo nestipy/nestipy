@@ -24,7 +24,7 @@ class GraphqlProxy:
         self.container = NestipyContainer.get_instance()
 
     async def apply_resolvers(
-        self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]
+            self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]
     ):
         for module_ref in modules:
             query, mutation, subscription, field_resolver = GraphqlExplorer.explore(
@@ -49,7 +49,7 @@ class GraphqlProxy:
         self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
     def _create_graphql_query_handler(
-        self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
+            self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
     ) -> tuple[str, Callable]:
         resolver: Union[object, Type] = meta["class"]
         method_name: str = meta["handler_name"]
@@ -87,7 +87,6 @@ class GraphqlProxy:
                     raise HttpException(
                         HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED
                     )
-
                 # perform query request
                 result = await self.container.get(resolver, method_name)
             except Exception as e:
@@ -102,7 +101,7 @@ class GraphqlProxy:
             return result
 
         # mutate handle inside adapter
-        self._graphql_server.mutate_handler(
+        self._graphql_server.modify_handler_signature(
             method, graphql_handler, default_return_type
         )
         return (
@@ -120,7 +119,6 @@ class GraphqlProxy:
             schema_sdl = gql_asgi.print_schema()
             with open(os.path.join(os.getcwd(), option.auto_schema_file), "w+") as file:
                 file.write(schema_sdl)
-                file.close()
         # create graphql handler but using handle of graphql_adapter
         self._adapter.mount(graphql_path, gql_asgi.handle)
 
@@ -132,10 +130,10 @@ class GraphqlProxy:
     @classmethod
     def should_render_graphql_ide(cls, req: Request) -> bool:
         return (
-            req.method == "GET"
-            and req.query_params.get("query") is None
-            and any(
-                supported_header in req.headers.get("accept", "")
-                for supported_header in ("text/html", "*/*")
-            )
+                req.method == "GET"
+                and req.query_params.get("query") is None
+                and any(
+            supported_header in req.headers.get("accept", "")
+            for supported_header in ("text/html", "*/*")
+        )
         )

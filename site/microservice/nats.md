@@ -14,13 +14,13 @@ To use the `NATS` transporter, pass the following options object to the `create_
 from app_module import AppModule
 
 from nestipy.core import NestipyFactory
-from nestipy.microservice import MicroserviceOption, Transport
+from nestipy.microservice import MicroserviceOption, Transport, NatsClientOption
 
 app = NestipyFactory.create_microservice(
     AppModule, [
         MicroserviceOption(
             transport=Transport.NATS,
-            url="nats://localhost:4222"
+            option=NatsClientOption()
         )
     ]
 )
@@ -30,7 +30,7 @@ app = NestipyFactory.create_microservice(
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig, NatsClientOption, MicroserviceOption, Transport
 
 
 @Module(
@@ -40,7 +40,7 @@ from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceOptio
                 name="MATH_SERVICE",
                 option=MicroserviceOption(
                     transport=Transport.NATS,
-                    url="nats://localhost:4222"
+                    option=NatsClientOption()
                 )
             )
         ]),

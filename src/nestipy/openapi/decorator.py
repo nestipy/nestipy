@@ -87,8 +87,8 @@ def _ApiResponse(status: int, response: Response):
     )
 
 
-def NoSwagger():
-    return SetMetadata(key="__openapi__no_swagger", data=True)
+def ApiExclude():
+    return SetMetadata(key="__openapi__hidden", data=True)
 
 
 def ApiOkResponse(
