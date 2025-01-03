@@ -5,7 +5,7 @@ from dataclasses_json import dataclass_json
 
 from .exception import RpcException
 
-MICROSERVICE_CHANNEL = "channel:microservice"
+MICROSERVICE_CHANNEL = "__channel__:microservice"
 
 
 @dataclasses.dataclass

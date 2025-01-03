@@ -14,9 +14,9 @@ from strawberry.types.field import StrawberryField
 from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey
 from ..graphql_adapter import GraphqlAdapter
-from ..graphql_asgi import GraphqlAsgi
+from ..graphql_asgi import GraphqlASGI
 from ..graphql_module import GraphqlOption
-from ..strawberry.strawberry_asgi import StrawberryAsgi
+from ..strawberry.strawberry_asgi import StrawberryASGI
 
 
 class StrawberryAdapter(GraphqlAdapter):
@@ -44,8 +44,8 @@ class StrawberryAdapter(GraphqlAdapter):
     def create_subscription_field_resolver(self, resolver: Callable) -> object:
         return subscription(resolver)
 
-    def mutate_handler(
-        self, original_handler: Any, mutated_handler: Callable, default_return_type: Any
+    def modify_handler_signature(
+            self, original_handler: Any, mutated_handler: Callable, default_return_type: Any
     ) -> Type:
         signature = inspect.signature(original_handler)
         return_annotation = (
@@ -65,10 +65,10 @@ class StrawberryAdapter(GraphqlAdapter):
         for param_name, param in signature.parameters.items():
             args = get_args(param.annotation)
             if any(
-                isinstance(arg, TypeAnnotated)
-                and arg.metadata.key == CtxDepKey.Args
-                and arg.metadata.token is None
-                for arg in args
+                    isinstance(arg, TypeAnnotated)
+                    and arg.metadata.key == CtxDepKey.Args
+                    and arg.metadata.token is None
+                    for arg in args
             ):
                 new_parameters.append(param)
 
@@ -91,13 +91,13 @@ class StrawberryAdapter(GraphqlAdapter):
             )
 
         if (
-            "self" in signature.parameters
-            and list(signature.parameters.keys())[0] == "self"
+                "self" in signature.parameters
+                and list(signature.parameters.keys())[0] == "self"
         ):
             new_parameters.insert(0, signature.parameters["self"])
         elif (
-            "cls" in signature.parameters
-            and list(signature.parameters.keys())[0] == "cls"
+                "cls" in signature.parameters
+                and list(signature.parameters.keys())[0] == "cls"
         ):
             new_parameters.insert(0, signature.parameters["cls"])
 
@@ -108,12 +108,11 @@ class StrawberryAdapter(GraphqlAdapter):
         mutated_handler.__signature__ = new_signature
         return return_annotation
 
-    def create_schema(self, **kwargs):
+    def create_schema(self, **kwargs) -> Schema:
         query = self.create_query()
         mutation_ = self.create_mutation()
         subscription_ = self.create_subscription()
         if query is None:
-
             def health() -> bool:
                 return True
 
@@ -128,7 +127,7 @@ class StrawberryAdapter(GraphqlAdapter):
         )
 
     def create_graphql_asgi_app(
-        self, schema: Any, option: GraphqlOption
-    ) -> GraphqlAsgi:
-        app_asgi = StrawberryAsgi(schema=schema, option=option)
+            self, schema: Any, option: GraphqlOption
+    ) -> GraphqlASGI:
+        app_asgi = StrawberryASGI(schema=schema, option=option)
         return app_asgi

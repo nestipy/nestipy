@@ -1,14 +1,15 @@
 import inspect
 import json
 import os
+import re
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
 
-from nestipy.common.template.interface import TemplateEngine
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
+from nestipy.common.template.interface import TemplateEngine
 from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.metadata import SetMetadata, Reflect
 from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
@@ -153,6 +154,19 @@ class HttpAdapter(ABC):
 
     def get_template_engine(self) -> TemplateEngine:
         return self.get_state(TemplateKey.MetaEngine)
+
+    @staticmethod
+    def extract_params(route_path) -> dict:
+        params = {}
+        regex_pattern = r"{(\w+)(:\w+)?}"
+        matches = re.findall(regex_pattern, route_path)
+        for match in matches:
+            param_name = match[0]
+            param_type = (
+                match[1][1] if match[1] else "str"
+            )  # Default to str if type not specified
+            params[param_name] = param_type
+        return params
 
     async def __call__(self, scope, receive, send):
         self.scope = scope

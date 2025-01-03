@@ -1,11 +1,15 @@
 import asyncio
 
 from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
+from nestipy.microservice.client.option import NatsClientOption, Transport
 
 
 async def main():
     client = NatsClientProxy(
-        MicroserviceOption(url="nats://localhost:4222"),
+        MicroserviceOption(
+            transport=Transport.NATS,
+            option=NatsClientOption()
+        ),
     )
     await client.send("topic", "request")
 

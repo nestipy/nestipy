@@ -68,7 +68,7 @@ class RouterProxy:
                     if "responses" not in route["openapi"].keys():
                         route["openapi"]["responses"] = {200: ApiResponse()}
                     json_schemas = {**json_schemas, **route["schemas"]}
-                    if "no_swagger" not in route["openapi"].keys():
+                    if "hidden" not in route["openapi"].keys():
                         route_path[method.lower()] = Operation(
                             **route["openapi"],
                             summary=snakecase_to_camelcase(method_name),

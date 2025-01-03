@@ -37,7 +37,7 @@ from nestipy.openapi import (
     ApiOkResponse,
     ApiNotFoundResponse,
     ApiCreatedResponse,
-    NoSwagger,
+    ApiExclude,
     ApiBody,
 )
 from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
@@ -116,7 +116,7 @@ class AppController:
     provider: Annotated[AppProvider, Inject()]
     event_emitter: Annotated[EventEmitter, Inject()]
 
-    @NoSwagger()
+    @ApiExclude()
     @Render("index.html")
     @Get()
     async def test(

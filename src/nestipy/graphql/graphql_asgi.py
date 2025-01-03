@@ -10,7 +10,7 @@ from nestipy.common.http_ import Request, Response
 from nestipy.graphql.graphql_module import GraphqlOption
 
 
-class GraphqlAsgi:
+class GraphqlASGI:
     option: Optional[GraphqlOption] = None
 
     @abstractmethod

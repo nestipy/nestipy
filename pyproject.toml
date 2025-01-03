@@ -32,6 +32,8 @@ redis = "^5.2.0"
 aio-pika = "^9.4.3"
 asyncclick = "^8.1.7.2"
 click = "^8.1.7"
+grpcio = "^1.68.1"
+grpcio-tools = "^1.68.1"
 
 [tool.poetry.extras]
 blacksheep = ["blacksheep"]

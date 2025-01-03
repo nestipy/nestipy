@@ -3,11 +3,12 @@ import inspect
 import typing
 from typing import Type, Any
 
-from nestipy.dynamic_module import DynamicModule, MiddlewareConsumer, NestipyModule
+from nestipy.dynamic_module import DynamicModule
+from nestipy.dynamic_module.module.consumer import MiddlewareConsumer
+from nestipy.dynamic_module.module.interface import NestipyModule
 from nestipy.ioc import NestipyContainer, ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect
-
-from .discover import DiscoverService
+from nestipy.core.providers.discover import DiscoverService
 from .on_destroy import OnDestroy
 from .on_init import OnInit
 from ..graphql.graphql_module import GraphqlModule
@@ -64,7 +65,7 @@ class InstanceLoader:
             s
             for s in all_services
             if inspect.isclass(s)
-            and issubclass(
+               and issubclass(
                 s, (NestipyInterceptor, CanActivate, NestipyMiddleware, ExceptionFilter)
             )
         ]:

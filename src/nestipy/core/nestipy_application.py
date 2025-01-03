@@ -23,12 +23,13 @@ from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
-from .background import BackgroundTasks
-from .discover import DiscoverService
+from nestipy.core.providers.background import BackgroundTasks
+from nestipy.core.providers.discover import DiscoverService
 from .instance_loader import InstanceLoader
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
 from .meta.provider_metadata_creator import ProviderMetadataCreator
+from .providers.async_local_storage import AsyncLocalStorage
 from .router.router_proxy import RouterProxy
 from ..graphql.graphql_proxy import GraphqlProxy
 from ..websocket.adapter import IoAdapter
@@ -105,6 +106,7 @@ class NestipyApplication:
     def init(self, root_module: Type):
         self._root_module = root_module
         self._add_root_module_provider(DiscoverService, _init=False)
+        self._add_root_module_provider(AsyncLocalStorage, _init=False)
         self._add_root_module_provider(
             ModuleProviderDict(token=BackgroundTasks, value=self._background_tasks)
         )
@@ -223,7 +225,7 @@ class NestipyApplication:
     def enable_cors(self):
         self._http_adapter.enable_cors()
 
-    def use_static_assets(self, assets_path: str, url: str = "/static"):
+    def use_static_assets(self, assets_path: str, url: str = "/static", *args, **kwargs):
         # async def render_asset_file(
         #         req: "Request", res: "Response", _next_fn: "NextFn"
         # ) -> Response:
@@ -234,7 +236,7 @@ class NestipyApplication:
         #
         # static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
         # self._http_adapter.get(static_path, render_asset_file, {})
-        self._http_adapter.static(f'/{url.strip("/")}', assets_path)
+        self._http_adapter.static(f'/{url.strip("/")}', assets_path, *args, **kwargs)
 
     def set_base_view_dir(self, view_dir: str):
         self._http_adapter.set(TemplateKey.MetaBaseView, view_dir)

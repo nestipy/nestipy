@@ -1,4 +1,6 @@
 import asyncio
+import typing
+from dataclasses import asdict
 from typing import AsyncIterator, Union, cast
 
 import async_timeout
@@ -7,6 +9,7 @@ from aio_pika.abc import AbstractRobustConnection, AbstractRobustChannel
 from aio_pika.abc import AbstractRobustQueue, AbstractRobustExchange
 
 from .base import ClientProxy, MicroserviceOption
+from .option import RabbitMQClientOption
 
 
 class RabbitMQClientProxy(ClientProxy):
@@ -25,13 +28,13 @@ class RabbitMQClientProxy(ClientProxy):
         )
 
     async def connect(self):
-        self.connection = await connect_robust(
-            host=self.option.option.host, port=self.option.option.port
-        )
+        option = typing.cast(RabbitMQClientOption, self.option.option or RabbitMQClientOption())
+        self.connection = await connect_robust(**asdict(option))
         self.channel = await self.connection.channel()
         await self.channel.__aenter__()
         self.exchange = await self.channel.declare_exchange(
-            self.CHANGE, ExchangeType.FANOUT
+            self.option.option.queue_option.name or self.CHANGE, ExchangeType.FANOUT,
+            **asdict(option.queue_option)
         )
 
     async def _publish(self, topic: str, data: str):
@@ -39,7 +42,7 @@ class RabbitMQClientProxy(ClientProxy):
 
     async def send_response(self, topic: str, data: str):
         response_exchange = await self.channel.declare_exchange(
-            f"{self.CHANGE}:{topic}", ExchangeType.FANOUT
+            f"{self.option.option.queue_option.name or self.CHANGE}:{topic}", ExchangeType.FANOUT
         )
         await response_exchange.publish(Message(body=data.encode()), routing_key=topic)
 

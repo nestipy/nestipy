@@ -5,12 +5,11 @@ from typing import Callable, Type
 from rich.style import Style
 
 from nestipy.common.logger import console
-from nestipy.core import NestipyApplication, NestipyConfig
+from nestipy.core import NestipyApplication, NestipyConfig, DiscoverService
 from nestipy.microservice.client.base import MicroserviceOption
 from nestipy.microservice.client.factory import ClientModuleFactory
 from nestipy.microservice.proxy import MicroserviceProxy
 from nestipy.microservice.server import MicroServiceServer
-from nestipy.microservice.server.module import MicroserviceServerModule
 
 
 class NestipyMicroservice:
@@ -19,27 +18,26 @@ class NestipyMicroservice:
     _ms_ready: bool = False
     coroutines: list = []
 
-    def __init__(self, module: Type, option: list[MicroserviceOption]):
+    def __init__(self, module: Type, option: list[MicroserviceOption], auto_init: bool = True):
         self.root_module = module
         self.option = option
-        self.app = NestipyApplication()
+        if auto_init:
+            self.app = NestipyApplication()
+            self.app.init(root_module=self.root_module)
 
-    async def ready(self):
+    async def ms_setup(self):
+        self.servers = []
         for opt in self.option:
             client_adapter = ClientModuleFactory.create(opt)
             server = MicroServiceServer(
-                pubsub=client_adapter,
+                pub_sub=client_adapter,
             )
             self.servers.append(server)
-        self.app.init(self.root_module)
-        self.app.add_module_root_module(MicroserviceServerModule, _init=True)
+        # self.app.add_module_root_module(MicroserviceServerModule, _init=True)
         # create all instance if not
         await self.app.setup()
-        # get server module
-        server_module: MicroserviceServerModule = await self.app.get(
-            MicroserviceServerModule
-        )
-        controllers = server_module.discover.get_all_controller()
+        discover: DiscoverService = await self.app.get(DiscoverService)
+        controllers = discover.get_all_controller()
         for server in self.servers:
             MicroserviceProxy(server).apply_routes(controllers)
 
@@ -49,7 +47,7 @@ class NestipyMicroservice:
         self.coroutines = []
         # start server listener
         if not self._ms_ready:
-            await self.ready()
+            await self.ms_setup()
         for server in self.servers:
             self.coroutines.append(server.listen())
         await asyncio.gather(*self.coroutines)
@@ -68,13 +66,12 @@ class NestipyMicroservice:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get("type") == "lifespan":
-
             def create_task():
                 asyncio.create_task(self.start())
 
             create_task()
             console.print(
-                "[INFO]    Microservice startup completed",
+                "[INFO]  Microservice startup completed",
                 style=Style(color="green", bold=True),
             )
 
@@ -83,18 +80,30 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
     _running: bool = False
 
     def __init__(
-        self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]
+            self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]
     ):
-        NestipyMicroservice.__init__(self, module, option)
+        NestipyMicroservice.__init__(self, module, option, auto_init=False)
         NestipyApplication.__init__(self, config)
         self.app = self
+        self.init(self.root_module)
+        self.ms_task = None
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         await NestipyApplication.__call__(self, scope, receive, send)
 
     def start_all_microservices(self):
         def on_start():
-            asyncio.create_task(self.start())
+            if self.ms_task is None:
+                self.ms_task = asyncio.get_running_loop().create_task(self.start())
+                console.print(
+                    "INFO:     Microservice startup completed.",
+                    style=Style(color="green", bold=True),
+                )
+
+        async def on_stop():
+            if self.ms_task is not None:
+                self.ms_task.cancel()
+            await self.stop()
 
         self.app.on_startup(on_start)
-        self.app.on_shutdown(self.stop)
+        self.app.on_shutdown(on_stop)

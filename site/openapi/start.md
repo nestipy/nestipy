@@ -12,7 +12,7 @@ from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import Request, Response
 from nestipy.ioc import Req, Res, Body
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody, NoSwagger
+from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody, ApiExclude
 
 
 @dataclasses.dataclass
@@ -26,7 +26,7 @@ class TestBody:
 @ApiNotFoundResponse()
 class AppController:
 
-    @NoSwagger() # this will hide it in swagger ui.
+    @ApiExclude() # this will hide it in swagger ui.
     @Render('index.html')
     @Get()
     async def test(self, req: Annotated[Request, Req()], res: Annotated[Response, Res()]):

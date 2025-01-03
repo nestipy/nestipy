@@ -60,7 +60,7 @@ class RouteExplorer:
                 method_deps, method_schemas = self._openapi_scanner.explore(method)
                 method_docs = deep_merge(method_deps, {"parameters": parameters})
                 merged_docs = deep_merge(docs, method_docs)
-                merger_schemas = deep_merge(schemas, method_schemas)
+                merged_schemas = deep_merge(schemas, method_schemas)
                 path_docs = deep_merge(
                     {"tags": [controller.__name__.replace("Controller", "")]},
                     merged_docs,
@@ -75,7 +75,7 @@ class RouteExplorer:
                     "method_name": method_name,
                     "controller": controller,
                     "openapi": path_docs,  # openapi docs
-                    "schemas": merger_schemas,
+                    "schemas": merged_schemas,
                 }
                 routes.append(route_info)
         return routes

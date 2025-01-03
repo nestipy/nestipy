@@ -1,4 +1,28 @@
+A module is a class annotated with a `@Module()` decorator. The `@Module()` decorator provides metadata that **Nestipy** makes use of to organize the application structure.
 For **Nestipy**, module works like **NestJs** module . It support **re-exporting** as same as <b>NestJs</b>.
+The `@Module()` decorator takes positionals properties that describe the module:
+
+* providers
+* controllers
+* exports
+* imports
+* is_global
+
+This is how it look like.
+```python
+from nestipy.common import Module
+
+
+@Module(
+    providers=[],  # list of providers
+    controllers=[],  # list of controllers,
+    imports=[],  # list of imported modules
+    exports=[],  # list of module or providers exported for module
+    is_global=False  # define if module is global or note, 
+)
+class AppModule:
+    ...
+```
 
 ## Dynamic modules
 

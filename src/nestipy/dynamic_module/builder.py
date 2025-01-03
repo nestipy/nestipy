@@ -49,8 +49,7 @@ class ConfigurableModuleBuilder(Generic[T]):
     ) -> DynamicModule:
         dynamic_module = DynamicModule(
             obj,
-            providers=provider
-                      + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
+            providers=provider + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
             exports=Reflect.get_metadata(obj, ModuleMetadata.Exports, []),
             imports=imports + Reflect.get_metadata(obj, ModuleMetadata.Imports, []),
             controllers=Reflect.get_metadata(obj, ModuleMetadata.Controllers, []),
@@ -59,14 +58,14 @@ class ConfigurableModuleBuilder(Generic[T]):
         return self._extra_return(dynamic_module)
 
     def build(self) -> tuple[Type, str]:
-        MODULE_OPTION_TOKEN = f"{uuid.uuid4().hex}_TOKEN"
+        module_option_token = f"{uuid.uuid4().hex}_TOKEN"
 
         def register(
                 cls_: Any, options: Optional[T], extras: Optional[dict] = None
         ) -> DynamicModule:
             if extras is not None:
                 self._extras = extras
-            provider = ModuleProviderDict(token=MODULE_OPTION_TOKEN, value=options)
+            provider = ModuleProviderDict(token=module_option_token, value=options)
             return self._create_dynamic_module(cls_, [], [provider])
 
         def register_async(
@@ -82,7 +81,7 @@ class ConfigurableModuleBuilder(Generic[T]):
             if extras is not None:
                 self._extras = extras
             provider = ModuleProviderDict(
-                token=MODULE_OPTION_TOKEN,
+                token=module_option_token,
                 factory=factory,
                 inject=inject or [],
                 use_class=use_class,
@@ -118,4 +117,4 @@ class ConfigurableModuleBuilder(Generic[T]):
                 f"{self._method_name}_async": classmethod(register_async),
             },
         )
-        return cls, MODULE_OPTION_TOKEN
+        return cls, module_option_token

@@ -12,17 +12,13 @@ import random
 import uvicorn
 from app_module import AppModule
 from nestipy.core import NestipyFactory
-from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
+from nestipy.microservice import MicroserviceOption, Transport
 
 app = NestipyFactory.create_microservice(
     AppModule,
     [
         MicroserviceOption(
-            transport=Transport.REDIS,
-            option=MicroserviceClientOption(
-                host="localhost",
-                port=6379
-            )
+            transport=Transport.TCP,
         )
     ]
 )
@@ -79,7 +75,7 @@ First, register `ClientsModule` in `AppModule`.
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClientOption, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceOption, Transport
 
 
 @Module(
@@ -88,11 +84,7 @@ from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClien
             ClientsConfig(
                 name="MATH_SERVICE",
                 option=MicroserviceOption(
-                    transport=Transport.REDIS,
-                    option=MicroserviceClientOption(
-                        host="localhost",
-                        port=6379
-                    )
+                    transport=Transport.TCP,
                 )
             )
         ]),
@@ -107,19 +99,19 @@ Or use `ModuleProviderDict`.
 ```python
 from typing import Annotated
 
-from nestipy.common import Module, ModuleProviderDict
+from nestipy.common import Module, ModuleProviderDict, ConfigModule, ConfigService
 from nestipy.ioc import Inject
 from nestipy.microservice import ClientProxy, ClientModuleFactory
-from nestipy.microservice import MicroserviceClientOption, MicroserviceOption, Transport
+from nestipy.microservice import MicroserviceOption, Transport, TCPClientOption
 
 
 async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
     return ClientModuleFactory.create(
         MicroserviceOption(
-            transport=Transport.REDIS,
-            option=MicroserviceClientOption(
-                host=config.get("HOST"),
-                port=int(config.get("PORT"))
+            transport=Transport.TCP,
+            option=TCPClientOption(
+                host=config.token.get('HOST'),  # Default localhost
+                port=config.get("PORT")  # Default 1333
             )
         )
     )
@@ -135,11 +127,8 @@ async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
             ]
             # value=ClientModuleFactory.create(
             #     MicroserviceOption(
-            #         transport=Transport.REDIS,
-            #         option=MicroserviceClientOption(
-            #             host="localhost",
-            #             port=6379
-            #         ))
+            #         transport=Transport.TCP
+            #     )
             # )
         )
     ]
@@ -249,18 +238,15 @@ Nestipy support hybrid application. To achieve this, we need to use `connect_mic
 
 import uvicorn
 from app_module import AppModule
+
 from nestipy.core import NestipyFactory
-from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
+from nestipy.microservice import MicroserviceOption, Transport
 
 app = NestipyFactory.connect_microservice(
     AppModule,
     [
         MicroserviceOption(
-            transport=Transport.REDIS,
-            option=MicroserviceClientOption(
-                host="localhost",
-                port=6379
-            )
+            transport=Transport.TCP,
         )
     ]
 )

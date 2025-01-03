@@ -8,12 +8,12 @@ from strawberry import (
 from strawberry import input as Input, scalar as Scalar, enum as Enum
 from strawberry import type as ObjectType, interface as Interface
 
-from .strawberry_asgi import StrawberryAsgi
+from .strawberry_asgi import StrawberryASGI
 from .strawberry_adapter import StrawberryAdapter
 from .dependency import Root, Info
 
 __all__ = [
-    "StrawberryAsgi",
+    "StrawberryASGI",
     "StrawberryAdapter",
     "ObjectType",
     "Interface",

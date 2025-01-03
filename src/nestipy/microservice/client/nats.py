@@ -1,11 +1,13 @@
 import asyncio
+import typing
+from dataclasses import asdict
 from typing import AsyncIterator
 
 import nats
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
 
-from .base import ClientProxy, MicroserviceOption
+from .base import ClientProxy, MicroserviceOption, NatsClientOption
 
 NATS_QUEUE = "microservice:queue"
 
@@ -23,7 +25,8 @@ class NatsClientProxy(ClientProxy):
         )
 
     async def connect(self):
-        self.client = await nats.connect(self.option.url)
+        _option = typing.cast(NatsClientOption, self.option.option or NatsClientOption())
+        self.client = await nats.connect(**asdict(_option))
 
     async def _publish(self, topic: str, data: str):
         await self.client.publish(topic, data.encode())

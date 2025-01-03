@@ -1,14 +1,18 @@
 import asyncio
 
+from nestipy.microservice import NatsClientOption, Transport
 from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
 from nestipy.microservice.server.base import MicroServiceServer
 
 
 async def main():
     client = NatsClientProxy(
-        MicroserviceOption(url="nats://localhost:4222"),
+        MicroserviceOption(
+            transport=Transport.NATS,
+            option=NatsClientOption()
+        ),
     )
-    server = MicroServiceServer(pubsub=client)
+    server = MicroServiceServer(pub_sub=client)
     print("Running server ...")
     await server.listen()
 

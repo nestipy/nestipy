@@ -12,8 +12,8 @@ class CatsController:
 ```
 In this example:
 
-* The `@Controller('cats')` decorator binds this controller to the /cats route.
-* The `@Get()` decorator defines a route for GET /cats.
+* The `@Controller('cats')` decorator binds this controller to the `/cats` route.
+* The `@Get()` decorator defines a route for `GET /cats`.
 * The `find_all` method handles the request and returns a response.
 
 ## Request and Response object

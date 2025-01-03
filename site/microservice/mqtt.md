@@ -14,14 +14,14 @@ To use the Mqtt transporter, pass the following options object to the `create_mi
 from app_module import AppModule
 
 from nestipy.core import NestipyFactory
-from nestipy.microservice import MicroserviceOption, Transport, MicroserviceClientOption
+from nestipy.microservice import MicroserviceOption, Transport, MqttClientOption
 
 app = NestipyFactory.create_microservice(
     AppModule, [
         MicroserviceOption(
             transport=Transport.MQTT,
-            option=MicroserviceClientOption(
-                host="localhost",
+            option=MqttClientOption(
+                hostname="localhost",
                 port=1883
             )
         )
@@ -33,7 +33,7 @@ app = NestipyFactory.create_microservice(
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClientOption, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig, MqttClientOption, MicroserviceOption, Transport
 
 
 @Module(
@@ -43,8 +43,8 @@ from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceClien
                 name="MATH_SERVICE",
                 option=MicroserviceOption(
                     transport=Transport.MQTT,
-                    option=MicroserviceClientOption(
-                        host="localhost",
+                    option=MqttClientOption(
+                        hostname="localhost",
                         port=1883
                     )
                 )
