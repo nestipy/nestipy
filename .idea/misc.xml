@@ -3,5 +3,8 @@
   <component name="Black">
     <option name="sdkName" value="Poetry (pesty)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (nestipy) (2)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (nestipy)" project-jdk-type="Python SDK" />
+  <component name="PythonCompatibilityInspectionAdvertiser">
+    <option name="version" value="3" />
+  </component>
 </project>

@@ -1,4 +1,4 @@
-Provider is the same for NestJs providers.
+Providers are plain python classes that are declared as providers in a Nestipy module.
 
 ## Services
 

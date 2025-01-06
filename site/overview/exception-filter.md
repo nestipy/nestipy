@@ -1,3 +1,5 @@
+In Nestipy, any unhandled exceptions within the application are processed by a built-in exceptions layer. If your application code does not handle an exception, this layer intercepts it and automatically returns a user-friendly response.
+
 This is a example of using exception filter with Nestipy.
 
 ```python

@@ -2,7 +2,7 @@ from app_controller import AppController
 from app_service import AppService
 from nestipy.common import Module
 from nestipy.microservice import ClientsModule, ClientsConfig, Transport
-from nestipy.microservice import MicroserviceOption, MicroserviceClientOption
+from nestipy.microservice import MicroserviceOption, RedisClientOption
 
 
 @Module(
@@ -13,7 +13,7 @@ from nestipy.microservice import MicroserviceOption, MicroserviceClientOption
                     name="TEST_MICROSERVICE",
                     option=MicroserviceOption(
                         transport=Transport.REDIS,
-                        option=MicroserviceClientOption(host="localhost", port=6379),
+                        option=RedisClientOption(host="localhost", port=6379),
                     ),
                 )
             ]
