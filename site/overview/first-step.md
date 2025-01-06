@@ -1,6 +1,6 @@
 These articles will teach you the basic principles of Nestipy. You'll get to know its key components by building a simple CRUD application, which will introduce you to various beginner-level features.
 ## Prerequisites
-Please make sure that <strong>Python</strong> (version >= 3.9) is installed on your operating system.
+Please make sure that <strong>Python</strong> (version >= 3.10) is installed on your operating system.
 
 ## Setup
 Starting a fresh project using the <strong>Nestipy CLI</strong> is simple. Just configure Python's environment and run these commands in your OS terminal to create a new Nestipy project.

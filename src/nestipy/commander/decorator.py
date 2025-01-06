@@ -1,10 +1,8 @@
 from typing import Callable
 
-from graphql.pyutils import description
-
 from nestipy.common.decorator import Injectable
-from .meta import CommanderMeta
 from nestipy.metadata.decorator import SetMetadata
+from .meta import CommanderMeta
 
 
 class Command:

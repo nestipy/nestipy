@@ -9,6 +9,8 @@ List of available command for **Nestipy-CLI** :
         <li><b>resolver</b> {resolver-name}</li>
         <li><b>service</b> {service-name}</li>
         <li><b>input</b> {input-name}</li>
+        <li><b>repl</b> </li>
+        <li><b>run</b> {command-name}</li>
     </ul>
 </li>
 </ul>

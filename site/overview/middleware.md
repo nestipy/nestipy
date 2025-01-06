@@ -1,4 +1,4 @@
-Nestipy define middleware like NestJs do.
+Middleware is a function that executes before the route handler in the application's request-response cycle. It has access to the request and response objects, as well as the `next_fn()` function, which passes control to the subsequent middleware. The `next_fn()` function is typically represented by the variable `next_fn`.
 
 ```python
 from nestipy.common import Injectable
@@ -17,7 +17,7 @@ class LoggerMiddleware(NestipyMiddleware):
 
 ### Dependency injection
 
-Nestipy middleware support dependency injection
+Nestipy middleware support dependency injection. Similar to providers and controllers, they can inject dependencies that are available within the same module.
 
 ### Applying middleware#
 
