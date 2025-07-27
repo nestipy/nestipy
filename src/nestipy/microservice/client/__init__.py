@@ -19,5 +19,5 @@ __all__ = [
     "ClientsModule",
     "ClientsConfig",
     "ClientModuleFactory",
-    "GrpcClientProxy"
+    "GrpcClientProxy",
 ]

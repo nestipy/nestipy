@@ -29,7 +29,7 @@ class UserResolver:
         req: Annotated[Request, Req()],
     ):
         print(test, req, info)
-        return Test(test1="test1", test2_named="holla")
+        return Test(test1=test, test2_named="holla")
 
     @Mutation()
     def test_mutation(self) -> str:
@@ -51,4 +51,4 @@ class UserResolver:
         req: Annotated[Request, Req()],
         test: Annotated[str, Arg()],
     ) -> str:
-        return "test2 value " + root.test1
+        return f"test2 value, test1: {root.test1}, param: {test}"

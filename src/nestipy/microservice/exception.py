@@ -39,7 +39,9 @@ class RPCErrorMessage:
     DEADLINE_EXCEEDED = "The deadline expired before the operation could complete."
     NOT_FOUND = "Some requested entity was not found."
     ALREADY_EXISTS = "The entity that a client attempted to create already exists."
-    PERMISSION_DENIED = "The caller does not have permission to execute the specified operation."
+    PERMISSION_DENIED = (
+        "The caller does not have permission to execute the specified operation."
+    )
     RESOURCE_EXHAUSTED = """
     Some resource has been exhausted, perhaps a per-user quota, or perhaps the entire file system is out of space.
     """
@@ -50,11 +52,15 @@ class RPCErrorMessage:
     The operation was aborted, typically due to a concurrency issue such as a sequencer check failure or transaction abort.
     """
     OUT_OF_RANGE = "The operation was attempted past the valid range."
-    UNIMPLEMENTED = "The operation is not implemented or is not supported/enabled in this service."
+    UNIMPLEMENTED = (
+        "The operation is not implemented or is not supported/enabled in this service."
+    )
     INTERNAL = "Internal errors. Means some invariants expected by the underlying system have been broken."
     UNAVAILABLE = "The service is currently unavailable."
     DATA_LOSS = "Unrecoverable data loss or corruption."
-    UNAUTHENTICATED = "The request does not have valid authentication credentials for the operation."
+    UNAUTHENTICATED = (
+        "The request does not have valid authentication credentials for the operation."
+    )
 
 
 @dataclasses_json.dataclass_json

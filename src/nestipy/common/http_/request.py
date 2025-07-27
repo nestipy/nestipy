@@ -178,19 +178,19 @@ class Request:
         return parse_content_header(_content_type)
 
     def form(
-            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+        self, *, max_files: int | float = 1000, max_fields: int | float = 1000
     ) -> AwaitableOrContextManager[FormData]:
         return AwaitableOrContextManagerWrapper(
             self._get_form(max_files=max_files, max_fields=max_fields)
         )
 
     async def _get_form(
-            self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+        self, *, max_files: int | float = 1000, max_fields: int | float = 1000
     ) -> FormData:
         if self._form is None:
-            assert (
-                    parse_options_header is not None
-            ), "The `python-multipart` library must be installed to use form parsing."
+            assert parse_options_header is not None, (
+                "The `python-multipart` library must be installed to use form parsing."
+            )
             content_type_header = self.headers.get("content-type")
             content_type: bytes
             content_type, _ = parse_options_header(content_type_header)

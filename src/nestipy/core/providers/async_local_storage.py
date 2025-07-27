@@ -9,7 +9,9 @@ from nestipy.common import Injectable
 class AsyncLocalStorage:
     def __init__(self):
         # Create a ContextVar to store the local state
-        self._store: ContextVar[Optional[Dict[str, Any]]] = ContextVar("store", default=None)
+        self._store: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+            "store", default=None
+        )
 
     async def run(self, data: Dict[str, Any], func: Callable[..., Any]):
         """

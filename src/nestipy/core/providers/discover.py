@@ -31,12 +31,15 @@ class DiscoverService:
 
     def get_module_providers(self, module: Type):
         return [
-            p for p in self._providers if
-            p.__class__ in Reflect.get_metadata(module, ModuleMetadata.Providers, [])
+            p
+            for p in self._providers
+            if p.__class__ in Reflect.get_metadata(module, ModuleMetadata.Providers, [])
         ]
 
     def get_module_controllers(self, module: Type):
         return [
-            c for c in self._controllers if
-            c.__class__ in Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
+            c
+            for c in self._controllers
+            if c.__class__
+            in Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
         ]

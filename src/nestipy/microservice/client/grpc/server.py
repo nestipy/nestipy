@@ -10,7 +10,6 @@ from nestipy.common.logger import console
 
 
 class GrpcServer(pb2_grpc.GrpcServicer):
-
     def __init__(self, verbose: bool = True):
         self.subscriptions: dict[str, Any] = {}
         self.verbose: bool = verbose
@@ -62,7 +61,9 @@ class GrpcServer(pb2_grpc.GrpcServicer):
         if topic in self.subscriptions:
             for client_context in self.subscriptions[topic]:
                 try:
-                    await client_context.write(pb2.DataResponse(topic=topic, data=request.data))
+                    await client_context.write(
+                        pb2.DataResponse(topic=topic, data=request.data)
+                    )
                 except grpc.aio.AioRpcError as e:
                     if self.verbose:
                         console.print(

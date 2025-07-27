@@ -18,15 +18,11 @@ class ConfigService:
 
 
 @Module(
-    providers=[
-        ConfigService,
-        ModuleProviderDict(value="hello", token="MyProvider")
-    ],
+    providers=[ConfigService, ModuleProviderDict(value="hello", token="MyProvider")],
     exports=[ConfigService],
     is_global=True,
 )
-class ConfigModule(ConfigurableModuleClass):
-    ...
+class ConfigModule(ConfigurableModuleClass): ...
 
 
 if __name__ == "__main__":

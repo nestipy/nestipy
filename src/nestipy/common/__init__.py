@@ -69,5 +69,5 @@ __all__ = [
     "apply_decorators",
     "cookie_session",
     "SessionStore",
-    "SessionCookieOption"
+    "SessionCookieOption",
 ]

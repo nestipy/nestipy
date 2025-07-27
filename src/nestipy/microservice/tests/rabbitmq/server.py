@@ -7,9 +7,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 
 async def main():
     client = RabbitMQClientProxy(
-        MicroserviceOption(
-            option=RabbitMQClientOption(host="localhost", port=5672)
-        ),
+        MicroserviceOption(option=RabbitMQClientOption(host="localhost", port=5672)),
     )
     server = MicroServiceServer(pub_sub=client)
     print("Running server ...")

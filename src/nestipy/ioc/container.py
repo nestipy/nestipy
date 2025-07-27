@@ -240,7 +240,7 @@ class NestipyContainer:
                     return value
                 else:
                     raise ValueError(
-                        f"Service {instance.__class__.__name__} " f"not found in scope"
+                        f"Service {instance.__class__.__name__} not found in scope"
                     )
             else:
                 return instance

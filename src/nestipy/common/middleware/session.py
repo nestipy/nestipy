@@ -73,7 +73,10 @@ def cookie_session(option: SessionCookieOption = SessionCookieOption()) -> Type:
                 data = req.cookies[option.session_cookie].encode("utf-8")
                 try:
                     un_sign_data = signer.unsign(data, max_age=option.max_age)
-                    req.session = {**req.session, **ujson.loads(b64decode(un_sign_data))}
+                    req.session = {
+                        **req.session,
+                        **ujson.loads(b64decode(un_sign_data)),
+                    }
                     initial_session_was_empty = False
                 except BadSignature:
                     pass

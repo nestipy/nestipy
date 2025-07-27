@@ -133,7 +133,7 @@ class Response:
         return self
 
     async def json(
-            self, content: dict, status_code: Union[int, None] = None
+        self, content: dict, status_code: Union[int, None] = None
     ) -> "Response":
         """
         Send json

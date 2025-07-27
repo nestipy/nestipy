@@ -17,7 +17,9 @@ class RedisClientProxy(ClientProxy):
         super().__init__(option)
 
     async def connect(self):
-        option = typing.cast(RedisClientOption, self.option.option or RedisClientOption())
+        option = typing.cast(
+            RedisClientOption, self.option.option or RedisClientOption()
+        )
         # url = f"redis://{option.host}:{option.port}"
         # self.broker = Redis.from_url(url, max_connections=10, decode_responses=True)
         self.broker = Redis(**asdict(option))

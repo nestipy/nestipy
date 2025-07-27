@@ -17,7 +17,9 @@ class MicroServiceServer(ABC):
     async def listen(self):
         await self._pub_sub.before_start()
         await self._pub_sub.connect()
-        await self._pub_sub.subscribe(f"{MICROSERVICE_CHANNEL}:{self._pub_sub.option.channel_key}")
+        await self._pub_sub.subscribe(
+            f"{MICROSERVICE_CHANNEL}:{self._pub_sub.option.channel_key}"
+        )
         async for data in self._pub_sub.listen():
             json_rep = await self._pub_sub.option.serializer.deserialize(data)
             request = RpcRequest(**json_rep)
@@ -80,7 +82,9 @@ class MicroServiceServer(ABC):
                 )
             )
         )
-        await slave.send_response(f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}", rpc_response)
+        await slave.send_response(
+            f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}", rpc_response
+        )
         await slave.close()
 
     async def handle_event(self, request: RpcRequest):

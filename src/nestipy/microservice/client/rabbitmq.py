@@ -28,13 +28,16 @@ class RabbitMQClientProxy(ClientProxy):
         )
 
     async def connect(self):
-        option = typing.cast(RabbitMQClientOption, self.option.option or RabbitMQClientOption())
+        option = typing.cast(
+            RabbitMQClientOption, self.option.option or RabbitMQClientOption()
+        )
         self.connection = await connect_robust(**asdict(option))
         self.channel = await self.connection.channel()
         await self.channel.__aenter__()
         self.exchange = await self.channel.declare_exchange(
-            self.option.option.queue_option.name or self.CHANGE, ExchangeType.FANOUT,
-            **asdict(option.queue_option)
+            self.option.option.queue_option.name or self.CHANGE,
+            ExchangeType.FANOUT,
+            **asdict(option.queue_option),
         )
 
     async def _publish(self, topic: str, data: str):
@@ -42,7 +45,8 @@ class RabbitMQClientProxy(ClientProxy):
 
     async def send_response(self, topic: str, data: str):
         response_exchange = await self.channel.declare_exchange(
-            f"{self.option.option.queue_option.name or self.CHANGE}:{topic}", ExchangeType.FANOUT
+            f"{self.option.option.queue_option.name or self.CHANGE}:{topic}",
+            ExchangeType.FANOUT,
         )
         await response_exchange.publish(Message(body=data.encode()), routing_key=topic)
 

@@ -47,7 +47,9 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def static(self, route: str, directory: str, name: str = None, option: dict = None) -> None:
+    def static(
+        self, route: str, directory: str, name: str = None, option: dict = None
+    ) -> None:
         pass
 
     @abstractmethod

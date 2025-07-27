@@ -50,7 +50,9 @@ class BlackSheepAdapter(HttpAdapter):
         # need to transform
         self.instance.middlewares.append(callback)
 
-    def static(self, route: str, directory: str, name: str = None, option: dict = None) -> None:
+    def static(
+        self, route: str, directory: str, name: str = None, option: dict = None
+    ) -> None:
         # self.instance.serve_files()
         pass
 
@@ -88,7 +90,7 @@ class BlackSheepAdapter(HttpAdapter):
         # path = metadata['path']
         # params = RouteParamsExtractor.extract_params(path)
         async def blacksheep_handler(
-                _bs_request: BlackSheepRequest,
+            _bs_request: BlackSheepRequest,
         ) -> BlackSheepResponse:
             req, res, next_fn = self.create_handler_parameter()
             result: Response = await callback(req, res, next_fn)
@@ -112,7 +114,7 @@ class BlackSheepAdapter(HttpAdapter):
         return blacksheep_handler
 
     def _create_blacksheep_websocket_handler(
-            self, callback: WebsocketHandler, metadata: dict
+        self, callback: WebsocketHandler, metadata: dict
     ):
         async def blacksheep_websocket_handler(bsw: BSWebSocket):
             wbs = self.create_websocket_parameter()

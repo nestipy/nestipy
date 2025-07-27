@@ -24,7 +24,7 @@ class GraphqlProxy:
         self.container = NestipyContainer.get_instance()
 
     async def apply_resolvers(
-            self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]
+        self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]
     ):
         for module_ref in modules:
             query, mutation, subscription, field_resolver = GraphqlExplorer.explore(
@@ -49,7 +49,7 @@ class GraphqlProxy:
         self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
     def _create_graphql_query_handler(
-            self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
+        self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
     ) -> tuple[str, Callable]:
         resolver: Union[object, Type] = meta["class"]
         method_name: str = meta["handler_name"]
@@ -130,10 +130,10 @@ class GraphqlProxy:
     @classmethod
     def should_render_graphql_ide(cls, req: Request) -> bool:
         return (
-                req.method == "GET"
-                and req.query_params.get("query") is None
-                and any(
-            supported_header in req.headers.get("accept", "")
-            for supported_header in ("text/html", "*/*")
-        )
+            req.method == "GET"
+            and req.query_params.get("query") is None
+            and any(
+                supported_header in req.headers.get("accept", "")
+                for supported_header in ("text/html", "*/*")
+            )
         )

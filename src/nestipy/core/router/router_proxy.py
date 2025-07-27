@@ -30,8 +30,8 @@ from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiRespo
 
 class RouterProxy:
     def __init__(
-            self,
-            router: HttpAdapter,
+        self,
+        router: HttpAdapter,
     ):
         self.router = router
         self._template_processor = TemplateRendererProcessor(router)
@@ -80,7 +80,7 @@ class RouterProxy:
         return paths, json_schemas
 
     def create_request_handler(
-            self, module_ref: Type, controller: Union[object, Type], method_name: str
+        self, module_ref: Type, controller: Union[object, Type], method_name: str
     ) -> CallableHandler:
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
             context_container = RequestContextContainer.get_instance()
@@ -134,7 +134,7 @@ class RouterProxy:
 
                 # process template rendering
                 if self._template_processor.can_process(
-                        controller_method_handler, result
+                    controller_method_handler, result
                 ):
                     result = await res.html(self._template_processor.render())
                 # transform result to response
@@ -168,7 +168,7 @@ class RouterProxy:
 
     @classmethod
     async def _ensure_response(
-            cls, res: "Response", result: Union["Response", str, dict, list]
+        cls, res: "Response", result: Union["Response", str, dict, list]
     ) -> "Response":
         if isinstance(result, (str, int, float)):
             return await res.send(content=str(result))
@@ -209,7 +209,7 @@ class RouterProxy:
             return f"Could not read file {filename}: {str(e)}"
 
     async def render_not_found(
-            self, _req: "Request", _res: "Response", _next_fn: "NextFn"
+        self, _req: "Request", _res: "Response", _next_fn: "NextFn"
     ) -> Response:
         try:
             raise HttpException(
@@ -241,7 +241,7 @@ class RouterProxy:
 
     @classmethod
     def get_full_traceback_details(
-            cls, req: Request, exception: typing.Any, file_path: str
+        cls, req: Request, exception: typing.Any, file_path: str
     ):
         exc_type, exc_value, exc_tb = sys.exc_info()
         traceback_details = []

@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-#    branches:
-#      - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
@@ -19,6 +17,7 @@ jobs:
       repository-projects: write
       contents: write
       pull-requests: write
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -30,25 +29,25 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Upgrade pip
+      - name: Install uv
         run: |
-          pip install --constraint=.github/workflows/constraints.txt pip
-          pip --version
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv --version
 
-      - name: Install Poetry
+      - name: Install dependencies
         run: |
-          pip install --constraint=.github/workflows/constraints.txt poetry
-          poetry --version
+          uv pip install --system --no-deps build
 
-      - name: Bump version for release
+      - name: Extract version
         id: load_version
         run: |
-          version=$(poetry version | awk '{ print $2 }') &&
-          poetry version $version && echo "tag=$version" >> "$GITHUB_OUTPUT"
+          version=$(grep -Po '(?<=^version = ")[^"]+' pyproject.toml)
+          echo "tag=$version" >> "$GITHUB_OUTPUT"
 
       - name: Build package
         run: |
-          poetry build --ansi
+          python -m build --sdist --wheel
 
       - name: Bump version and push tag
         id: tag_version
@@ -72,4 +71,3 @@ jobs:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
-

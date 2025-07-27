@@ -6,10 +6,7 @@ from nestipy.microservice.client.option import NatsClientOption, Transport
 
 async def main():
     client = NatsClientProxy(
-        MicroserviceOption(
-            transport=Transport.NATS,
-            option=NatsClientOption()
-        ),
+        MicroserviceOption(transport=Transport.NATS, option=NatsClientOption()),
     )
     await client.send("topic", "request")
 

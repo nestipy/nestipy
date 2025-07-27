@@ -19,7 +19,9 @@ class GrpcClientProxy(ClientProxy):
         self.stub: typing.Optional[pb2_grpc.GrpcStub] = None
         self.subscription: typing.Optional[AsyncIterator[pb2.DataResponse]] = None
         self.response_queue = asyncio.Queue()
-        self._config = typing.cast(GrpcClientOption, self.option.option or GrpcClientOption())
+        self._config = typing.cast(
+            GrpcClientOption, self.option.option or GrpcClientOption()
+        )
         self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         self.server: GrpcServer = GrpcServer()
         self.server_task: typing.Optional[asyncio.Task] = None
@@ -29,7 +31,9 @@ class GrpcClientProxy(ClientProxy):
         return GrpcClientProxy(self.option)
 
     async def before_start(self):
-        self.server_task = self.loop.create_task(coro=self.server.serve(port=self._config.port), name="grpc_server")
+        self.server_task = self.loop.create_task(
+            coro=self.server.serve(port=self._config.port), name="grpc_server"
+        )
 
     async def before_close(self):
         if self.server_task:
@@ -38,11 +42,13 @@ class GrpcClientProxy(ClientProxy):
     async def connect(self):
         """Establish a connection to the gRPC server."""
         if not self.channel:
-            self.channel = grpc.aio.insecure_channel(f"{self._config.host}:{self._config.port}")
+            self.channel = grpc.aio.insecure_channel(
+                f"{self._config.host}:{self._config.port}"
+            )
             self.stub = pb2_grpc.GrpcStub(self.channel)
 
     async def _publish(self, topic, data):
-        """Publish data """
+        """Publish data"""
         request = pb2.DataRequest(topic=topic, data=data)
         await self.stub.SendData(request)
 

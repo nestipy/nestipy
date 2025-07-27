@@ -18,7 +18,7 @@
       <excludeFolder url="file://$MODULE_DIR$/docs/util" />
       <excludeFolder url="file://$MODULE_DIR$/docs/websocket" />
     </content>
-    <orderEntry type="jdk" jdkName="Poetry (nestipy)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.13 (nestipy)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">

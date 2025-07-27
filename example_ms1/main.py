@@ -3,6 +3,7 @@ import random
 import uvicorn
 
 from app_module import AppModule
+
 # from nestipy.common import session
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport

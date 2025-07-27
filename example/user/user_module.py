@@ -34,7 +34,7 @@ class UserModule(NestipyModule, OnInit):
         async def func(req: Request, res: Response, next_fn: NextFn) -> Response:
             return await res.json({"message": "Hello"})
 
-        self.adapter.get('/my_test', func, {})
+        self.adapter.get("/my_test", func, {})
 
     def configure(self, consumer: MiddlewareConsumer):
         consumer.apply(TestMiddleware2).for_route(UserController)

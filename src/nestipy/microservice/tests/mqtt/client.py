@@ -6,9 +6,7 @@ from nestipy.microservice.client.option import MqttClientOption
 
 async def main():
     client = MqttClientProxy(
-        MicroserviceOption(
-            option=MqttClientOption(hostname="localhost", port=1883)
-        ),
+        MicroserviceOption(option=MqttClientOption(hostname="localhost", port=1883)),
     )
     await client.send("topic", "request")
 

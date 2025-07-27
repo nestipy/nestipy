@@ -25,7 +25,9 @@ class NatsClientProxy(ClientProxy):
         )
 
     async def connect(self):
-        _option = typing.cast(NatsClientOption, self.option.option or NatsClientOption())
+        _option = typing.cast(
+            NatsClientOption, self.option.option or NatsClientOption()
+        )
         self.client = await nats.connect(**asdict(_option))
 
     async def _publish(self, topic: str, data: str):

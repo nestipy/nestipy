@@ -10,9 +10,18 @@ from aio_pika.abc import SSLOptions, ExchangeType
 from aiomqtt import ProtocolVersion, Will, Message, TLSParameters, ProxySettings
 from aiomqtt.types import SocketOption, WebSocketHeaders
 from aiormq.abc import TimeoutType
-from nats.aio.client import DEFAULT_CONNECT_TIMEOUT, DEFAULT_RECONNECT_TIME_WAIT, DEFAULT_MAX_RECONNECT_ATTEMPTS, \
-    DEFAULT_PING_INTERVAL, DEFAULT_MAX_OUTSTANDING_PINGS, DEFAULT_MAX_FLUSHER_QUEUE_SIZE, DEFAULT_DRAIN_TIMEOUT, \
-    Credentials, DEFAULT_INBOX_PREFIX, DEFAULT_PENDING_SIZE
+from nats.aio.client import (
+    DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_RECONNECT_TIME_WAIT,
+    DEFAULT_MAX_RECONNECT_ATTEMPTS,
+    DEFAULT_PING_INTERVAL,
+    DEFAULT_MAX_OUTSTANDING_PINGS,
+    DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
+    DEFAULT_DRAIN_TIMEOUT,
+    Credentials,
+    DEFAULT_INBOX_PREFIX,
+    DEFAULT_PENDING_SIZE,
+)
 from paho.mqtt.properties import Properties
 from pamqp.common import FieldTable, Arguments
 from redis import ConnectionPool, CredentialProvider
@@ -69,7 +78,7 @@ class RedisClientOption:
     ssl_ca_certs: Optional[str] = None
     ssl_ca_data: Optional[str] = None
     ssl_check_hostname: bool = False
-    ssl_min_version: Optional[TLSVersion] = None,
+    ssl_min_version: Optional[TLSVersion] = (None,)
     ssl_ciphers: Optional[str] = None
     max_connections: Optional[int] = None
     single_connection_client: bool = False
@@ -119,7 +128,9 @@ class MqttClientOption:
 
 @dataclass
 class NatsClientOption:
-    servers: Union[str, List[str]] = field(default_factory=lambda: ["nats://localhost:4222"])
+    servers: Union[str, List[str]] = field(
+        default_factory=lambda: ["nats://localhost:4222"]
+    )
     name: Optional[str] = None
     pedantic: bool = False
     verbose: bool = False
@@ -173,4 +184,6 @@ class RabbitMQClientOption:
     ssl_context: Optional[SSLContext] = None
     timeout: TimeoutType = None
     client_properties: Optional[FieldTable] = None
-    queue_option: RabbitMQQueueOption = field(default_factory=lambda: RabbitMQQueueOption())
+    queue_option: RabbitMQQueueOption = field(
+        default_factory=lambda: RabbitMQQueueOption()
+    )
