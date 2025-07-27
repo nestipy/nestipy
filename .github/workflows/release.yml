@@ -45,9 +45,13 @@ jobs:
           version=$(grep -Po '(?<=^version = ")[^"]+' pyproject.toml)
           echo "tag=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Install Hatch
+        run: |
+          uv pip install --system hatch
+
       - name: Build package
         run: |
-          python -m build --sdist --wheel
+          hatch build
 
       - name: Bump version and push tag
         id: tag_version
