@@ -18,7 +18,7 @@ class _NestipyFactoryMeta(type):
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
     @classmethod
     def create(
-            cls, module: Type, config: typing.Optional[NestipyConfig] = None
+        cls, module: Type, config: typing.Optional[NestipyConfig] = None
     ) -> NestipyApplication:
         cls._setup_log()
         if getattr(cls, "__generic_type__", None) == "NestipyBlackSheepApplication":
@@ -30,16 +30,16 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
     def create_microservice(
-            cls, module: Type, option: list[MicroserviceOption]
+        cls, module: Type, option: list[MicroserviceOption]
     ) -> NestipyMicroservice:
         return NestipyMicroservice(module, option)
 
     @classmethod
     def connect_microservice(
-            cls,
-            module: Type,
-            option: list[MicroserviceOption],
-            config: typing.Optional[NestipyConfig] = None,
+        cls,
+        module: Type,
+        option: list[MicroserviceOption],
+        config: typing.Optional[NestipyConfig] = None,
     ) -> NestipyConnectMicroservice:
         return NestipyConnectMicroservice(module, config, option)
 

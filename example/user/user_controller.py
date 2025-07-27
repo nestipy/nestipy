@@ -16,13 +16,13 @@ from .user_guards import TestGuard, TestGuardMethod
 from .user_service import UserService
 
 
-async def longtask():
+async def long_task():
     print("Task 1")
     await asyncsleep(2)
     print("Task finished")
 
 
-async def longtask2():
+async def long_task2():
     print("Task 2")
     await asyncsleep(2)
     print("Task2 finished")
@@ -47,8 +47,8 @@ class UserController:
         tasks: Annotated[BackgroundTasks, Inject()],
     ) -> Union[Response | dict,]:
         print(headers)
-        tasks.add_task(longtask)
-        tasks.add_task(longtask2)
+        tasks.add_task(long_task)
+        tasks.add_task(long_task2)
         return await res.json({"user": "Me"})
         # return {'user': 'Me'}
 

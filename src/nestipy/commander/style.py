@@ -4,22 +4,33 @@ import click
 
 
 class CliStyle:
+    @classmethod
+    def info(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="green")
 
     @classmethod
-    def info(cls, info: Optional[Any] = None, ):
-        click.secho(info, fg='green')
+    def error(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="red")
 
     @classmethod
-    def error(cls, info: Optional[Any] = None, ):
-        click.secho(info, fg='red')
+    def warning(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="orange")
 
     @classmethod
-    def warning(cls, info: Optional[Any] = None, ):
-        click.secho(info, fg='orange')
-
-    @classmethod
-    def success(cls, info: Optional[Any] = None, ):
-        click.secho(info, fg='green', bold=True)
+    def success(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="green", bold=True)
 
 
 echo = CliStyle()

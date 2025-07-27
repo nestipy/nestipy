@@ -225,7 +225,9 @@ class NestipyApplication:
     def enable_cors(self):
         self._http_adapter.enable_cors()
 
-    def use_static_assets(self, assets_path: str, url: str = "/static", *args, **kwargs):
+    def use_static_assets(
+        self, assets_path: str, url: str = "/static", *args, **kwargs
+    ):
         # async def render_asset_file(
         #         req: "Request", res: "Response", _next_fn: "NextFn"
         # ) -> Response:
@@ -236,7 +238,7 @@ class NestipyApplication:
         #
         # static_path = self._http_adapter.create_wichard(f'/{url.strip("/")}')
         # self._http_adapter.get(static_path, render_asset_file, {})
-        self._http_adapter.static(f'/{url.strip("/")}', assets_path, *args, **kwargs)
+        self._http_adapter.static(f"/{url.strip('/')}", assets_path, *args, **kwargs)
 
     def set_base_view_dir(self, view_dir: str):
         self._http_adapter.set(TemplateKey.MetaBaseView, view_dir)
@@ -275,7 +277,7 @@ class NestipyApplication:
         self._prefix = prefix or ""
 
     def _add_root_module_provider(
-            self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
+        self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
     ):
         root_providers: list = Reflect.get_metadata(
             self._root_module, ModuleMetadata.Providers, []

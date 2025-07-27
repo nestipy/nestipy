@@ -7,9 +7,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 
 async def main():
     client = TCPClientProxy(
-        MicroserviceOption(
-            option=TCPClientOption()
-        ),
+        MicroserviceOption(option=TCPClientOption()),
     )
     server = MicroServiceServer(pub_sub=client)
     print("Running server ...")

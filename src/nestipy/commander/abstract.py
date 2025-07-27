@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
+
+import click
 
 
 class BaseCommand(ABC):
@@ -13,6 +15,34 @@ class BaseCommand(ABC):
         """The method to handle the command logic."""
         raise NotImplemented("Must be implement")
 
+    @classmethod
+    def info(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="green")
+
+    @classmethod
+    def error(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="red")
+
+    @classmethod
+    def warning(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="orange")
+
+    @classmethod
+    def success(
+        cls,
+        info: Optional[Any] = None,
+    ):
+        click.secho(info, fg="green", bold=True)
+
     def init(self, context: tuple):
         """Parse the combined context into arguments and options.
 
@@ -20,21 +50,36 @@ class BaseCommand(ABC):
             context (tuple): Combined arguments and options.
 
         """
-        args = []
-        options = {}
-
-        it = iter(context)
-        for item in it:
-            if item.startswith('--'):
-                key = item.lstrip('--')
-                value = next(it, True)
-                if value.startswith('--'):
-                    value = True
-                options[key] = value
+        positional_args = []
+        keyword_args = {}
+        i = 0
+        while i < len(context):
+            arg = context[i]
+            if arg.startswith("--"):
+                if "=" in arg:
+                    key, value = arg[2:].split("=", 1)
+                    keyword_args[key] = value
+                else:
+                    key = arg[2:]
+                    # lookahead for value
+                    if i + 1 < len(context) and not context[i + 1].startswith("-"):
+                        keyword_args[key] = context[i + 1]
+                        i += 1
+                    else:
+                        keyword_args[key] = True
+            elif arg.startswith("-") and len(arg) == 2:
+                key = arg[1:]
+                if i + 1 < len(context) and not context[i + 1].startswith("-"):
+                    keyword_args[key] = context[i + 1]
+                    i += 1
+                else:
+                    keyword_args[key] = True
             else:
-                args.append(item)
-        self._args = args
-        self._options = options
+                positional_args.append(arg)
+            i += 1
+
+        self._args = positional_args
+        self._options = keyword_args
 
     def get_opt(self, key: str = None, default=None):
         """Retrieve an option from the options dictionary safely."""

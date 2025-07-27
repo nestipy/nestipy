@@ -6,9 +6,7 @@ from nestipy.microservice.client.option import RabbitMQClientOption
 
 async def main():
     client = RabbitMQClientProxy(
-        MicroserviceOption(
-            option=RabbitMQClientOption(host="localhost", port=5672)
-        ),
+        MicroserviceOption(option=RabbitMQClientOption(host="localhost", port=5672)),
     )
     await client.send("topic", "request")
 

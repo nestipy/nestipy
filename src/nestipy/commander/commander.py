@@ -35,12 +35,10 @@ class NestipyCommander(object):
         self._root_module = root_module
         self._set_metadata()
 
-    async def run(self, command_name: str, context: tuple):
+    async def run(self, command_name: str, args: tuple):
         try:
             modules = self._get_modules(self._root_module)
-            await self.instance_loader.create_instances(
-                modules
-            )
+            await self.instance_loader.create_instances(modules)
             commands: dict[str, BaseCommand] = {}
             for c in self.instance_loader.discover.get_all_provider():
                 meta: Optional[dict[str]] = Reflect.get_metadata(c, CommanderMeta.Meta)
@@ -49,7 +47,7 @@ class NestipyCommander(object):
 
             command = commands.get(command_name, None)
             if command is not None:
-                command.init(context)
+                command.init(args)
                 await command.run()
             else:
                 echo.error(f"Command '{command_name}' not found ")

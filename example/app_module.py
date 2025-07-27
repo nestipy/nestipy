@@ -25,7 +25,7 @@ from user.user_module import UserModule
 @Injectable()
 class ModuleGuard(CanActivate):
     async def can_activate(
-            self, context: ExecutionContext
+        self, context: ExecutionContext
     ) -> Union[Awaitable[bool], bool]:
         print("Guarded")
         return True
@@ -46,15 +46,7 @@ class TestMiddleware(NestipyMiddleware):
         GraphqlModule.for_root(GraphqlOption(url="/graphql", ide="default")),
         EventEmitterModule.for_root(is_global=True),
         UserModule,
-        RouterModule.register(
-            config=[
-                RouteItem(
-                    module=UserModule,
-                    path="test"
-                )
-            ]
-        )
-
+        RouterModule.register(config=[RouteItem(module=UserModule, path="test")]),
     ],
     providers=[
         ModuleProviderDict(token="TEST", value="Test"),

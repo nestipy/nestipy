@@ -12,11 +12,13 @@ class MqttClientProxy(ClientProxy):
     client: Client
 
     def __init__(
-            self,
-            option: MicroserviceOption,
+        self,
+        option: MicroserviceOption,
     ):
         super().__init__(option)
-        _option = typing.cast(MqttClientOption, self.option.option or MqttClientOption())
+        _option = typing.cast(
+            MqttClientOption, self.option.option or MqttClientOption()
+        )
         self.client = Client(**asdict(_option))
 
     async def slave(self) -> "ClientProxy":

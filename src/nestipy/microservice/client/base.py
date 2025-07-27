@@ -19,8 +19,12 @@ class MicroserviceOption:
     transport: Transport = field(default=Transport.TCP)
     option: Optional[
         Union[
-            RedisClientOption, MqttClientOption, NatsClientOption,
-            RabbitMQClientOption, TCPClientOption, GrpcClientOption
+            RedisClientOption,
+            MqttClientOption,
+            NatsClientOption,
+            RabbitMQClientOption,
+            TCPClientOption,
+            GrpcClientOption,
         ]
     ] = None
     proxy: Optional["ClientProxy"] = None
@@ -29,35 +33,53 @@ class MicroserviceOption:
     timeout: int = 30
 
     def __post_init__(self):
-        if self.transport == Transport.TCP and self.option is not None and not isinstance(
-                self.option, TCPClientOption):
+        if (
+            self.transport == Transport.TCP
+            and self.option is not None
+            and not isinstance(self.option, TCPClientOption)
+        ):
             raise ValueError("Option must be of type TCPClientOption for TCP transport")
-        elif self.transport == Transport.REDIS and self.option is not None and not isinstance(
-                self.option,
-                RedisClientOption
+        elif (
+            self.transport == Transport.REDIS
+            and self.option is not None
+            and not isinstance(self.option, RedisClientOption)
         ):
-            raise ValueError("Option must be of type RedisClientOption for REDIS transport")
-        elif self.transport == Transport.MQTT and self.option is not None and not isinstance(
-                self.option,
-                MqttClientOption
+            raise ValueError(
+                "Option must be of type RedisClientOption for REDIS transport"
+            )
+        elif (
+            self.transport == Transport.MQTT
+            and self.option is not None
+            and not isinstance(self.option, MqttClientOption)
         ):
-            raise ValueError("Option must be of type MqttClientOption for MQTT transport")
-        elif self.transport == Transport.NATS and self.option is not None and not isinstance(
-                self.option,
-                NatsClientOption
+            raise ValueError(
+                "Option must be of type MqttClientOption for MQTT transport"
+            )
+        elif (
+            self.transport == Transport.NATS
+            and self.option is not None
+            and not isinstance(self.option, NatsClientOption)
         ):
-            raise ValueError("Option must be of type NatsClientOptions for NATS transport")
-        elif self.transport == Transport.RABBITMQ and self.option is not None and not isinstance(
-                self.option,
-                RabbitMQClientOption
+            raise ValueError(
+                "Option must be of type NatsClientOptions for NATS transport"
+            )
+        elif (
+            self.transport == Transport.RABBITMQ
+            and self.option is not None
+            and not isinstance(self.option, RabbitMQClientOption)
         ):
-            raise ValueError("Option must be of type RabbitMQClientOption for RABBITMQ transport")
+            raise ValueError(
+                "Option must be of type RabbitMQClientOption for RABBITMQ transport"
+            )
 
-        elif self.transport == Transport.GRPC and self.option is not None and not isinstance(
-                self.option,
-                GrpcClientOption
+        elif (
+            self.transport == Transport.GRPC
+            and self.option is not None
+            and not isinstance(self.option, GrpcClientOption)
         ):
-            raise ValueError("Option must be of type GrpcClientOption for GRPC transport")
+            raise ValueError(
+                "Option must be of type GrpcClientOption for GRPC transport"
+            )
 
 
 class ClientProxy(ABC):
@@ -95,7 +117,7 @@ class ClientProxy(ABC):
         await asyncio.sleep(0.001)
 
     async def send(
-            self, topic, data: Any, headers: dict[str, str] = None
+        self, topic, data: Any, headers: dict[str, str] = None
     ) -> RpcResponse:
         await self.connect()
         response_topic = uuid.uuid4().hex
@@ -133,7 +155,9 @@ class ClientProxy(ABC):
     async def emit(self, topic, data, headers: dict[str, str] = None):
         request = RpcRequest(pattern=topic, data=data, headers=headers or {})
         json_req = await self.option.serializer.serialize(asdict(request))
-        await self._publish(f"{MICROSERVICE_CHANNEL}:{self.option.channel_key}", json_req)
+        await self._publish(
+            f"{MICROSERVICE_CHANNEL}:{self.option.channel_key}", json_req
+        )
 
     @abstractmethod
     def listen(self) -> AsyncIterator[str]:

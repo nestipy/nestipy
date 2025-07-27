@@ -4,7 +4,6 @@ from .commander import NestipyCommander
 
 
 class CommandFactory:
-
     @classmethod
     def create(cls, root_module: Optional[Type]) -> NestipyCommander:
         instance = NestipyCommander()

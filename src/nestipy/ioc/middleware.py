@@ -24,10 +24,10 @@ class MiddlewareProxy:
 
     @classmethod
     def form_dict(
-            cls,
-            middleware: Union[Type, Callable],
-            route: MiddlewareRouteConfig,
-            path_excludes=None,
+        cls,
+        middleware: Union[Type, Callable],
+        route: MiddlewareRouteConfig,
+        path_excludes=None,
     ) -> "MiddlewareProxy":
         if path_excludes is None:
             path_excludes = []
@@ -38,9 +38,7 @@ class MiddlewareProxy:
         return m
 
     def for_route(
-            self,
-            route: Union[Type, str],
-            method: list[HTTPMethod] = None
+        self, route: Union[Type, str], method: list[HTTPMethod] = None
     ) -> "MiddlewareProxy":
         self.route.method = method or ["ALL"]
         if isinstance(route, str):
@@ -78,7 +76,7 @@ class MiddlewareContainer:
         return MiddlewareContainer(*args, **kwargs)
 
     def add_singleton(
-            self, proxy: MiddlewareProxy, module: Union[Type, object, None] = None
+        self, proxy: MiddlewareProxy, module: Union[Type, object, None] = None
     ):
         if module is not None:
             for m in list(proxy.middlewares):

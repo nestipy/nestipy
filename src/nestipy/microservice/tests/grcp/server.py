@@ -7,10 +7,7 @@ from nestipy.microservice.server.base import MicroServiceServer
 
 async def main():
     client = GrpcClientProxy(
-        MicroserviceOption(
-            transport=Transport.GRPC,
-            option=GrpcClientOption()
-        ),
+        MicroserviceOption(transport=Transport.GRPC, option=GrpcClientOption()),
     )
     server = MicroServiceServer(pub_sub=client)
     print("Running server ...")

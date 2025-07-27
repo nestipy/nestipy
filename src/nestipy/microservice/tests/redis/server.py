@@ -9,7 +9,7 @@ async def main():
     client = RedisClientProxy(
         MicroserviceOption(
             transport=Transport.REDIS,
-            option=RedisClientOption(host="localhost", port=6379)
+            option=RedisClientOption(host="localhost", port=6379),
         ),
     )
     server = MicroServiceServer(pub_sub=client)

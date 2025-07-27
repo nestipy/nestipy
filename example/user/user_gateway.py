@@ -14,5 +14,5 @@ class UserGateway:
         client: Annotated[Websocket, WebSocketClient],
         data: Annotated[str, SocketData],
     ):
-        print(client, data)
+        print(client.sid, data)
         await self.server.emit("user", data, client.sid)

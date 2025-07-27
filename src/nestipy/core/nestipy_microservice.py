@@ -18,7 +18,9 @@ class NestipyMicroservice:
     _ms_ready: bool = False
     coroutines: list = []
 
-    def __init__(self, module: Type, option: list[MicroserviceOption], auto_init: bool = True):
+    def __init__(
+        self, module: Type, option: list[MicroserviceOption], auto_init: bool = True
+    ):
         self.root_module = module
         self.option = option
         if auto_init:
@@ -66,6 +68,7 @@ class NestipyMicroservice:
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get("type") == "lifespan":
+
             def create_task():
                 asyncio.create_task(self.start())
 
@@ -80,7 +83,7 @@ class NestipyConnectMicroservice(NestipyMicroservice, NestipyApplication):
     _running: bool = False
 
     def __init__(
-            self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]
+        self, module: Type, config: NestipyConfig, option: list[MicroserviceOption]
     ):
         NestipyMicroservice.__init__(self, module, option, auto_init=False)
         NestipyApplication.__init__(self, config)

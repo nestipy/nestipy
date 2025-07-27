@@ -8,7 +8,9 @@ from nestipy.dynamic_module import ConfigurableModuleBuilder
 class RouteItem(BaseModel):
     path: str
     module: Type
-    children: Optional[List["RouteItem"]] = Field(default_factory=lambda: [], alias="children")
+    children: Optional[List["RouteItem"]] = Field(
+        default_factory=lambda: [], alias="children"
+    )
 
 
 ConfigurableClassBuilder, ROUTER_CONFIG = (

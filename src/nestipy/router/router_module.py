@@ -25,11 +25,12 @@ class RouterModule(ConfigurableClassBuilder, NestipyModule):
                     Reflect.get_metadata(controller, RouteKey.path, "")
                 )
                 Reflect.set_metadata(
-                    controller, RouteKey.path,
+                    controller,
+                    RouteKey.path,
                     "/".join(
-                        [self._normalize_path(p) for p in parent_path] +
-                        [self._normalize_path(item.path), controller_path]
-                    )
+                        [self._normalize_path(p) for p in parent_path]
+                        + [self._normalize_path(item.path), controller_path]
+                    ),
                 )
             parent_path.append(item.path)
             if item.children:

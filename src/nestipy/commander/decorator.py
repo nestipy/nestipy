@@ -11,9 +11,6 @@ class Command:
         self.desc = desc
 
     def __call__(self, func: Callable) -> Callable:
-        data = {
-            "name": self.name,
-            "description": self.desc
-        }
+        data = {"name": self.name, "description": self.desc}
         decorator = SetMetadata(CommanderMeta.Meta, data)
         return decorator(Injectable()(func))

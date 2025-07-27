@@ -39,7 +39,9 @@ class InstanceLoader:
             ExceptionFilter,
         )
 
-        self.discover: DiscoverService = await NestipyContainer.get_instance().get(DiscoverService)
+        self.discover: DiscoverService = await NestipyContainer.get_instance().get(
+            DiscoverService
+        )
         for module in modules:
             if isinstance(module, DynamicModule):
                 module = module.module
@@ -65,7 +67,7 @@ class InstanceLoader:
             s
             for s in all_services
             if inspect.isclass(s)
-               and issubclass(
+            and issubclass(
                 s, (NestipyInterceptor, CanActivate, NestipyMiddleware, ExceptionFilter)
             )
         ]:
