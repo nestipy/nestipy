@@ -1,5 +1,6 @@
 from typing import Union, Annotated
 from asyncio import sleep as asyncsleep
+from nestipy.common import ConfigService
 from nestipy.common import Get, Post, Controller
 from nestipy.common import Request, Response
 from nestipy.common import UseGuards
@@ -35,6 +36,7 @@ async def long_task2():
 @Controller("users")
 class UserController:
     user_service: Annotated[UserService, Inject()]
+    config_service: Annotated[ConfigService, Inject()]
 
     @Get()
     @ApiOkResponse()
@@ -47,6 +49,7 @@ class UserController:
         tasks: Annotated[BackgroundTasks, Inject()],
     ) -> Union[Response | dict,]:
         print(headers)
+        print(self.config_service.get('ENV'))
         tasks.add_task(long_task)
         tasks.add_task(long_task2)
         return await res.json({"user": "Me"})

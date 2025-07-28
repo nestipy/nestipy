@@ -1,5 +1,4 @@
 from typing import Union, Awaitable
-
 from app_controller import AppController
 from app_provider import AppProvider
 from nestipy.common import (
@@ -42,7 +41,7 @@ class TestMiddleware(NestipyMiddleware):
 
 @Module(
     imports=[
-        ConfigModule.for_root({"folder": "./config"}),
+        ConfigModule.for_root(is_global=True),
         GraphqlModule.for_root(GraphqlOption(url="/graphql", ide="default")),
         EventEmitterModule.for_root(is_global=True),
         UserModule,
