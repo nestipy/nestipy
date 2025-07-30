@@ -3,7 +3,7 @@ import os
 from typing import Union, TYPE_CHECKING, AsyncIterator, Callable
 
 import aiofiles
-import ujson as json
+import orjson as json
 
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
@@ -147,7 +147,7 @@ class Response:
         if status_code is not None:
             self.status(status_code)
         self.header("Content-Type", "application/json")
-        await self._write(json.dumps(content).encode("utf-8"))
+        await self._write(json.dumps(content))
         return self
 
     async def download(self, file_path: str, attachment: bool = True) -> "Response":

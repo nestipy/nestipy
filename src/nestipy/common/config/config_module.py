@@ -10,9 +10,10 @@ from .config_service import ConfigService
     exports=[ConfigService],
 )
 class ConfigModule(ConfigurableModuleClass):
-
     @classmethod
-    def for_root(cls, option: ConfigOption | None = ConfigOption(), is_global: bool = False):
+    def for_root(
+        cls, option: ConfigOption | None = ConfigOption(), is_global: bool = False
+    ):
         module = super().for_root(option)  # Call on cls to preserve subclass
         module.is_global = option.is_global or is_global
         return module
@@ -27,7 +28,7 @@ class ConfigModule(ConfigurableModuleClass):
         inject: list = None,
         imports: list = None,
         extras: dict = None,
-        is_global: bool = False
+        is_global: bool = False,
     ):
         module = super().for_root_async(
             value=value,
@@ -36,7 +37,7 @@ class ConfigModule(ConfigurableModuleClass):
             use_class=use_class,
             inject=inject,
             imports=imports,
-            extras=extras
+            extras=extras,
         )
         module.is_global = is_global
         return module

@@ -1,4 +1,5 @@
 from typing import Union, Awaitable
+
 from app_controller import AppController
 from app_provider import AppProvider
 from nestipy.common import (
@@ -19,6 +20,7 @@ from nestipy.graphql import GraphqlModule, GraphqlOption
 from nestipy.router import RouterModule, RouteItem
 from nestipy.types_ import NextFn
 from user.user_module import UserModule
+from app_command import AppCommand
 
 
 @Injectable()
@@ -51,6 +53,7 @@ class TestMiddleware(NestipyMiddleware):
         ModuleProviderDict(token="TEST", value="Test"),
         ModuleProviderDict(token=AppKey.APP_GUARD, use_class=ModuleGuard),
         AppProvider,
+        AppCommand,
     ],
     controllers=[AppController],
 )

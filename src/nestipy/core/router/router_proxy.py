@@ -28,6 +28,10 @@ from ..context.execution_context import ExecutionContext
 from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
 
 
+def omit(d: dict, keys: set):
+    return {k: v for k, v in d.items() if k not in keys}
+
+
 class RouterProxy:
     def __init__(
         self,
@@ -44,8 +48,13 @@ class RouterProxy:
         )
         json_paths = {}
         json_schemas = {}
+        list_routes = []
         for module_ref in modules:
             routes = RouteExplorer.explore(module_ref)
+            list_routes = [
+                *list_routes,
+                *[omit(u, {"controller", "openapi", "schemas"}) for u in routes],
+            ]
             for route in routes:
                 path = (
                     f"{_prefix.rstrip('/')}/{route['path'].strip('/')}".rstrip("/")
@@ -77,7 +86,7 @@ class RouterProxy:
         paths = {}
         for path, op in json_paths.items():
             paths[path] = PathItem(**op)
-        return paths, json_schemas
+        return paths, json_schemas, list_routes
 
     def create_request_handler(
         self, module_ref: Type, controller: Union[object, Type], method_name: str
@@ -102,9 +111,7 @@ class RouterProxy:
                 async def next_fn_middleware(ex: typing.Any = None):
                     if ex is not None:
                         raise ex
-                    g_processor: GuardProcessor = (
-                        await NestipyContainer.get_instance().get(GuardProcessor)
-                    )
+                    g_processor: GuardProcessor = await container.get(GuardProcessor)
                     passed = await g_processor.process(execution_context)
                     if not passed[0]:
                         raise HttpException(

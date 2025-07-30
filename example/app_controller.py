@@ -13,7 +13,7 @@ from nestipy.common import (
     Get,
     logger,
     UploadFile,
-    ConfigService
+    ConfigService,
 )
 from nestipy.common import ExceptionFilter, Catch, UseFilters
 from nestipy.common import HttpException, apply_decorators
@@ -46,10 +46,10 @@ from nestipy.types_ import NextFn
 
 
 def user_callback(
-        _name: str,
-        _token: Optional[str],
-        _type_ref: Type,
-        _request_context: RequestContextContainer,
+    _name: str,
+    _token: Optional[str],
+    _type_ref: Type,
+    _request_context: RequestContextContainer,
 ):
     return "User"
 
@@ -122,18 +122,18 @@ class AppController:
     @Render("index.html")
     @Get()
     async def test(
-            self,
-            req: Annotated[Request, Req()],
-            res: Annotated[Response, Res()],
-            headers: Annotated[dict, Header()],
-            cookies: Annotated[dict, Cookie()],
-            user_id: Annotated[str, Session("user_id")],
-            sessions: Annotated[dict, Session()],
+        self,
+        req: Annotated[Request, Req()],
+        res: Annotated[Response, Res()],
+        headers: Annotated[dict, Header()],
+        cookies: Annotated[dict, Cookie()],
+        user_id: Annotated[str, Session("user_id")],
+        sessions: Annotated[dict, Session()],
     ):
         # req.session['user_id'] = 2
         # res.cookie('test', 'test-cookie')
         logger.info(sessions)
-        print(self.config.get('ENV'))
+        print(self.config.get("ENV"))
         self.event_emitter.emit("test", sessions)
         # raise HttpException(
         #     HttpStatus.INTERNAL_SERVER_ERROR,
@@ -156,10 +156,10 @@ class AppController:
     )
     @UseFilters(HttpExceptionFilter)
     async def post(
-            self,
-            res: Annotated[Response, Res()],
-            user: Annotated[str, User()],
-            body: Annotated[TestBody, Body("latin-1")],
+        self,
+        res: Annotated[Response, Res()],
+        user: Annotated[str, User()],
+        body: Annotated[TestBody, Body("latin-1")],
     ):
         print(user)
         file_path = os.path.join(

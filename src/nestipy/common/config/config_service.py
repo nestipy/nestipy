@@ -17,7 +17,7 @@ class ConfigService:
         if self.options.ignore_env_file:
             self.env = dict(os.environ)
         else:
-            env_directory = os.path.join(os.getcwd(), self.options.folder, '.env')
+            env_directory = os.path.join(os.getcwd(), self.options.folder, ".env")
             self.env = dotenv_values(env_directory)
             if len(self.options.load) > 0:
                 for load in self.options.load:
