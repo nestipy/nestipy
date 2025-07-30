@@ -22,7 +22,9 @@ class DataRequest(_message.Message):
     DATA_FIELD_NUMBER: _ClassVar[int]
     topic: str
     data: str
-    def __init__(self, topic: _Optional[str] = ..., data: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self, topic: _Optional[str] = ..., data: _Optional[str] = ...
+    ) -> None: ...
 
 class DataResponse(_message.Message):
     __slots__ = ("data", "topic")
@@ -30,7 +32,9 @@ class DataResponse(_message.Message):
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     data: str
     topic: str
-    def __init__(self, data: _Optional[str] = ..., topic: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self, data: _Optional[str] = ..., topic: _Optional[str] = ...
+    ) -> None: ...
 
 class Empty(_message.Message):
     __slots__ = ()

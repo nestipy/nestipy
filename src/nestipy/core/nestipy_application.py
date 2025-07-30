@@ -55,6 +55,7 @@ class NestipyApplication:
     _root_module: Optional[Type] = None
     _openapi_paths: dict = {}
     _openapi_schemas: dict = {}
+    _list_routes: list = []
     _prefix: Union[str | None] = None
     _debug: bool = True
     _ready: bool = False
@@ -140,7 +141,7 @@ class NestipyApplication:
                 modules
             )
             # create and register route to platform adapter
-            self._openapi_paths, self._openapi_schemas = (
+            self._openapi_paths, self._openapi_schemas, self._list_routes = (
                 self._router_proxy.apply_routes(modules, self._prefix)
             )
             # check if graphql is enabled

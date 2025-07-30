@@ -49,7 +49,7 @@ class UserController:
         tasks: Annotated[BackgroundTasks, Inject()],
     ) -> Union[Response | dict,]:
         print(headers)
-        print(self.config_service.get('ENV'))
+        print(self.config_service.get("ENV"))
         tasks.add_task(long_task)
         tasks.add_task(long_task2)
         return await res.json({"user": "Me"})

@@ -74,6 +74,7 @@ class RouteExplorer:
                     "request_method": request_method,
                     "method_name": method_name,
                     "controller": controller,
+                    "controller_name": controller.__name__,
                     "openapi": path_docs,  # openapi docs
                     "schemas": merged_schemas,
                 }
