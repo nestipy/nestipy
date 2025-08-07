@@ -33,7 +33,9 @@
     ├── app_controller.py
     ├── app_service.py
     ├── main.py
-    ├── requirements.txt
+    ├── cli.py
+    ├── pyproject.yml
+    ├── uv.lock
     ├── README.md
     
        

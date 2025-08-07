@@ -6,7 +6,14 @@ from nestipy.common.logger import logger
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import Reflect, ModuleMetadata
-from .decorator import GATEWAY_KEY, EVENT_KEY, SUCCESS_EVENT_KEY, ERROR_EVENT_KEY
+from .decorator import EVENT_ON_CONNECT, EVENT_ON_DISCONNECT
+from .decorator import (
+    GATEWAY_KEY,
+    EVENT_KEY,
+    SUCCESS_EVENT_KEY,
+    ERROR_EVENT_KEY,
+    WS_MESSAGE_SUBSCRIBE,
+)
 from ..core.context.execution_context import ExecutionContext
 
 if TYPE_CHECKING:
@@ -30,7 +37,16 @@ class IoSocketProxy:
                     handler = self._create_io_handler(
                         module_ref, gateway, method_name, namespace, event_name
                     )
-                    io_adapter.on(event=event_name, namespace=namespace)(handler)
+                    event_map = {
+                        WS_MESSAGE_SUBSCRIBE: io_adapter.on_message,
+                        EVENT_ON_CONNECT: io_adapter.on_connect,
+                        EVENT_ON_DISCONNECT: io_adapter.on_disconnect,
+                    }
+                    register_handler = event_map.get(
+                        event_name,
+                        lambda: io_adapter.on(event=event_name, namespace=namespace),
+                    )
+                    register_handler()(handler)
 
     @classmethod
     def _get_module_provider_gateway(

@@ -1,75 +1,17 @@
-This is an example of how to create a WebSocket adapter.
-
-Your adapter must extend the `IoAdapter` class from `nestipy.websocket` and implement all of its abstract methods.
-
-Below is the `IoAdapter` abstract class:
-```python 
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
-
-
-class IoAdapter(ABC):
-    def __init__(self, path: str = "socket.io"):
-        self._path = f"/{path.strip('/')}"
-
-    @abstractmethod
-    def on(
-            self, event: str, namespace: Optional[str] = None
-    ) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def emit(
-            self,
-            event: Any,
-            data: Optional[Any] = None,
-            to: Optional[Any] = None,
-            room: Optional[Any] = None,
-            skip_sid: Optional[Any] = None,
-            namespace: Optional[Any] = None,
-            callback: Optional[Any] = None,
-            ignore_queue: bool = False,
-    ):
-        pass
-
-    @abstractmethod
-    def on_connect(self) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def on_message(self) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def on_disconnect(self) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def broadcast(self, event: Any, data: Any):
-        pass
-
-    @abstractmethod
-    async def __call__(self, scope: dict, receive: Callable, send: Callable) -> bool:
-        pass
-```
-
-So , let's create Websocket Adapter for ASGI Websocket
-
-```python
 from typing import Any, Callable, Optional
 
 from orjson import orjson
 
-from nestipy.websocket.adapter import IoAdapter
-from nestipy.websocket.socket_request import Websocket
+from .abstract import IoAdapter
+from ..socket_request import Websocket
 
 
 class WebsocketAdapter(IoAdapter):
     def __init__(
-            self,
-            path: str = "/ws",
-            preprocess_payload: Callable[[str, Any], tuple[str, Any]] = None,
-            post_process_payload: Callable[[str, Any], Any] = None,
+        self,
+        path: str = "/ws",
+        preprocess_payload: Callable[[str, Any], tuple[str, Any]] = None,
+        post_process_payload: Callable[[str, Any], Any] = None,
     ):
         super().__init__(path=path)
         self._connected: list[str] = []
@@ -95,15 +37,15 @@ class WebsocketAdapter(IoAdapter):
         return decorator
 
     async def emit(
-            self,
-            event: Any,
-            data: Any = None,
-            to: Any = None,
-            room: Any = None,
-            skip_sid: Any = None,
-            namespace: Any = None,
-            callback: Any = None,
-            ignore_queue: bool = False,
+        self,
+        event: Any,
+        data: Any = None,
+        to: Any = None,
+        room: Any = None,
+        skip_sid: Any = None,
+        namespace: Any = None,
+        callback: Any = None,
+        ignore_queue: bool = False,
     ):
         """Send a message to one or all clients"""
         if self._post_process_payload:
@@ -212,12 +154,3 @@ class WebsocketAdapter(IoAdapter):
             self._client_info.pop(sid, None)
 
         return True
-
-```
-
-And now, in you `main.py`
-```python
-...
-app.use_io_adapter(WebsocketAdapter())
-...
-```

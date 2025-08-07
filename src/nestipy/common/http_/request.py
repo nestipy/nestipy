@@ -6,7 +6,6 @@ from urllib.parse import parse_qsl
 import ujson
 from python_multipart.multipart import parse_options_header
 from starlette._utils import AwaitableOrContextManagerWrapper, AwaitableOrContextManager
-from starlette.requests import Request as StarletteRequest
 
 from .form_parsers import MultiPartParser, MultiPartException, FormParser, FormData
 from .multipart import parse_content_header
@@ -33,7 +32,7 @@ class Request:
     def __init__(self, scope: dict, receive: Callable, send: Callable) -> None:
         self.scope = scope
         self.receive = receive
-        self.send = receive
+        self.send = send
         self._query_params = None
         self._headers: Optional[dict] = None
         self._path = None
@@ -49,8 +48,6 @@ class Request:
         self._cookies = None
         self._stream_consumed = False
         self._is_disconnected = False
-        if scope["type"] == "http":
-            self.starlette_request = StarletteRequest(scope, receive, send)
 
     @property
     def query_params(self) -> dict:

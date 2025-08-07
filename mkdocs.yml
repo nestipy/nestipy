@@ -1,5 +1,6 @@
 site_name: Nestipy
 docs_dir: site
+site_dir: docs
 repo_url: https://github.com/nestipy/nestipy
 repo_name: nestipy/nestipy
 copyright: Copyright &copy; 2024  <strong style="color:var(--md-accent-fg-color)">Nestipy</strong>

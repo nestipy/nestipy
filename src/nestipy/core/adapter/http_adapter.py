@@ -176,7 +176,7 @@ class HttpAdapter(ABC):
         self.send = send
         response_sent: bool = False
         if self._io_adapter is not None:
-            # Register socketio adapter
+            # Register io adapter
             response_sent = await self._io_adapter(scope, receive, send)
         # pass to http handler
         if not response_sent:

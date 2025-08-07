@@ -1,10 +1,9 @@
 import mimetypes
 import os
-from typing import Union, TYPE_CHECKING, AsyncIterator, Callable
+from typing import Union, TYPE_CHECKING, AsyncIterator, Callable, Self
 
 import aiofiles
 import orjson as json
-
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
@@ -247,7 +246,13 @@ class Response:
     def content(self) -> Union[bytes, None]:
         return self._content
 
-    def headers(self) -> set[tuple[str, str]]:
+    def headers(
+        self, headers: dict[str, str] = None
+    ) -> Union[set[tuple[str, str]], Self]:
+        if headers is not None:
+            for key, value in headers.items():
+                self.header(key, value)
+            return self
         return self._headers
 
     def cookies(self) -> set[tuple[str, str]]:

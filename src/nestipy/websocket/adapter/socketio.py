@@ -1,50 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from socketio import AsyncServer
 
-from .socket_request import Websocket
-
-
-class IoAdapter(ABC):
-    def __init__(self, path: str = "socket.io"):
-        self._path = f"/{path.strip('/')}"
-
-    @abstractmethod
-    def on(
-        self, event: str, namespace: Optional[str] = None
-    ) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def emit(
-        self,
-        event: Any,
-        data: Optional[Any] = None,
-        to: Optional[Any] = None,
-        room: Optional[Any] = None,
-        skip_sid: Optional[Any] = None,
-        namespace: Optional[Any] = None,
-        callback: Optional[Any] = None,
-        ignore_queue: bool = False,
-    ):
-        pass
-
-    @abstractmethod
-    def on_connect(self) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def on_disconnect(self) -> Callable[[Callable], Any]:
-        pass
-
-    @abstractmethod
-    def broadcast(self, event: Any, data: Any):
-        pass
-
-    @abstractmethod
-    async def __call__(self, scope: dict, receive: Callable, send: Callable) -> bool:
-        pass
+from .abstract import IoAdapter
+from ..socket_request import Websocket
 
 
 class SocketIoAdapter(IoAdapter):
@@ -52,6 +11,12 @@ class SocketIoAdapter(IoAdapter):
         super().__init__(path=path)
         self._io: AsyncServer = io
         self._connected: list = []
+
+    def on_message(self) -> Callable[[Callable], Any]:
+        def decorator(handler: Callable):
+            return handler
+
+        return decorator
 
     def on(self, event: str, namespace: str = None):
         def decorator(handler: Callable):
@@ -91,9 +56,17 @@ class SocketIoAdapter(IoAdapter):
 
     def on_connect(self):
         def decorator(handler: Callable):
-            async def wrapper(sid: Any, *args, **kwargs):
+            async def wrapper(sid: Any, environ: dict, *args, **kwargs):
                 self._connected.append(sid)
-                return await handler(sid, *args, **kwargs)
+                client = Websocket(
+                    None,
+                    sid,
+                    None,
+                    environ["asgi.scope"],
+                    environ["asgi.receive"],
+                    environ["asgi.send"],
+                )
+                return await handler(sid, client, None)
 
             return self._io.on("connect")(wrapper)
 
@@ -103,7 +76,15 @@ class SocketIoAdapter(IoAdapter):
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
                 self._connected.remove(sid)
-                return await handler(sid, *args, **kwargs)
+                client = Websocket(
+                    None,
+                    sid,
+                    None,
+                    {},
+                    lambda _: None,
+                    lambda _: None,
+                )
+                return await handler(sid, client, None)
 
             return self._io.on("disconnect")(wrapper)
 

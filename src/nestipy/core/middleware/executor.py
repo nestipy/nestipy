@@ -3,11 +3,10 @@ import re
 import traceback
 from typing import Callable, Any, Optional
 
-from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
-
-from nestipy.common.logger import logger
 from nestipy.common.http_ import Request, Response
+from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
+from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
 from nestipy.types_ import HTTPMethod
 
 
@@ -85,6 +84,16 @@ class MiddlewareExecutor:
             return await to_call(self._req, self._res, self._next_fn)
 
     def _is_match(self, to_match: str, route: Optional[str] = None) -> bool:
+        """
+        Check if the beginning of the route matches the given pattern.
+
+        Args:
+            to_match (str): The path prefix or pattern to match against (e.g., "/static").
+            route (Optional[str]): Optional route to test. If not provided, uses self._req.path.
+
+        Returns:
+            bool: True if the route starts with the given pattern, False otherwise.
+        """
         pattern = re.compile(f"^{to_match}")
         mitch = pattern.match(
             route or self._req.path,

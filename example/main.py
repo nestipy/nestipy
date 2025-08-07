@@ -9,7 +9,7 @@ from nestipy.common import HttpException, ExceptionFilter, Catch, logger
 from nestipy.common import session
 from nestipy.core import ArgumentHost, NestipyFactory, FastApiApplication
 from nestipy.openapi import SwaggerModule, DocumentBuilder
-from nestipy.websocket import SocketIoAdapter
+from nestipy.websocket import WebsocketAdapter
 
 # default use blacksheep
 app = NestipyFactory[FastApiApplication].create(AppModule)
@@ -60,7 +60,8 @@ class TestGlobalFilter(ExceptionFilter):
 # app.use_global_prefix('/v1')
 # socket io
 sio = socketio.AsyncServer(async_mode="asgi")
-app.use_io_adapter(SocketIoAdapter(sio))
+# app.use_io_adapter(SocketIoAdapter(sio))
+app.use_io_adapter(WebsocketAdapter())
 
 app.use(session())
 
