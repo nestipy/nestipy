@@ -40,7 +40,93 @@
     
        
 ```
+The main.py file contains an instance of application and bootstrapping it with uvicorn.
 
+```python
+import uvicorn
+from nestipy.core import NestipyFactory
+
+from app_module import AppModule
+
+app = NestipyFactory.create(AppModule)
+
+if __name__ == '__main__':
+    uvicorn.run('main:app', reload=True)
+```
+Inside module, we got,
+
+```python
+from app_command import AppCommand
+from app_controller import AppController
+from app_service import AppService
+
+from nestipy.common import Module
+
+
+@Module(
+    controllers=[AppController],
+    providers=[AppService, AppCommand]
+)
+class AppModule: ...
+
+```
+For controller, we got something like
+```python
+from typing import Annotated
+
+from nestipy.common import Controller, Get, Post, Put, Delete
+from nestipy.ioc import Inject, Body, Param
+
+from app_service import AppService
+
+
+@Controller()
+class AppController:
+    service: Annotated[AppService, Inject()]
+
+    @Get()
+    async def get(self) -> str:
+        return await self.service.get()
+
+    @Post()
+    async def post(self, data: Annotated[dict, Body()]) -> str:
+        return await self.service.post(data=data)
+
+    @Put("/{app_id}")
+    async def put(
+        self, app_id: Annotated[int, Param("app_id")], data: Annotated[dict, Body()]
+    ) -> str:
+        return await self.service.put(id_=app_id, data=data)
+
+    @Delete("/{app_id}")
+    async def delete(self, app_id: Annotated[int, Param("app_id")]) -> None:
+        await self.service.delete(id_=app_id)
+
+```
+And, for `app_service.py`
+```python
+from nestipy.common import Injectable
+
+
+@Injectable()
+class AppService:
+    @classmethod
+    async def get(cls):
+        return "test"
+
+    @classmethod
+    async def post(cls, data: dict):
+        return "test"
+
+    @classmethod
+    async def put(cls, id_: int, data: dict):
+        return "test"
+
+    @classmethod
+    async def delete(cls, id_: int):
+        return "test"
+
+```
 ## Documentation
 
 View full documentation from [here](https://nestipy.vercel.app).
