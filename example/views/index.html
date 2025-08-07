@@ -13,38 +13,70 @@
 </div>
 <button type="button" onclick="sendMessage()">Send message</button>
 <button type="button" onclick="sendUser()">Send user</button>
-<img src="/static/vite.svg"  alt="Vite Logo"/>
+<button type="button" onclick="sendWsMessage()">Send message (WebSocket)</button>
+<button type="button" onclick="sendWsUser()">Send user (WebSocket)</button>
+<img src="/static/vite.svg" alt="Vite Logo"/>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"
         integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4"
         crossorigin="anonymous"></script>
 <script>
+    // ===== Socket.IO client =====
     const socket = io();
-    socket.on("connection", (socket) => {
-        console.log(socket.id); // x8WIv7-mJelg7on_ALbx
-        // client-side
-    });
+
     socket.on("connect", () => {
-        console.log(socket.id); // x8WIv7-mJelg7on_ALbx
+        console.log("Socket.IO connected:", socket.id);
     });
 
     socket.on("disconnect", () => {
-        console.log(socket.id); // undefined
+        console.log("Socket.IO disconnected");
     });
+
     socket.on("message", (data) => {
-        console.log(data); // undefined
+        console.log("Socket.IO message:", data);
     });
+
     socket.on("user", (data) => {
-        console.log("User::", data); // undefined
+        console.log("Socket.IO user:", data);
     });
 
     function sendMessage() {
-        console.log('Send message');
-        socket.emit('message', 'test')
+        console.log("Send message (Socket.IO)");
+        socket.emit("message", "test");
     }
 
     function sendUser() {
-        console.log('Send user');
-        socket.emit('user', 'test user')
+        console.log("Send user (Socket.IO)");
+        socket.emit("user", "test user");
+    }
+
+    // ===== Native WebSocket client =====
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    ws.addEventListener("open", () => {
+        console.log("WebSocket connected");
+    });
+
+    ws.addEventListener("message", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("WebSocket received JSON:", data);
+        } catch {
+            console.log("WebSocket received text:", event.data);
+        }
+    });
+
+    ws.addEventListener("close", () => {
+        console.log("WebSocket disconnected");
+    });
+
+    function sendWsMessage() {
+        console.log("Send message (WebSocket)");
+        ws.send(JSON.stringify({event: "message", data: "test"}));
+    }
+
+    function sendWsUser() {
+        console.log("Send user (WebSocket)");
+        ws.send(JSON.stringify({event: "user", data: "test user"}));
     }
 </script>
 </body>

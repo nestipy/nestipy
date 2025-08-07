@@ -1,12 +1,19 @@
 import dataclasses
 import inspect
 from enum import Enum
-from typing import Union, Optional, Any, Type, Callable
+from typing import Union, Optional, Any, Type, Callable, Dict
 
 from pydantic import TypeAdapter, BaseModel
 
 from nestipy.metadata import SetMetadata
-from .openapi_docs.v3 import RequestBody, Response, Parameter
+from .openapi_docs.v3 import (
+    RequestBody,
+    Response,
+    Parameter,
+    ParameterLocation,
+    Header,
+    Reference,
+)
 from .openapi_docs.v3 import SecurityRequirement, MediaType, Schema
 
 
@@ -46,6 +53,9 @@ def _create_decorator_to_add_schema_ref(decorator: Callable, content: dict):
     return update_decorator
 
 
+# API BODY
+
+
 def ApiBody(
     body: Union[BaseModel, Type, None] = None, consumer: ApiConsumer = ApiConsumer.JSON
 ):
@@ -62,15 +72,55 @@ def ApiBody(
     return _create_decorator_to_add_schema_ref(decorator, content)
 
 
+def ApiParameter(param: Parameter):
+    return SetMetadata(key="__openapi__parameters", data=[param], as_list=True)
+
+
+def ApiHeader(name: str, description: Optional[str] = None, required: bool = True):
+    return ApiParameter(
+        Parameter(
+            name=name,
+            description=description,
+            in_=ParameterLocation.HEADER,
+            required=required,
+        )
+    )
+
+
+def ApiPath(name: str, description: Optional[str] = None):
+    return ApiParameter(
+        Parameter(
+            name=name,
+            description=description,
+            in_=ParameterLocation.PATH,
+            required=True,
+        )
+    )
+
+
+def ApiQuery(name: str, description: Optional[str] = None, required: bool = False):
+    return ApiParameter(
+        Parameter(
+            name=name,
+            description=description,
+            in_=ParameterLocation.QUERY,
+            required=required,
+        )
+    )
+
+
+#  API Response
 def ApiResponse(
     status: int,
     response: Union[BaseModel, Type] = None,
     description: str = None,
     example: Any = None,
+    headers: Optional[Dict[str, Union[Header, Reference]]] = None,
     consumer: ApiConsumer = ApiConsumer.JSON,
 ):
     content = _get_json_of_body(response)
     response_body = Response(
+        headers=headers,
         description=description,
         content={
             consumer.value: MediaType(
@@ -121,8 +171,7 @@ def ApiNotFoundResponse(
     )
 
 
-def ApiParameter(param: Parameter):
-    return SetMetadata(key="__openapi__parameters", data=[param], as_list=True)
+# API INFO
 
 
 def ApiTags(tags: Union[str, list[str]]):
@@ -133,6 +182,9 @@ def ApiTags(tags: Union[str, list[str]]):
 
 def ApiId(api_id: str):
     return SetMetadata(key="__openapi__operation_id", data=api_id)
+
+
+# SECURITY
 
 
 def ApiBasicAuth():

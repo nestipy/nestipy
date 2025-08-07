@@ -16,7 +16,9 @@ Upon execution, a directory named `project-name` will be generated, containing a
 ├── app_controller.py
 ├── app_service.py
 ├── main.py
-|── requirements.txt
+|── cli.py
+|── uv.lock
+|── pyproject.yaml
 |── README.md
 ├── src
 │    ├── __init__.py

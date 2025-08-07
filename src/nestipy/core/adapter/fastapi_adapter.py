@@ -1,14 +1,14 @@
 import typing
 
-from fastapi import Response as FResponse, FastAPI
+from fastapi import Response as FResponse, FastAPI, WebSocket as FastAPIWebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
+from nestipy.common.http_ import Response, Websocket
+from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from starlette.middleware import _MiddlewareFactory
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp
 
-from nestipy.common.http_ import Response
-from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from .http_adapter import HttpAdapter
 
 
@@ -19,6 +19,7 @@ class FastApiAdapter(HttpAdapter):
             on_shutdown=[self.on_shutdown],
             openapi_url=None,
         )
+        self.instance.router.redirect_slashes = False
 
     def get_instance(self) -> any:
         return self.instance
@@ -44,7 +45,9 @@ class FastApiAdapter(HttpAdapter):
         self.instance.post(route)(self._create_fastapi_handler(callback, metadata))
 
     def ws(self, route: str, callback: WebsocketHandler, metadata: dict) -> None:
-        pass
+        self.instance.websocket(route)(
+            self._create_fastapi_ws_handler(callback, metadata)
+        )
 
     def mount(self, route: str, callback: MountHandler) -> None:
         self.instance.mount(route, typing.cast(ASGIApp, callback))
@@ -105,3 +108,10 @@ class FastApiAdapter(HttpAdapter):
             )
 
         return fastapi_handler
+
+    def _create_fastapi_ws_handler(self, callback: WebsocketHandler, metadata: dict):
+        async def fastapi_ws_handler(ws: FastAPIWebSocket):
+            websocket = Websocket(self.scope, self.receive, self.send)
+            await callback(websocket)
+
+        return fastapi_ws_handler

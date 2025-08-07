@@ -1,3 +1,4 @@
+import asyncio
 import os.path
 import traceback
 from typing import Union, Type, Callable
@@ -10,7 +11,14 @@ from nestipy.ioc import RequestContextContainer
 from nestipy.metadata import Reflect
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
-from ..common import Request, Response, HttpException, HttpStatus, HttpStatusMessages
+from ..common import (
+    Request,
+    Response,
+    HttpException,
+    HttpStatus,
+    HttpStatusMessages,
+    Websocket,
+)
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
@@ -18,7 +26,16 @@ from ..types_ import NextFn
 
 
 class GraphqlProxy:
+    """
+    Proxy class that bridges Nestipy modules with a GraphQL server.
+    It dynamically registers resolvers, applies guards, and sets up HTTP/WebSocket handlers.
+    """
+
     def __init__(self, adapter: HttpAdapter, graphql_server: GraphqlAdapter):
+        """
+        :param adapter: The HTTP adapter instance to register handlers.
+        :param graphql_server: The GraphQL adapter (e.g., Strawberry ASGI integration).
+        """
         self._graphql_server = graphql_server
         self._adapter = adapter
         self.container = NestipyContainer.get_instance()
@@ -119,13 +136,49 @@ class GraphqlProxy:
             schema_sdl = gql_asgi.print_schema()
             with open(os.path.join(os.getcwd(), option.auto_schema_file), "w+") as file:
                 file.write(schema_sdl)
+
         # create graphql handler but using handle of graphql_adapter
-        self._adapter.mount(graphql_path, gql_asgi.handle)
+        async def graphql_handler(_req: Request, res: Response, _next_fn: NextFn):
+            scope = _req.scope
+            queue: asyncio.Queue[bytes] = asyncio.Queue()
+            completed = asyncio.Event()
 
-        async def graphql_redirect(_req: Request, res: Response, _next_fn: NextFn):
-            return await res.redirect(f"{graphql_path}/")
+            # Custom send method to handle ASGI messages
+            async def send(message: dict):
+                if message["type"] == "http.response.start":
+                    headers = {
+                        key.decode(): value.decode()
+                        for key, value in message["headers"]
+                    }
+                    res.headers(headers).status(message["status"])
 
-        self._adapter.get(graphql_path, graphql_redirect, {})
+                elif message["type"] == "http.response.body":
+                    body = message.get("body", b"")
+                    if body:
+                        await queue.put(body)
+
+                    if not message.get("more_body", False):
+                        completed.set()
+
+            async def stream_chunk_generator():
+                while not completed.is_set() or not queue.empty():
+                    chunk = await queue.get()
+                    yield chunk
+
+            await asyncio.get_running_loop().create_task(
+                gql_asgi.handle(scope, _req.receive, send)
+            )
+            # Return streaming response
+            return await res.stream(stream_chunk_generator)
+
+        async def graphql_ws_handler(_ws: Websocket):
+            scope = _ws.scope
+            receive = _ws.receive
+            send = _ws.send
+            await gql_asgi.handle(scope, receive, send)
+
+        self._adapter.all(graphql_path, graphql_handler, {})
+        self._adapter.ws(graphql_path, graphql_ws_handler, {})
 
     @classmethod
     def should_render_graphql_ide(cls, req: Request) -> bool:
@@ -133,7 +186,9 @@ class GraphqlProxy:
             req.method == "GET"
             and req.query_params.get("query") is None
             and any(
-                supported_header in req.headers.get("accept", "")
-                for supported_header in ("text/html", "*/*")
+                [
+                    supported_header in req.headers.get("accept", "")
+                    for supported_header in ("text/html", "*/*")
+                ]
             )
         )
