@@ -3,12 +3,12 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
-from rich.traceback import install
-
 from nestipy.common.logger import logger, console
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.common.utils import uniq_list
+from nestipy.core.providers.background import BackgroundTasks
+from nestipy.core.providers.discover import DiscoverService
 from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.dynamic_module import DynamicModule
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
@@ -21,10 +21,10 @@ from nestipy.ioc import (
 )
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
+from rich.traceback import install
+
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
-from nestipy.core.providers.background import BackgroundTasks
-from nestipy.core.providers.discover import DiscoverService
 from .instance_loader import InstanceLoader
 from .meta.controller_metadata_creator import ControllerMetadataCreator
 from .meta.module_metadata_creator import ModuleMetadataCreator
@@ -96,13 +96,13 @@ class NestipyApplication:
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
-        modules: list[Type] = [module]
+        modules: list[Type] = []
         for m in Reflect.get_metadata(module, ModuleMetadata.Imports, []):
             if isinstance(m, DynamicModule):
                 modules.append(m.module)
             else:
                 modules.append(m)
-        return uniq_list(modules)
+        return [module, *uniq_list(modules)]
 
     def init(self, root_module: Type):
         self._root_module = root_module

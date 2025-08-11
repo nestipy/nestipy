@@ -1,15 +1,16 @@
 from dataclasses import asdict
 from typing import Union, Callable, MutableMapping, Any, Awaitable
 
+from lia import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from starlette.websockets import WebSocket
 from strawberry.asgi import GraphQL
-from strawberry.http.exceptions import HTTPException
 from strawberry.http.typevars import Context
+from strawberry.printer import print_schema
 from strawberry.schema import BaseSchema
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
-from strawberry.printer import print_schema
+
 from ..graphql_asgi import GraphqlASGI
 from ..graphql_module import GraphqlOption, ASGIOption
 

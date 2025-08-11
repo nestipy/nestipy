@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GraphQL Playground</title>
+    <link rel="shortcut icon" href="/_devtools/static/graphql/favicon.png"/>
+</head>
+<body style="margin:0; overflow:hidden; height:100vh; width:100vw;">
+<div id="embeddableExplorer" style="width: 100vw; height: 100vh;"></div>
+<noscript>You need to enable JavaScript to run this app.</noscript>
+
+<script src="https://embeddable-explorer.cdn.apollographql.com/_latest/embeddable-explorer.umd.production.min.js"></script>
+<script>
+    async function loadExplorer() {
+        const endpoint = window.location.href;
+
+        const introspectionQuery = {
+            query: `
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              ...FullType
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                ...InputValue
+              }
+            }
+          }
+        }
+
+        fragment FullType on __Type {
+          kind
+          name
+          description
+          fields(includeDeprecated: true) {
+            name
+            description
+            args {
+              ...InputValue
+            }
+            type {
+              ...TypeRef
+            }
+            isDeprecated
+            deprecationReason
+          }
+          inputFields {
+            ...InputValue
+          }
+          interfaces {
+            ...TypeRef
+          }
+          enumValues(includeDeprecated: true) {
+            name
+            description
+            isDeprecated
+            deprecationReason
+          }
+          possibleTypes {
+            ...TypeRef
+          }
+        }
+
+        fragment InputValue on __InputValue {
+          name
+          description
+          type { ...TypeRef }
+          defaultValue
+        }
+
+        fragment TypeRef on __Type {
+          kind
+          name
+          ofType {
+            kind
+            name
+            ofType {
+              kind
+              name
+              ofType {
+                kind
+                name
+              }
+            }
+          }
+        }
+      `
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(introspectionQuery),
+        });
+
+        const result = await response.json();
+
+        new window.EmbeddedExplorer({
+            target: '#embeddableExplorer',
+            endpointUrl: endpoint,
+            initialSubscriptionEndpoint: 'ws://localhost:8002/graphql',
+            schema: result.data,
+            persistExplorerState: true,
+            initialState: {
+                displayOptions: {
+                    showHeadersAndEnvVars: true,
+                },
+            },
+        });
+    }
+
+    loadExplorer();
+</script>
+</body>
+</html>

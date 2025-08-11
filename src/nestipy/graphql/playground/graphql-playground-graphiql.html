@@ -1,119 +1,101 @@
-
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Graphql Playground</title>
-    <link rel="shortcut icon" href="/_devtools/static/graphql/favicon.png" />
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GraphiQL Playground</title>
+    <link rel="shortcut icon" href="/_devtools/static/graphql/favicon.png"/>
+    <link rel="favicon" href="/_devtools/static/graphql/favicon.png"/>
     <style>
-      body {
-        height: 100%;
-        margin: 0;
-        width: 100%;
-        overflow: hidden;
-      }
+        body {
+            margin: 0;
+        }
 
-      #graphiql {
-        height: 100vh;
-        display: flex;
-      }
-
-      .docExplorerHide {
-        display: none;
-      }
-
-      .doc-explorer-contents {
-        overflow-y: hidden !important;
-      }
-
-      .docExplorerWrap {
-        width: unset !important;
-        min-width: unset !important;
-      }
-
-      .graphiql-explorer-actions select {
-        margin-left: 4px;
-      }
+        #graphiql {
+            height: 100dvh;
+        }
     </style>
-
-    <script
-      crossorigin
-      src="/_devtools/static/graphiql/react.production.min.js"
-    ></script>
-    <script
-      crossorigin
-      src="/_devtools/static/graphiql/react-dom.production.min.js"
-    ></script>
-
-    <script
-      crossorigin
-      src="/_devtools/static/graphiql/js.cookie.min.js"
-    ></script>
-
+    <link rel="stylesheet" href="https://esm.sh/graphiql/dist/style.css"/>
     <link
-      crossorigin
-      rel="stylesheet"
-      href="/_devtools/static/graphiql/graphiql.min.css"
+            rel="stylesheet"
+            href="https://esm.sh/@graphiql/plugin-explorer/dist/style.css"
     />
+    <script type="importmap">
+        {
+          "imports": {
+            "react": "https://esm.sh/react@19.1.0",
+            "react/": "https://esm.sh/react@19.1.0/",
 
-    <link
-      crossorigin
-      rel="stylesheet"
-      href="/_devtools/static/graphiql/style.css"
-    />
-  </head>
+            "react-dom": "https://esm.sh/react-dom@19.1.0",
+            "react-dom/": "https://esm.sh/react-dom@19.1.0/",
 
-  <body>
-    <div id="graphiql" class="graphiql-container">Loading...</div>
-    <script
-      crossorigin
-      src="/_devtools/static/graphiql/graphiql.min.js"
-    ></script>
-    <script
-      crossorigin
-      src="/_devtools/static/graphiql/index.umd.js"
-    ></script>
-    <script>
-      const EXAMPLE_QUERY = ``;
+            "graphiql": "https://esm.sh/graphiql?standalone&external=react,react-dom,@graphiql/react,graphql",
+            "graphiql/": "https://esm.sh/graphiql/",
+            "@graphiql/plugin-explorer": "https://esm.sh/@graphiql/plugin-explorer?standalone&external=react,@graphiql/react,graphql",
+            "@graphiql/react": "https://esm.sh/@graphiql/react?standalone&external=react,react-dom,graphql,@graphiql/toolkit,@emotion/is-prop-valid",
 
-      const fetchURL = window.location.href;
-
-      function httpUrlToWebSocketUrl(url) {
-        const parsedURL = new URL(url);
-        parsedURL.protocol = parsedURL.protocol === "http:" ? "ws:" : "wss:";
-        parsedURL.hash = "";
-        return parsedURL.toString();
-      }
-
-      const headers = {};
-      const csrfToken = Cookies.get("csrftoken");
-
-      if (csrfToken) {
-        headers["x-csrftoken"] = csrfToken;
-      }
-
-      const subscriptionsEnabled = JSON.parse("true");
-      const subscriptionUrl = subscriptionsEnabled
-        ? httpUrlToWebSocketUrl(fetchURL)
-        : null;
-
-      const fetcher = GraphiQL.createFetcher({
-        url: fetchURL,
-        headers: headers,
-        subscriptionUrl,
-      });
-
-      const explorerPlugin = GraphiQLPluginExplorer.explorerPlugin();
-
-      const root = ReactDOM.createRoot(document.getElementById("graphiql"));
-
-      root.render(
-        React.createElement(GraphiQL, {
-          fetcher: fetcher,
-          defaultEditorToolsVisibility: true,
-          plugins: [explorerPlugin],
-          inputValueDeprecation: true,
-        }),
-      );
+            "@graphiql/toolkit": "https://esm.sh/@graphiql/toolkit?standalone&external=graphql",
+            "graphql": "https://esm.sh/graphql@16.11.0",
+            "@emotion/is-prop-valid": "data:text/javascript,"
+          }
+        }
     </script>
-  </body>
+    <script type="module">
+        import React from 'react';
+        import ReactDOM from 'react-dom/client';
+        import {GraphiQL, HISTORY_PLUGIN} from 'graphiql';
+        import {createGraphiQLFetcher} from '@graphiql/toolkit';
+        import {explorerPlugin} from '@graphiql/plugin-explorer';
+        import 'graphiql/setup-workers/esm.sh';
+
+        const fetcher = createGraphiQLFetcher({
+            url: window.location.href,
+            subscriptionUrl: window.location.href
+        });
+        const plugins = [HISTORY_PLUGIN, explorerPlugin()];
+
+        function App() {
+            return React.createElement(GraphiQL, {
+                fetcher,
+                plugins,
+                defaultEditorToolsVisibility: true,
+            });
+        }
+
+        const container = document.getElementById('graphiql');
+        const root = ReactDOM.createRoot(container);
+        root.render(React.createElement(App));
+    </script>
+</head>
+<body>
+<div id="graphiql">
+    <style>
+        body {
+            background-color: rgb(23, 42, 58);
+            font-family: Open Sans, sans-serif;
+            height: 90vh;
+        }
+        #graphiql {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        img {
+            width: 78px;
+            height: 78px;
+        }
+
+        .title {
+            font-weight: 400;
+        }
+    </style>
+    <img src='/_devtools/static/graphql/graphql.png' alt=''>
+    <div class="loading"> Loading
+        <span class="title">GraphQL Playground</span>
+    </div>
+</div>
+</body>
 </html>
