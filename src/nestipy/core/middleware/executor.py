@@ -61,6 +61,7 @@ class MiddlewareExecutor:
                 tb = traceback.format_exc()
                 logger.error(e)
                 logger.error(tb)
+                raise e
                 return None
         elif inspect.isfunction(proxy.middleware):
             return proxy.middleware

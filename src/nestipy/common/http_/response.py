@@ -171,7 +171,7 @@ class Response:
         )
         async with aiofiles.open(file_path, "rb") as file:
             content = await file.read()
-            self.header("Content-Length", str(len(content)))
+            # self.header("Content-Length", str(len(content)))
             await self._write(content)
         return self
 

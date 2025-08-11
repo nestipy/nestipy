@@ -426,7 +426,7 @@ class NestipyContainer:
         method: str = _INIT,
         origin: Optional[list] = None,
         disable_scope: Optional[bool] = False,
-    ) -> Awaitable[object]:
+    ) -> Union[object, Awaitable[object]]:
         """
         Retrieves an instance of a service, creating it if necessary.
 

@@ -1,6 +1,6 @@
 [project]
 name = "nestipy"
-version = "0.7.8"
+version = "0.7.9"
 description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
 authors = [{ name = "tsiresymila", email = "tsiresymila@gmail.com" }]
 requires-python = ">=3.11,<4"
@@ -34,6 +34,7 @@ dependencies = [
     "fastapi>=0.116.1",
     "dotenv>=0.9.9",
     "orjson>=3.11.1",
+    "pydantic[email]>=2.11.7",
 ]
 
 [project.optional-dependencies]

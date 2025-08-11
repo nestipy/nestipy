@@ -44,7 +44,7 @@ class TestMiddleware(NestipyMiddleware):
 @Module(
     imports=[
         ConfigModule.for_root(is_global=True),
-        GraphqlModule.for_root(GraphqlOption(url="/graphql", ide="default")),
+        GraphqlModule.for_root(GraphqlOption(url="/graphql")),
         EventEmitterModule.for_root(is_global=True),
         UserModule,
         RouterModule.register(config=[RouteItem(module=UserModule, path="test")]),

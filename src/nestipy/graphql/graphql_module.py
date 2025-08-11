@@ -22,13 +22,13 @@ class GraphqlOption:
     url: str = "/graphql"
     cors: bool = True
     auto_schema_file: Optional[str] = None
-    ide: Literal["default", "graphiql"] = "default"
+    ide: Literal["default", "graphiql", "apollo-sandbox"] = "graphiql"
     schema_option: Optional[dict] = None
     asgi_option: Optional[ASGIOption] = None
     context_callback: Optional[Callable[[...], dict]] = None
 
     def __post_init__(self):
-        if self.ide not in ["default", "graphiql"]:
+        if self.ide not in ["default", "graphiql", "apollo-sandbox"]:
             raise ValueError("ide value must be one of 'default', 'graphiql'")
 
 

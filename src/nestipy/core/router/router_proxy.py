@@ -219,17 +219,27 @@ class RouterProxy:
         self, _req: "Request", _res: "Response", _next_fn: "NextFn"
     ) -> Response:
         try:
-            raise HttpException(
-                HttpStatus.NOT_FOUND,
-                HttpStatusMessages.NOT_FOUND,
-                "Sorry, but the page you are looking for has not been found or temporarily unavailable.",
-            )
+
+            def next_fn(ex: typing.Any = None):
+                raise HttpException(
+                    HttpStatus.NOT_FOUND,
+                    HttpStatusMessages.NOT_FOUND,
+                    "Sorry, but the page you are looking for has not been found or temporarily unavailable.",
+                )
+
+            result = await MiddlewareExecutor(_req, _res, next_fn).execute()
+            return await self._ensure_response(_res, result)
+
         except Exception as ex:
             track_b = self.get_full_traceback_details(
                 _req,
                 f"{HttpStatus.NOT_FOUND} - {HttpStatusMessages.NOT_FOUND}",
                 os.getcwd(),
             )
+            if not isinstance(ex, HttpException):
+                ex = HttpException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, str(ex), str(track_b)
+                )
 
             ex.track_back = track_b
             _res.status(404)

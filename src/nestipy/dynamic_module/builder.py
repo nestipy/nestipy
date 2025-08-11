@@ -55,7 +55,7 @@ class ConfigurableModuleBuilder(Generic[T]):
             self._extras_process_callback(dynamic_module, self._extras)
         return dynamic_module
 
-    def _create_dynamic_module(
+    def create_dynamic_module(
         self, obj: Any, imports: list, provider: list
     ) -> DynamicModule:
         dynamic_module = DynamicModule(
@@ -78,7 +78,7 @@ class ConfigurableModuleBuilder(Generic[T]):
             if extras is not None:
                 self._extras = extras
             provider = ModuleProviderDict(token=module_option_token, value=options)
-            return self._create_dynamic_module(cls_, [], [provider])
+            return self.create_dynamic_module(cls_, [], [provider])
 
         def register_async(
             cls_: Any,
@@ -101,7 +101,7 @@ class ConfigurableModuleBuilder(Generic[T]):
                 value=value,
                 imports=imports,
             )
-            return self._create_dynamic_module(cls_, imports or [], [provider])
+            return self.create_dynamic_module(cls_, imports or [], [provider])
 
         annotations = {
             self._method_name: Callable[
