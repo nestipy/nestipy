@@ -15,14 +15,14 @@ class ClientsConfig:
 
 ConfigurableModuleClass, CLIENT_OPTION = ConfigurableModuleBuilder[
     list[ClientsConfig]
-]().build()
+]().set_method("_register").build()
 
 
 @Module()
 class ClientsModule(ConfigurableModuleClass):
     @classmethod
     def register(cls, option: list[ClientsConfig]):
-        dynamic_module: DynamicModule = getattr(ConfigurableModuleClass, "register")(
+        dynamic_module: type[DynamicModule] = getattr(cls, "_register")(
             option
         )
         providers = []

@@ -4,7 +4,7 @@ from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
 
 import ujson
-from python_multipart.multipart import parse_options_header
+from multipart.multipart import parse_options_header
 from starlette._utils import AwaitableOrContextManagerWrapper, AwaitableOrContextManager
 
 from .form_parsers import MultiPartParser, MultiPartException, FormParser, FormData

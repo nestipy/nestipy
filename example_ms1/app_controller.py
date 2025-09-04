@@ -43,9 +43,10 @@ class AppController:
 
     @UseFilters(MyRpcExceptionFilter)
     @MessagePattern("test2")
-    async def get2(self, data: Annotated[str, Payload()]) -> None:
+    async def get2(self, data: Annotated[str, Payload()]) -> str:
         print("Event data ::", data)
-        raise RpcException(RPCErrorCode.ABORTED, RPCErrorMessage.ABORTED)
+        # raise RpcException(RPCErrorCode.ABORTED, RPCErrorMessage.ABORTED)
+        return "Hello"
 
     @Post()
     async def post(self, data: Annotated[dict, Body()]) -> str:

@@ -13,6 +13,7 @@ class AppController:
 
     @Get()
     async def get(self) -> str:
+        print("Sending request")
         result = await self.client.send("test2", "from client")
         print("result from microservice server :::", result)
         return result.data

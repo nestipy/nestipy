@@ -7,12 +7,13 @@ import uvicorn
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
 from nestipy.common import session
-from nestipy.core import ArgumentHost, NestipyFactory, FastApiApplication
+from nestipy.core import ArgumentHost, NestipyFactory
+from nestipy.core import FastApiApplication, BlackSheepApplication
 from nestipy.openapi import SwaggerModule, DocumentBuilder
 from nestipy.websocket import WebsocketAdapter
 
 # default use blacksheep
-app = NestipyFactory[FastApiApplication].create(AppModule)
+app = NestipyFactory[BlackSheepApplication].create(AppModule)
 # enable cors
 app.enable_cors()
 # setup swagger

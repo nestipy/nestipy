@@ -2,17 +2,20 @@ import inspect
 import json
 import os
 import re
+import typing
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Tuple, Any, Callable, Union, Type, TYPE_CHECKING
+from typing import Any, Callable, Union, Type, TYPE_CHECKING
 
+from nestipy.common import Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
 from nestipy.common.template import TemplateKey
 from nestipy.common.template.interface import TemplateEngine
+from nestipy.core.router.router_proxy import RouterProxy
 from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.metadata import SetMetadata, Reflect
-from nestipy.types_ import CallableHandler, NextFn, WebsocketHandler, MountHandler
+from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
 
 if TYPE_CHECKING:
@@ -43,7 +46,9 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def use(self, callback: "CallableHandler", metadata: dict) -> None:
+    def use(
+        self, callback: "CallableHandler", metadata: typing.Optional[dict] = None
+    ) -> None:
         pass
 
     @abstractmethod
@@ -53,15 +58,30 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def get(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def get(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def post(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def post(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def ws(self, route: str, callback: WebsocketHandler, metadata: dict) -> None:
+    def ws(
+        self,
+        route: str,
+        callback: WebsocketHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
@@ -69,27 +89,57 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def put(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def put(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def delete(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def delete(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def patch(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def patch(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def options(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def options(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def head(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def head(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
-    def all(self, route: str, callback: "CallableHandler", metadata: dict) -> None:
+    def all(
+        self,
+        route: str,
+        callback: "CallableHandler",
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         pass
 
     @abstractmethod
@@ -185,7 +235,9 @@ class HttpAdapter(ABC):
     def create_websocket_parameter(self) -> Websocket:
         return Websocket(self.scope, self.receive, self.send)
 
-    def create_handler_parameter(self) -> Tuple[Request, Response, NextFn]:
+    async def process_callback(
+        self, callback: CallableHandler, metadata: typing.Optional[dict] = None
+    ) -> Response:
         req = Request(self.scope, self.receive, self.send)
         res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))
 
@@ -241,4 +293,8 @@ class HttpAdapter(ABC):
             else:
                 return await res.status(204).send("No content")
 
-        return req, res, next_fn
+        if not metadata:
+            return await RouterProxy.create_request_handler(
+                self, custom_callback=callback
+            )(req, res, next_fn)
+        return await callback(req, res, next_fn)

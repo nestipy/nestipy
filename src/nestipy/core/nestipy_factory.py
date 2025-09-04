@@ -3,9 +3,9 @@ import typing
 from importlib import import_module
 from typing import Type
 
-from .nestipy_application import NestipyApplication, NestipyConfig
-
+from nestipy.common.logger import logger
 from nestipy.microservice.client.base import MicroserviceOption
+from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
 
 
@@ -18,10 +18,10 @@ class _NestipyFactoryMeta(type):
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
     @classmethod
     def create(
-        cls, module: Type, config: typing.Optional[NestipyConfig] = None
+            cls, module: Type, config: typing.Optional[NestipyConfig] = None
     ) -> NestipyApplication:
         cls._setup_log()
-        if getattr(cls, "__generic_type__", None) == "NestipyBlackSheepApplication":
+        if getattr(cls, "__generic_type__", None) == "BlackSheepApplication":
             if not config:
                 config = NestipyConfig(adapter=cls._load_adapter())
         application = NestipyApplication(config=config)
@@ -30,16 +30,16 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
     def create_microservice(
-        cls, module: Type, option: list[MicroserviceOption]
+            cls, module: Type, option: list[MicroserviceOption]
     ) -> NestipyMicroservice:
         return NestipyMicroservice(module, option)
 
     @classmethod
     def connect_microservice(
-        cls,
-        module: Type,
-        option: list[MicroserviceOption],
-        config: typing.Optional[NestipyConfig] = None,
+            cls,
+            module: Type,
+            option: list[MicroserviceOption],
+            config: typing.Optional[NestipyConfig] = None,
     ) -> NestipyConnectMicroservice:
         return NestipyConnectMicroservice(module, config, option)
 
@@ -58,12 +58,14 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         """
         try:
             # Try to load the BlackSheep adapter
-            adapter_module = import_module("nestipy.adapters.blacksheep_adapter")
+            adapter_module = import_module("nestipy.core.adapter.blacksheep_adapter")
+            logger.info("[Blacksheep Adapter] Using BlackSheepAdapter")
             return adapter_module.BlackSheepAdapter()
         except ImportError:
             try:
                 # Fallback to FastAPI adapter
-                adapter_module = import_module("nestipy.adapters.fastapi_adapter")
+                adapter_module = import_module("nestipy.core.adapter.fastapi_adapter")
+                logger.info("[FastAPI Adapter] Using FastAPIAdapter")
                 return adapter_module.FastAPIAdapter()
             except ImportError:
                 raise RuntimeError(
