@@ -11,7 +11,7 @@ class UserService(OnInit, OnDestroy):
     tes: Annotated[str, Inject("TEST")]
 
     async def on_startup(self):
-        logger.info("On init service")
+        logger.info("On init user service")
 
     async def on_shutdown(self):
-        pass
+        logger.info("On shutdown user service")

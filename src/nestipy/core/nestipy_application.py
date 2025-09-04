@@ -3,6 +3,8 @@ import os.path
 import traceback
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
+from rich.traceback import install
+
 from nestipy.common.logger import logger, console
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
@@ -21,8 +23,6 @@ from nestipy.ioc import (
 )
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
-from rich.traceback import install
-
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
@@ -180,12 +180,16 @@ class NestipyApplication:
                 ),
                 "/_devtools/static",
             )
-            if self._debug:
-                # Not found
-                not_found_path = self._http_adapter.create_wichard().lstrip("/")
-                self._http_adapter.get(
-                    not_found_path, self._router_proxy.render_not_found, {}
-                )
+            # Not found
+            not_found_path = self._http_adapter.create_wichard().lstrip("/")
+            self._http_adapter.all(
+                not_found_path,
+                self._router_proxy.create_request_handler(
+                    self._http_adapter,
+                    custom_callback=self._router_proxy.render_not_found,
+                ),
+                {},
+            )
 
     async def ready(self) -> bool:
         if not self._ready:

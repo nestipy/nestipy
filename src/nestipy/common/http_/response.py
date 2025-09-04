@@ -1,6 +1,6 @@
 import mimetypes
 import os
-from typing import Union, TYPE_CHECKING, AsyncIterator, Callable, Self
+from typing import Union, TYPE_CHECKING, AsyncIterator, Callable, Self, Optional
 
 import aiofiles
 import orjson as json
@@ -22,7 +22,7 @@ class Response:
         self._headers = set()
         self._status_code = 200
         self._content = None
-        self.stream_content = None
+        self.stream_content: Optional[Callable[[], AsyncIterator[Union[bytes, str]]]] = None
         self.template_engine = template_engine
 
     async def _start(self) -> None:
@@ -132,7 +132,7 @@ class Response:
         return self
 
     async def json(
-        self, content: dict, status_code: Union[int, None] = None
+        self, content: dict | list, status_code: Union[int, None] = None
     ) -> "Response":
         """
         Send json

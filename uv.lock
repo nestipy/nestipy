@@ -601,7 +601,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/ba/dc/9a01dd9561b736622
 
 [[package]]
 name = "nestipy"
-version = "0.7.8"
+version = "0.7.9"
 source = { editable = "." }
 dependencies = [
     { name = "aio-pika" },

@@ -22,7 +22,6 @@ class GrpcClientProxy(ClientProxy):
         self._config = typing.cast(
             GrpcClientOption, self.option.option or GrpcClientOption()
         )
-        self.loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         self.server: GrpcServer = GrpcServer()
         self.server_task: typing.Optional[asyncio.Task] = None
 
@@ -31,7 +30,7 @@ class GrpcClientProxy(ClientProxy):
         return GrpcClientProxy(self.option)
 
     async def before_start(self):
-        self.server_task = self.loop.create_task(
+        self.server_task = asyncio.get_running_loop().create_task(
             coro=self.server.serve(port=self._config.port), name="grpc_server"
         )
 

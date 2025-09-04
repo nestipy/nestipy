@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import Union, Callable, MutableMapping, Any, Awaitable
 
-from lia import HTTPException
+from strawberry.asgi import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from starlette.websockets import WebSocket

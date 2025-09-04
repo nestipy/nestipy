@@ -1,4 +1,5 @@
 import dataclasses
+import inspect
 import os
 import sys
 import traceback
@@ -12,7 +13,6 @@ from nestipy.common.exception.http import ExceptionDetail, RequestTrack, Traceba
 from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
 from nestipy.common.http_ import Request, Response
-from nestipy.common.logger import logger
 from nestipy.common.utils import snakecase_to_camelcase
 from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards import GuardProcessor
@@ -21,11 +21,13 @@ from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
+from nestipy.openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
 from nestipy.types_ import NextFn, CallableHandler
 from .route_explorer import RouteExplorer
-from ..adapter.http_adapter import HttpAdapter
 from ..context.execution_context import ExecutionContext
-from ...openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
+
+if typing.TYPE_CHECKING:
+    from ..adapter.http_adapter import HttpAdapter
 
 
 def omit(d: dict, keys: set):
@@ -35,10 +37,9 @@ def omit(d: dict, keys: set):
 class RouterProxy:
     def __init__(
         self,
-        router: HttpAdapter,
+        router: "HttpAdapter",
     ):
         self.router = router
-        self._template_processor = TemplateRendererProcessor(router)
 
     def apply_routes(self, modules: list[Union[Type, object]], prefix: str = ""):
         _prefix: Union[str | None] = (
@@ -65,7 +66,7 @@ class RouterProxy:
                 method_name = route["method_name"]
                 controller = route["controller"]
                 handler = self.create_request_handler(
-                    module_ref, controller, method_name
+                    self.router, module_ref, controller, method_name
                 )
                 for method in methods:
                     getattr(self.router, method.lower())(path, handler, route)
@@ -88,15 +89,30 @@ class RouterProxy:
             paths[path] = PathItem(**op)
         return paths, json_schemas, list_routes
 
+    @classmethod
     def create_request_handler(
-        self, module_ref: Type, controller: Union[object, Type], method_name: str
+        cls,
+        http_adapter: "HttpAdapter",
+        module_ref: typing.Optional[Type] = None,
+        controller: typing.Optional[Union[object, Type]] = None,
+        method_name: typing.Optional[str] = None,
+        custom_callback: typing.Optional[
+            typing.Callable[["Request", "Response", NextFn], typing.Any]
+        ] = None,
     ) -> CallableHandler:
+        controller_method_handler = custom_callback or getattr(controller, method_name)
+        _template_processor = TemplateRendererProcessor(http_adapter)
+        context_container = RequestContextContainer.get_instance()
+        container = NestipyContainer.get_instance()
+
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
-            context_container = RequestContextContainer.get_instance()
-            container = NestipyContainer.get_instance()
-            controller_method_handler = getattr(controller, method_name)
             execution_context = ExecutionContext(
-                self.router, module_ref, controller, controller_method_handler, req, res
+                http_adapter,
+                custom_callback or module_ref,
+                custom_callback or controller,
+                controller_method_handler,
+                req,
+                res,
             )
             # setup container for query params, route params, request, response, session, etc..
             context_container.set_execution_context(execution_context)
@@ -105,7 +121,13 @@ class RouterProxy:
 
                 async def next_fn_interceptor(ex: typing.Any = None):
                     if ex is not None:
-                        return await self._ensure_response(res, await next_fn(ex))
+                        return await cls._ensure_response(res, await next_fn(ex))
+                    if custom_callback:
+                        callback_res = custom_callback(req, res, next_fn)
+                        if inspect.isawaitable(callback_res):
+                            return await callback_res
+                        else:
+                            return callback_res
                     return await container.get(controller, method_name)
 
                 async def next_fn_middleware(ex: typing.Any = None):
@@ -140,32 +162,16 @@ class RouterProxy:
                 ).execute()
 
                 # process template rendering
-                if self._template_processor.can_process(
-                    controller_method_handler, result
-                ):
-                    result = await res.html(self._template_processor.render())
+
+                if _template_processor.can_process(controller_method_handler, result):
+                    result = await res.html(_template_processor.render())
                 # transform result to response
-                handler_response = await self._ensure_response(res, result)
+                handler_response = await cls._ensure_response(res, result)
 
             except Exception as e:
-                tb = traceback.format_exc()
-                logger.error(e)
-                logger.error(tb)
-                if not isinstance(e, HttpException):
-                    e = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(e), str(tb))
-                track = self.get_full_traceback_details(req, e.message, os.getcwd())
-                e.track_back = track
-                # Call exception catch
-                exception_handler: ExceptionFilterHandler = await container.get(
-                    ExceptionFilterHandler
+                handler_response = await cls.handle_exception(
+                    e, execution_context, next_fn
                 )
-                result = await exception_handler.catch(e, execution_context)
-                if result:
-                    handler_response = await self._ensure_response(res, result)
-                else:
-                    handler_response = await self._ensure_response(
-                        res, await next_fn(e)
-                    )
             finally:
                 #  reset request context container
                 context_container.destroy()
@@ -215,46 +221,42 @@ class RouterProxy:
         except Exception as e:
             return f"Could not read file {filename}: {str(e)}"
 
+    @classmethod
     async def render_not_found(
-        self, _req: "Request", _res: "Response", _next_fn: "NextFn"
+        cls, _req: "Request", _res: "Response", _next_fn: "NextFn"
     ) -> Response:
-        try:
+        raise HttpException(
+            HttpStatus.NOT_FOUND,
+            HttpStatusMessages.NOT_FOUND,
+            "Sorry, but the page you are looking for has not been found or temporarily unavailable.",
+        )
 
-            def next_fn(ex: typing.Any = None):
-                raise HttpException(
-                    HttpStatus.NOT_FOUND,
-                    HttpStatusMessages.NOT_FOUND,
-                    "Sorry, but the page you are looking for has not been found or temporarily unavailable.",
-                )
-
-            result = await MiddlewareExecutor(_req, _res, next_fn).execute()
-            return await self._ensure_response(_res, result)
-
-        except Exception as ex:
-            track_b = self.get_full_traceback_details(
-                _req,
-                f"{HttpStatus.NOT_FOUND} - {HttpStatusMessages.NOT_FOUND}",
-                os.getcwd(),
+    @classmethod
+    async def handle_exception(
+        cls, ex: Exception, execution_context: ExecutionContext, next_fn: NextFn
+    ):
+        tb = traceback.format_exc()
+        if not isinstance(ex, HttpException):
+            ex = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(ex), str(tb))
+        track_b = cls.get_full_traceback_details(
+            execution_context.get_request(),
+            ex.message,
+            os.getcwd(),
+        )
+        ex.track_back = track_b
+        exception_handler = await NestipyContainer.get_instance().get(
+            ExceptionFilterHandler
+        )
+        result = await exception_handler.catch(ex, execution_context)
+        if result:
+            handler_response = await cls._ensure_response(
+                execution_context.get_response(), result
             )
-            if not isinstance(ex, HttpException):
-                ex = HttpException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, str(ex), str(track_b)
-                )
-
-            ex.track_back = track_b
-            _res.status(404)
-            execution_context = ExecutionContext(
-                self.router, self, self, self.render_not_found, _req, _res
+        else:
+            handler_response = await cls._ensure_response(
+                execution_context.get_response(), await next_fn(ex)
             )
-            exception_handler = await NestipyContainer.get_instance().get(
-                ExceptionFilterHandler
-            )
-            result = await exception_handler.catch(ex, execution_context)
-            if result:
-                handler_response = await self._ensure_response(_res, result)
-            else:
-                handler_response = await self._ensure_response(_res, await _next_fn(ex))
-            return handler_response
+        return handler_response
 
     @classmethod
     def get_full_traceback_details(
@@ -280,6 +282,7 @@ class RouterProxy:
             )
             traceback_details.append(frame_info)
             tb = tb.tb_next
+        traceback_details.reverse()
         return ExceptionDetail(
             exception=exception,
             type=exc_type.__name__,

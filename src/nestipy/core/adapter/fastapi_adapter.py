@@ -3,12 +3,12 @@ import typing
 from fastapi import Response as FResponse, FastAPI, WebSocket as FastAPIWebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
-from nestipy.common.http_ import Response, Websocket
-from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from starlette.middleware import _MiddlewareFactory
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp
 
+from nestipy.common.http_ import Response, Websocket
+from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from .http_adapter import HttpAdapter
 
 
@@ -19,7 +19,7 @@ class FastApiAdapter(HttpAdapter):
             on_shutdown=[self.on_shutdown],
             openapi_url=None,
         )
-        self.instance.router.redirect_slashes = False
+        self.instance.redirect_slashes = False
 
     def get_instance(self) -> any:
         return self.instance
@@ -27,7 +27,9 @@ class FastApiAdapter(HttpAdapter):
     def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
         return f"/{prefix.strip('/')}" + "/{" + f"{name}:path" + "}"
 
-    def use(self, callback: CallableHandler, metadata: dict) -> None:
+    def use(
+        self, callback: CallableHandler, metadata: typing.Optional[dict] = None
+    ) -> None:
         # need to transform if we use middleware from here
         self.instance.middleware("http")
 
@@ -38,13 +40,28 @@ class FastApiAdapter(HttpAdapter):
             route, StaticFiles(directory=directory, **(option or {})), name=name
         )
 
-    def get(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def get(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
 
-    def post(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def post(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.post(route)(self._create_fastapi_handler(callback, metadata))
 
-    def ws(self, route: str, callback: WebsocketHandler, metadata: dict) -> None:
+    def ws(
+        self,
+        route: str,
+        callback: WebsocketHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.websocket(route)(
             self._create_fastapi_ws_handler(callback, metadata)
         )
@@ -52,22 +69,52 @@ class FastApiAdapter(HttpAdapter):
     def mount(self, route: str, callback: MountHandler) -> None:
         self.instance.mount(route, typing.cast(ASGIApp, callback))
 
-    def put(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def put(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.put(route)(self._create_fastapi_handler(callback, metadata))
 
-    def delete(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def delete(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.delete(route)(self._create_fastapi_handler(callback, metadata))
 
-    def patch(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def patch(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.patch(route)(self._create_fastapi_handler(callback, metadata))
 
-    def options(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def options(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.options(route)(self._create_fastapi_handler(callback, metadata))
 
-    def head(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def head(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.head(route)(self._create_fastapi_handler(callback, metadata))
 
-    def all(self, route: str, callback: CallableHandler, metadata: dict) -> None:
+    def all(
+        self,
+        route: str,
+        callback: CallableHandler,
+        metadata: typing.Optional[dict] = None,
+    ) -> None:
         self.instance.get(route)(self._create_fastapi_handler(callback, metadata))
         self.instance.post(route)(self._create_fastapi_handler(callback, metadata))
         self.instance.put(route)(self._create_fastapi_handler(callback, metadata))
@@ -88,12 +135,11 @@ class FastApiAdapter(HttpAdapter):
             allow_headers=["*"],
         )
 
-    def _create_fastapi_handler(self, callback: CallableHandler, metadata: dict):
-        # path = metadata['path']
-        # params = RouteParamsExtractor.extract_params(path)
+    def _create_fastapi_handler(
+        self, callback: CallableHandler, _metadata: typing.Optional[dict] = None
+    ):
         async def fastapi_handler() -> FResponse:
-            req, res, next_fn = self.create_handler_parameter()
-            result: Response = await callback(req, res, next_fn)
+            result: Response = await self.process_callback(callback, _metadata)
             if result.is_stream():
                 return FStreamingResponse(
                     content=result.stream_content(),
@@ -109,7 +155,9 @@ class FastApiAdapter(HttpAdapter):
 
         return fastapi_handler
 
-    def _create_fastapi_ws_handler(self, callback: WebsocketHandler, metadata: dict):
+    def _create_fastapi_ws_handler(
+        self, callback: WebsocketHandler, _metadata: typing.Optional[dict] = None
+    ):
         async def fastapi_ws_handler(ws: FastAPIWebSocket):
             websocket = Websocket(self.scope, self.receive, self.send)
             await callback(websocket)
