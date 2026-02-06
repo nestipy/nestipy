@@ -278,13 +278,14 @@ class RouterProxy:
         container = container or NestipyContainer.get_instance()
         exception_handler = typing.cast(ExceptionFilterHandler, await container.get(ExceptionFilterHandler))
         result = await typing.cast(typing.Any, exception_handler).catch(ex, execution_context)
+        response = typing.cast(Response,  execution_context.get_response())
         if result:
             handler_response = await cls._ensure_response(
-                execution_context.get_response(), result
+               response, result
             )
         else:
             handler_response = await cls._ensure_response(
-                execution_context.get_response(), await next_fn(ex)
+                response, await next_fn(ex)
             )
         return handler_response
 
