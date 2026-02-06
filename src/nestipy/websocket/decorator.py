@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Optional, Any
 
 from nestipy.common.decorator import Injectable
 from nestipy.metadata import SetMetadata
@@ -22,7 +22,7 @@ def Gateway(namespace: str = "/"):
     return decorator
 
 
-def SubscribeMessage(event: str = None):
+def SubscribeMessage(event: Optional[str] = None):
     return SetMetadata(EVENT_KEY, event or WS_MESSAGE_SUBSCRIBE)
 
 

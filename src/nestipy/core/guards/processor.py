@@ -1,5 +1,6 @@
 import inspect
-from typing import Type, Union
+import typing
+from typing import Type, Union, Any
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.guards.can_activate import CanActivate
@@ -24,9 +25,11 @@ class GuardProcessor(SpecialProviderExtractor):
         handler = context.get_handler()
         global_guards = []
         if is_http:
-            global_guards = context.get_adapter().get_global_guards()
+            global_guards = (
+                typing.cast(Any, context.get_adapter()).get_global_guards() or []
+            )
         module_guards = self.extract_special_providers(
-            handler_module_class, CanActivate, APP_GUARD
+            typing.cast(Type, handler_module_class), CanActivate, APP_GUARD
         )
         handler_class_guards = Reflect.get_metadata(handler_class, GuardKey.Meta, [])
         handler_guards = Reflect.get_metadata(handler, GuardKey.Meta, [])

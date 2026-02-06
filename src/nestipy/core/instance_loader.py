@@ -16,7 +16,7 @@ from ..graphql.graphql_module import GraphqlModule
 
 class InstanceType(enum.Enum):
     providers: str = "Provider"
-    controller: str = ("Controller",)
+    controller: tuple = ("Controller",)
     module: str = "Module"
 
 
@@ -28,10 +28,10 @@ class InstanceLoader:
 
     _is_controller: bool = False
     _module_instances: list = []
-    graphql_instance: GraphqlModule = None
+    graphql_instance: typing.Optional[GraphqlModule] = None
     discover: DiscoverService = DiscoverService()
 
-    async def create_instances(self, modules: list[Type]) -> GraphqlModule:
+    async def create_instances(self, modules: list[Type]) -> typing.Optional[GraphqlModule]:
         from nestipy.common import (
             NestipyInterceptor,
             CanActivate,

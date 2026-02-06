@@ -1,4 +1,7 @@
 class ModuleMetadata:
+    """
+    Constant keys used for storing and retrieving module metadata using the Reflect system.
+    """
     Imports: str = "imports"
     Exports: str = "exports"
     Providers: str = "providers"

@@ -19,7 +19,7 @@ from nestipy.core.guards import GuardProcessor
 from nestipy.core.interceptor import RequestInterceptor
 from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
-from nestipy.ioc import NestipyContainer
+from nestipy.ioc import NestipyContainer, NestipyIContainer
 from nestipy.ioc import RequestContextContainer
 from nestipy.openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
 from nestipy.types_ import NextFn, CallableHandler
@@ -35,13 +35,30 @@ def omit(d: dict, keys: set):
 
 
 class RouterProxy:
+    """
+    Proxy class that handles the registration of routes from modules and controllers.
+    It acts as a bridge between Nestipy modules and the underlying HTTP adapter.
+    """
     def __init__(
         self,
         router: "HttpAdapter",
+        container: typing.Optional[NestipyIContainer] = None,
     ):
+        """
+        Initialize the RouterProxy.
+        :param router: The HTTP adapter (e.g., FastApiAdapter, BlackSheepAdapter).
+        :param container: The IoC container instance.
+        """
         self.router = router
+        self.container = container or NestipyContainer.get_instance()
 
     def apply_routes(self, modules: list[Union[Type, object]], prefix: str = ""):
+        """
+        Explore the provided modules for controllers and register their routes with the HTTP adapter.
+        :param modules: List of modules to explore.
+        :param prefix: Global path prefix for all routes.
+        :return: A tuple containing (OpenAPI paths, OpenAPI schemas, List of registered routes).
+        """
         _prefix: Union[str | None] = (
             f"/{prefix.strip('/')}"
             if prefix is not None and prefix.strip() != ""
@@ -66,7 +83,11 @@ class RouterProxy:
                 method_name = route["method_name"]
                 controller = route["controller"]
                 handler = self.create_request_handler(
-                    self.router, module_ref, controller, method_name
+                    self.router,
+                    typing.cast(Type, module_ref),
+                    controller,
+                    method_name,
+                    container=self.container,
                 )
                 for method in methods:
                     getattr(self.router, method.lower())(path, handler, route)
@@ -99,13 +120,15 @@ class RouterProxy:
         custom_callback: typing.Optional[
             typing.Callable[["Request", "Response", NextFn], typing.Any]
         ] = None,
+        container: typing.Optional[NestipyIContainer] = None,
     ) -> CallableHandler:
-        controller_method_handler = custom_callback or getattr(controller, method_name)
+        controller_method_handler = custom_callback or getattr(controller, typing.cast(str, method_name))
         _template_processor = TemplateRendererProcessor(http_adapter)
         context_container = RequestContextContainer.get_instance()
-        container = NestipyContainer.get_instance()
+        container = container or NestipyContainer.get_instance()
 
         async def request_handler(req: "Request", res: "Response", next_fn: NextFn):
+            interceptor_called = False
             execution_context = ExecutionContext(
                 http_adapter,
                 custom_callback or module_ref,
@@ -120,6 +143,8 @@ class RouterProxy:
             try:
 
                 async def next_fn_interceptor(ex: typing.Any = None):
+                    nonlocal interceptor_called
+                    interceptor_called = True
                     if ex is not None:
                         return await cls._ensure_response(res, await next_fn(ex))
                     if custom_callback:
@@ -128,12 +153,12 @@ class RouterProxy:
                             return await callback_res
                         else:
                             return callback_res
-                    return await container.get(controller, method_name)
+                    return await container.get(typing.cast(typing.Union[typing.Type, str], controller), typing.cast(str, method_name))
 
                 async def next_fn_middleware(ex: typing.Any = None):
                     if ex is not None:
                         raise ex
-                    g_processor: GuardProcessor = await container.get(GuardProcessor)
+                    g_processor: GuardProcessor = typing.cast(GuardProcessor, await container.get(GuardProcessor))
                     passed = await g_processor.process(execution_context)
                     if not passed[0]:
                         raise HttpException(
@@ -142,14 +167,14 @@ class RouterProxy:
                             details=f"Not authorized from guard {passed[1]}",
                         )
 
-                    interceptor: RequestInterceptor = await container.get(
+                    interceptor: RequestInterceptor = typing.cast(RequestInterceptor, await container.get(
                         RequestInterceptor
-                    )
+                    ))
                     resp = await interceptor.intercept(
                         execution_context, next_fn_interceptor
                     )
                     #  execute Interceptor by using middleware execution as next_handler
-                    if resp is None:
+                    if not interceptor_called:
                         raise HttpException(
                             HttpStatus.BAD_REQUEST,
                             "Handler not called because of interceptor: Invalid Request",
@@ -164,13 +189,13 @@ class RouterProxy:
                 # process template rendering
 
                 if _template_processor.can_process(controller_method_handler, result):
-                    result = await res.html(_template_processor.render())
+                    result = await res.html(_template_processor.render() or "")
                 # transform result to response
                 handler_response = await cls._ensure_response(res, result)
 
             except Exception as e:
                 handler_response = await cls.handle_exception(
-                    e, execution_context, next_fn
+                    e, execution_context, next_fn, container=container
                 )
             finally:
                 #  reset request context container
@@ -189,12 +214,14 @@ class RouterProxy:
             return await res.json(content=result)
         elif dataclasses.is_dataclass(result):
             return await res.json(
-                content=dataclasses.asdict(typing.cast(dataclasses.dataclass, result)),
+                content=dataclasses.asdict(typing.cast(typing.Any, result)),
             )
         elif isinstance(result, BaseModel):
             return await res.json(content=result.model_dump(mode="json"))
         elif isinstance(result, Response):
             return result
+        elif result is None:
+            return await res.status(204).send("")
         else:
             return await res.json(
                 content={"error": "Unknown response format"}, status_code=403
@@ -233,7 +260,11 @@ class RouterProxy:
 
     @classmethod
     async def handle_exception(
-        cls, ex: Exception, execution_context: ExecutionContext, next_fn: NextFn
+        cls,
+        ex: Exception,
+        execution_context: ExecutionContext,
+        next_fn: NextFn,
+        container: typing.Optional[NestipyIContainer] = None,
     ):
         tb = traceback.format_exc()
         if not isinstance(ex, HttpException):
@@ -244,10 +275,9 @@ class RouterProxy:
             os.getcwd(),
         )
         ex.track_back = track_b
-        exception_handler = await NestipyContainer.get_instance().get(
-            ExceptionFilterHandler
-        )
-        result = await exception_handler.catch(ex, execution_context)
+        container = container or NestipyContainer.get_instance()
+        exception_handler = typing.cast(ExceptionFilterHandler, await container.get(ExceptionFilterHandler))
+        result = await typing.cast(typing.Any, exception_handler).catch(ex, execution_context)
         if result:
             handler_response = await cls._ensure_response(
                 execution_context.get_response(), result
@@ -260,7 +290,7 @@ class RouterProxy:
 
     @classmethod
     def get_full_traceback_details(
-        cls, req: Request, exception: typing.Any, file_path: str
+        cls, req: typing.Optional[Request], exception: typing.Any, file_path: str
     ):
         exc_type, exc_value, exc_tb = sys.exc_info()
         traceback_details = []
@@ -285,9 +315,11 @@ class RouterProxy:
         traceback_details.reverse()
         return ExceptionDetail(
             exception=exception,
-            type=exc_type.__name__,
+            type=exc_type.__name__ if exc_type else "Unknown",
             root=file_path,
             traceback=traceback_details,
-            request=RequestTrack(method=req.method, host=req.path),
+            request=RequestTrack(method=req.method, host=req.path)
+            if req
+            else RequestTrack(method="GET", host="localhost"),
             message=getattr(exc_value, "details", None) or str(exc_value),
         )

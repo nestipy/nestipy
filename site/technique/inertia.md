@@ -10,7 +10,9 @@ pip install nestipy_inertia
 ```python
 import os
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
+
 from nestipy.common import session
 from nestipy.core import NestipyFactory
 
@@ -24,7 +26,14 @@ app.set_base_view_dir(os.path.join(os.path.dirname(__file__), "views"))
 app.use(session())
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
+        port=8000,
+        interface=Interfaces.ASGI,
+        reload=True,
+    )
+    granian.serve()
 
 
 ```

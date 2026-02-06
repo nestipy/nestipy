@@ -1,5 +1,5 @@
 from dataclasses import is_dataclass
-from typing import Any, Type, Optional
+from typing import Any, Type, Optional, cast
 
 from pydantic import BaseModel
 
@@ -9,16 +9,34 @@ from .context_container import RequestContextContainer
 
 
 class TypeAnnotated:
+    """
+    Wrapper for ParamAnnotation that supports being called as a decorator or used with Annotated.
+    """
     def __init__(self, metadata: ParamAnnotation):
+        """
+        Initialize TypeAnnotated.
+        :param metadata: The parameter annotation metadata.
+        """
         self.metadata = metadata
 
     def __call__(self, token: Any = None) -> "TypeAnnotated":
+        """
+        Allow the annotation to be called with a token (e.g., Query("id")).
+        :param token: The token to associate with the annotation.
+        :return: A new TypeAnnotated instance with the token.
+        """
         return TypeAnnotated(
             ParamAnnotation(self.metadata.callback, self.metadata.key, token)
         )
 
 
 def create_type_annotated(callback: TypeAnnotatedCallable, key: str) -> TypeAnnotated:
+    """
+    Factory function for creating TypeAnnotated instances.
+    :param callback: The resolution callback.
+    :param key: The dependency key.
+    :return: A TypeAnnotated instance.
+    """
     return TypeAnnotated(ParamAnnotation(callback, key))
 
 
@@ -28,6 +46,7 @@ def inject_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for injecting services."""
     return None
 
 
@@ -37,6 +56,7 @@ def instance_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Default callback for instance resolution."""
     return None
 
 
@@ -46,7 +66,8 @@ def req_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.get_request()
+    """Callback to retrieve the Request object from the execution context."""
+    return cast(Any, _request_context.execution_context).get_request()
 
 
 def res_callback(
@@ -55,10 +76,17 @@ def res_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.get_response()
+    """Callback to retrieve the Response object from the execution context."""
+    return cast(Any, _request_context.execution_context).get_response()
 
 
 def to_valid_value(value: Any, _type_ref: Type):
+    """
+    Convert a value to a specific type (e.g., Pydantic model or Dataclass).
+    :param value: The value to convert.
+    :param _type_ref: The target type.
+    :return: The converted value or the original value.
+    """
     if is_dataclass(_type_ref):
         return _type_ref(**value)
     elif issubclass(_type_ref, BaseModel):
@@ -72,7 +100,8 @@ async def body_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    req = _request_context.execution_context.get_request()
+    """Callback to retrieve and parse the request body."""
+    req = cast(Any, _request_context.execution_context).get_request()
     form_data = await req.form()
     if bool(form_data):
         return to_valid_value(form_data, _type_ref)
@@ -86,7 +115,8 @@ def _get_request_param_value(
     _request_context: RequestContextContainer,
     token: Optional[str] = None,
 ):
-    req = _request_context.execution_context.get_request()
+    """Helper to extract values from request properties like query_params, path_params, etc."""
+    req = cast(Any, _request_context.execution_context).get_request()
     value: dict = getattr(req, key)
     if token:
         return value.get(token)
@@ -100,6 +130,7 @@ def session_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for session data."""
     return _get_request_param_value("session", _type_ref, _request_context, token)
 
 
@@ -109,6 +140,7 @@ def cookie_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for cookie data."""
     return _get_request_param_value("cookies", _type_ref, _request_context, token)
 
 
@@ -118,6 +150,7 @@ def query_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for query parameters."""
     return _get_request_param_value("query_params", _type_ref, _request_context, token)
 
 
@@ -127,6 +160,7 @@ def params_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for path parameters."""
     return _get_request_param_value("path_params", _type_ref, _request_context, token)
 
 
@@ -136,6 +170,7 @@ def headers_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for request headers."""
     return _get_request_param_value("headers", _type_ref, _request_context, token)
 
 
@@ -145,7 +180,8 @@ def args_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    args = _request_context.execution_context.switch_to_graphql().get_args()
+    """Callback for GraphQL arguments."""
+    args = cast(Any, _request_context.execution_context).switch_to_graphql().get_args()
     return args.get(_name)
 
 
@@ -155,6 +191,7 @@ def context_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
+    """Callback for the request context container."""
     return _request_context
 
 
@@ -164,7 +201,8 @@ def graphql_context_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.switch_to_graphql().get_context()
+    """Callback for GraphQL context."""
+    return cast(Any, _request_context.execution_context).switch_to_graphql().get_context()
 
 
 def websocket_server_callback(
@@ -173,7 +211,8 @@ def websocket_server_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.switch_to_websocket().get_server()
+    """Callback for WebSocket server instance."""
+    return cast(Any, _request_context.execution_context).switch_to_websocket().get_server()
 
 
 def websocket_client_callback(
@@ -182,7 +221,8 @@ def websocket_client_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.switch_to_websocket().get_client()
+    """Callback for WebSocket client instance."""
+    return cast(Any, _request_context.execution_context).switch_to_websocket().get_client()
 
 
 def websocket_data_callback(
@@ -191,9 +231,11 @@ def websocket_data_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    return _request_context.execution_context.switch_to_websocket().get_data()
+    """Callback for WebSocket message data."""
+    return cast(Any, _request_context.execution_context).switch_to_websocket().get_data()
 
 
+# Predefined injection tokens
 Default = create_type_annotated(instance_callback, "instance")
 Inject = create_type_annotated(inject_callback, CtxDepKey.Service)
 Req = create_type_annotated(req_callback, CtxDepKey.Request)

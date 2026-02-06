@@ -5,8 +5,8 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Any, Callable, Union, Type, TYPE_CHECKING
-
+from typing import Any, Callable, Union, Type, TYPE_CHECKING, AsyncIterator
+from contextlib import asynccontextmanager
 from nestipy.common import Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
@@ -25,6 +25,10 @@ if TYPE_CHECKING:
 
 
 class HttpAdapter(ABC):
+    """
+    Base class for HTTP adapters.
+    Provides a common interface for different HTTP frameworks (e.g., FastAPI, BlackSheep).
+    """
     STATE_KEY: str = "__state__"
 
     _global_interceptors: list = []
@@ -34,11 +38,14 @@ class HttpAdapter(ABC):
     startup_hooks: list = []
     shutdown_hook: list = []
 
-    _io_adapter: IoAdapter = None
+    _io_adapter: typing.Optional[IoAdapter] = None
     debug: bool = True
 
     @abstractmethod
-    def get_instance(self) -> any:
+    def get_instance(self) -> Any:
+        pass
+
+    async def start(self):
         pass
 
     @abstractmethod
@@ -53,7 +60,7 @@ class HttpAdapter(ABC):
 
     @abstractmethod
     def static(
-        self, route: str, directory: str, name: str = None, option: dict = None
+        self, route: str, directory: str, name: typing.Optional[str] = None, option: typing.Optional[dict] = None
     ) -> None:
         pass
 
@@ -157,6 +164,9 @@ class HttpAdapter(ABC):
         pass
 
     async def on_startup(self, *_args, **_kwargs):
+        """
+        Execute all registered startup hooks.
+        """
         for hook in self.startup_hooks:
             if inspect.iscoroutinefunction(hook):
                 await hook()
@@ -164,16 +174,39 @@ class HttpAdapter(ABC):
                 hook()
 
     async def on_shutdown(self, *_args, **_kwargs):
+        """
+        Execute all registered shutdown hooks.
+        """
         for hook in self.shutdown_hook:
             if inspect.iscoroutinefunction(hook):
                 await hook()
             else:
                 hook()
 
+    @asynccontextmanager
+    async def lifespan(self, _app: Any) -> AsyncIterator[None]:
+        """
+        Lifespan context manager for the application.
+        Handles startup and shutdown events.
+        """
+        await self.on_startup()
+        try:
+            yield
+        finally:
+            await self.on_shutdown()
+
     def on_startup_callback(self, callback: Callable):
+        """
+        Register a callback to be executed on startup.
+        :param callback: The callback function.
+        """
         self.startup_hooks.append(callback)
 
     def on_shutdown_callback(self, callback: Callable):
+        """
+        Register a callback to be executed on shutdown.
+        :param callback: The callback function.
+        """
         self.shutdown_hook.append(callback)
 
     def set(self, key: str, value: Any = None) -> None:

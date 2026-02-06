@@ -24,10 +24,12 @@ Upon execution, a directory named `project-name` will be generated, containing a
 │    ├── __init__.py
 ```
 
-The main.py file contains an instance of application and bootstrapping it with uvicorn.
+The main.py file contains an instance of application and bootstrapping it with granian.
 
 ```python
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
+
 from nestipy.core import NestipyFactory
 
 from app_module import AppModule
@@ -35,7 +37,14 @@ from app_module import AppModule
 app = NestipyFactory.create(AppModule)
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', reload=True)
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
+        port=8000,
+        interface=Interfaces.ASGI,
+        reload=True,
+    )
+    granian.serve()
 ```
 
 ## Platform

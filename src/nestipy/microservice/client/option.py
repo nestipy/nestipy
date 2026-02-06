@@ -78,7 +78,7 @@ class RedisClientOption:
     ssl_ca_certs: Optional[str] = None
     ssl_ca_data: Optional[str] = None
     ssl_check_hostname: bool = False
-    ssl_min_version: Optional[TLSVersion] = (None,)
+    ssl_min_version: Optional[TLSVersion] = None
     ssl_ciphers: Optional[str] = None
     max_connections: Optional[int] = None
     single_connection_client: bool = False
@@ -160,14 +160,14 @@ class NatsClientOption:
 
 @dataclass
 class RabbitMQQueueOption:
-    name: str = None
+    name: Optional[str] = None
     type: Union[ExchangeType, str] = ExchangeType.FANOUT
     durable: bool = False
     auto_delete: bool = False
     internal: bool = False
     passive: bool = False
-    arguments: Arguments = None
-    timeout: TimeoutType = None
+    arguments: Optional[Arguments] = None
+    timeout: Optional[TimeoutType] = None
     robust: bool = True
 
 
@@ -182,7 +182,7 @@ class RabbitMQClientOption:
     loop: Optional[asyncio.AbstractEventLoop] = None
     ssl_options: Optional[SSLOptions] = None
     ssl_context: Optional[SSLContext] = None
-    timeout: TimeoutType = None
+    timeout: Optional[TimeoutType] = None
     client_properties: Optional[FieldTable] = None
     queue_option: RabbitMQQueueOption = field(
         default_factory=lambda: RabbitMQQueueOption()

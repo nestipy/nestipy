@@ -1,6 +1,6 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
-from orjson import orjson
+import orjson
 
 from .abstract import IoAdapter
 from ..socket_request import Websocket
@@ -10,8 +10,8 @@ class WebsocketAdapter(IoAdapter):
     def __init__(
         self,
         path: str = "/ws",
-        preprocess_payload: Callable[[str, Any], tuple[str, Any]] = None,
-        post_process_payload: Callable[[str, Any], Any] = None,
+        preprocess_payload: Optional[Callable[[str, Any], tuple[str, Any]]] = None,
+        post_process_payload: Optional[Callable[[str, Any], Any]] = None,
     ):
         super().__init__(path=path)
         self._connected: list[str] = []
@@ -19,11 +19,11 @@ class WebsocketAdapter(IoAdapter):
         self._post_process_payload = post_process_payload
         self._client_info: dict[str, Websocket] = {}
         self._event_handlers: dict[str, Callable] = {}
-        self._on_connect_handler: list[Optional[Callable]] = []
-        self._on_disconnect_handler: list[Optional[Callable]] = []
-        self._on_message_handler: list[Optional[Callable]] = []
+        self._on_connect_handler: list[Callable] = []
+        self._on_disconnect_handler: list[Callable] = []
+        self._on_message_handler: list[Callable] = []
 
-    def on(self, event: str, namespace: str = None) -> Callable[[Callable], Any]:
+    def on(self, event: str, namespace: Optional[str] = None) -> Callable[[Callable], Any]:
         """Register a handler for a specific path (event name)"""
 
         def decorator(handler: Callable):
@@ -60,10 +60,13 @@ class WebsocketAdapter(IoAdapter):
                     continue
                 await self._send_to(sid, payload)
 
-    async def _send_to(self, sid: str, payload: str):
+    async def _send_to(self, sid: str, payload: Union[str, bytes]):
         if sid in self._client_info:
             client = self._client_info[sid]
-            await client.send({"type": "websocket.send", "text": payload})
+            if isinstance(payload, str):
+                await client.send({"type": "websocket.send", "text": payload})
+            else:
+                await client.send({"type": "websocket.send", "bytes": payload})
 
     def on_connect(self) -> Callable[[Callable], Any]:
         """Register connection handler"""

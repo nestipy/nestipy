@@ -16,7 +16,7 @@ class RouterModule(ConfigurableClassBuilder, NestipyModule):
     async def on_startup(self):
         self._update_router([], self._option)
 
-    def _update_router(self, main_path: [], items: list[RouteItem]):
+    def _update_router(self, main_path: list, items: list[RouteItem]):
         for item in items:
             parent_path = [*main_path]
             controllers = self._discover.get_module_controllers(item.module)

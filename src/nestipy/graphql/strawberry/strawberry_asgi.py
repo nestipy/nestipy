@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Union, Callable, MutableMapping, Any, Awaitable
+from typing import Union, Callable, MutableMapping, Any, Awaitable, cast
 
 from strawberry.asgi import HTTPException
 from starlette.requests import Request
@@ -28,7 +28,6 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
             GRAPHQL_TRANSPORT_WS_PROTOCOL,
             GRAPHQL_WS_PROTOCOL,
         )
-
         super().__init__(schema=schema, **asgi_option)
         self.set_graphql_option(option)
 
@@ -36,13 +35,13 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
         return print_schema(self.schema)
 
     async def get_context(
-        self, request: Union[Request, WebSocket], response: Response
+        self, request: Union[Request, WebSocket], response: Union[Response, WebSocket]
     ) -> Context:
         context = {"request": request, "response": response}
-        return await self.modify_default_context(context)
+        return cast(Context, await self.modify_default_context(context))
 
     async def render_graphql_ide(self, request: Union[Request, WebSocket]) -> Response:
-        if self.option.ide:
+        if self.option != None and self.option.ide:
             return HTMLResponse(await self.get_graphql_ide())
         else:
             raise HTTPException(404, "Not Found")

@@ -3,7 +3,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from dataclasses import field, dataclass
-from typing import AsyncIterator, Any, Union
+from typing import AsyncIterator, Any, Union, cast
 from typing import Optional
 
 from nestipy.microservice.context import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
@@ -117,7 +117,7 @@ class ClientProxy(ABC):
         await asyncio.sleep(0.001)
 
     async def send(
-        self, topic, data: Any, headers: dict[str, str] = None
+        self, topic, data: Any, headers: Optional[dict[str, str]] = None
     ) -> RpcResponse:
         await self.connect()
         response_topic = uuid.uuid4().hex
@@ -147,12 +147,12 @@ class ClientProxy(ABC):
         await self.unsubscribe(response_channel)
         await self.close()
         json_rep = await self.option.serializer.deserialize(rpc_response)
-        response = RpcResponse.from_dict(json_rep)
+        response = cast(Any, RpcResponse).from_dict(json_rep)
         if response.exception:
             raise response.exception
         return response
 
-    async def emit(self, topic, data, headers: dict[str, str] = None):
+    async def emit(self, topic, data, headers: Optional[dict[str, str]] = None):
         request = RpcRequest(pattern=topic, data=data, headers=headers or {})
         json_req = await self.option.serializer.serialize(asdict(request))
         await self._publish(

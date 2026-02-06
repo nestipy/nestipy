@@ -35,6 +35,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "orjson>=3.11.1",
     "pydantic[email]>=2.11.7",
+    "granian[reload]",
 ]
 
 [project.optional-dependencies]
@@ -55,6 +56,14 @@ include = ["src/nestipy"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src/nestipy" = "nestipy"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ty",
+]
 
 [build-system]
 requires = ["hatchling"]

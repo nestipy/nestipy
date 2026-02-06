@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Type, Any, get_type_hints, get_args, Optional
+from typing import Callable, Type, Any, get_type_hints, get_args, Optional, cast
 
 import strawberry
 from strawberry import (
@@ -25,10 +25,10 @@ class StrawberryAdapter(GraphqlAdapter):
 
     _schema: Optional[Schema] = None
 
-    def create_type_field_resolver(self, prop: dict, resolver: Callable) -> object:
+    def create_type_field_resolver(self, prop: dict, resolve: Callable) -> object:
         type_to_resolve: Type = prop["type"]
         prop_name = prop["name"]
-        field = strawberry_field(resolver=resolver)
+        field = strawberry_field(resolver=resolve)
         field.name = prop_name
         fields: list[StrawberryField] = type_to_resolve.__strawberry_definition__.fields
         new_fields = [field if f.name == prop_name else f for f in fields]
@@ -45,7 +45,10 @@ class StrawberryAdapter(GraphqlAdapter):
         return subscription(resolver)
 
     def modify_handler_signature(
-        self, original_handler: Any, mutated_handler: Callable, default_return_type: Any
+        self,
+        original_handler: Callable,
+        wrapper_handler: Callable,
+        default_return_type: Any,
     ) -> Type:
         signature = inspect.signature(original_handler)
         return_annotation = (
@@ -56,7 +59,7 @@ class StrawberryAdapter(GraphqlAdapter):
         # Set annotations for the new function
         if return_annotation is None:
             raise Exception(
-                f"Method {original_handler.__name__} has no return annotation"
+                f"Method {cast(Any, original_handler).__name__} has no return annotation"
             )
 
         original_annotations = get_type_hints(original_handler)
@@ -104,8 +107,8 @@ class StrawberryAdapter(GraphqlAdapter):
         new_signature = inspect.Signature(
             parameters=new_parameters, return_annotation=return_annotation
         )
-        mutated_handler.__annotations__ = original_annotations
-        mutated_handler.__signature__ = new_signature
+        cast(Any, wrapper_handler).__annotations__ = original_annotations
+        cast(Any, wrapper_handler).__signature__ = new_signature
         return return_annotation
 
     def create_schema(self, **kwargs) -> Schema:
@@ -119,9 +122,11 @@ class StrawberryAdapter(GraphqlAdapter):
 
             query = type("Query", (), {"health": strawberry_field(health)})
         return Schema(
-            query=strawberry_type(query),
-            mutation=strawberry_type(mutation_) if mutation_ is not None else None,
-            subscription=strawberry_type(subscription_)
+            query=cast(Type, strawberry_type(query)),
+            mutation=cast(Type, strawberry_type(mutation_))
+            if mutation_ is not None
+            else None,
+            subscription=cast(Type, strawberry_type(subscription_))
             if subscription_ is not None
             else None,
             **kwargs,

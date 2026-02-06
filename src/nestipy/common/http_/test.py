@@ -1,6 +1,7 @@
 from typing import Callable
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
 
 from request import Request
 from response import Response
@@ -16,4 +17,11 @@ async def app(scope: dict, receive: Callable, send: Callable):
 
 
 if __name__ == "__main__":
-    uvicorn.run("test:app", reload=True)
+    granian = Granian(
+        target="test:app",
+        address="0.0.0.0",
+        port=8000,
+        interface=Interfaces.ASGI,
+        reload=True,
+    )
+    granian.serve()

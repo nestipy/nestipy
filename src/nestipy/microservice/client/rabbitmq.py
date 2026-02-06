@@ -32,10 +32,10 @@ class RabbitMQClientProxy(ClientProxy):
             RabbitMQClientOption, self.option.option or RabbitMQClientOption()
         )
         self.connection = await connect_robust(**asdict(option))
-        self.channel = await self.connection.channel()
+        self.channel = cast(AbstractRobustChannel, await self.connection.channel())
         await self.channel.__aenter__()
         self.exchange = await self.channel.declare_exchange(
-            self.option.option.queue_option.name or self.CHANGE,
+            option.queue_option.name or self.CHANGE,
             ExchangeType.FANOUT,
             **asdict(option.queue_option),
         )
@@ -44,8 +44,9 @@ class RabbitMQClientProxy(ClientProxy):
         await self.exchange.publish(Message(body=data.encode()), routing_key=topic)
 
     async def send_response(self, topic: str, data: str):
+        option = cast(RabbitMQClientOption, self.option.option)
         response_exchange = await self.channel.declare_exchange(
-            f"{self.option.option.queue_option.name or self.CHANGE}:{topic}",
+            f"{option.queue_option.name or self.CHANGE}:{topic}",
             ExchangeType.FANOUT,
         )
         await response_exchange.publish(Message(body=data.encode()), routing_key=topic)
@@ -55,8 +56,9 @@ class RabbitMQClientProxy(ClientProxy):
         await self.consumer_queue.bind(self.exchange)
 
     async def unsubscribe(self, *args):
-        await self.consumer_queue.unbind(self.exchange)
-        await self.consumer_queue.delete()
+        if self.consumer_queue is not None:
+            await self.consumer_queue.unbind(self.exchange)
+            await self.consumer_queue.delete()
 
     async def listen(self) -> AsyncIterator[str]:
         if self.consumer_queue is not None:
@@ -73,7 +75,7 @@ class RabbitMQClientProxy(ClientProxy):
         response_queue = await self.channel.declare_queue(from_topic)
         await response_queue.bind(response_exchange)
         try:
-            with async_timeout.timeout(timeout):
+            async with async_timeout.timeout(timeout):
                 async with response_queue.iterator() as queue_iter:
                     async for message in queue_iter:
                         async with message.process():

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from nestipy.common.http_ import Response, Request
 from .argument_host import ArgumentHost
@@ -9,10 +9,10 @@ if TYPE_CHECKING:
 
 class GraphqlArgumentHost(ArgumentHost):
     def get_request(self) -> Request:
-        return self._req
+        return cast(Request, self._req)
 
     def get_response(self) -> Response:
-        return self._res
+        return cast(Response, self._res)
 
     def get_args(self) -> dict:
         return self._graphql_args

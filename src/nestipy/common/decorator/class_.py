@@ -7,19 +7,34 @@ from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 
 
 class Scope(enum.Enum):
+    """
+    Enum representing the lifecycle scope of a provider.
+    """
     Request = "Request"
     Transient = "Transient"
     Singleton = "Singleton"
 
 
 class Injectable:
+    """
+    Decorator that marks a class as a provider that can be injected as a dependency.
+    """
     scope: Optional[Scope] = None
 
     def __init__(self, scope: Scope = Scope.Singleton):
+        """
+        Initialize the Injectable decorator.
+        :param scope: The lifecycle scope of the provider (Singleton, Transient, or Request).
+        """
         self.scope = scope
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls: Union[Type, Callable]) -> Type:
+        """
+        Register the class into the container with the specified scope.
+        :param cls: The class to be marked as injectable.
+        :return: The decorated class.
+        """
         match self.scope:
             case Scope.Transient:
                 self.container.add_transient(cls)
@@ -31,12 +46,26 @@ class Injectable:
 
 
 class Controller:
+    """
+    Decorator that marks a class as a controller.
+    Controllers are responsible for handling incoming requests and returning responses to the client.
+    """
     def __init__(self, path: str = "/", **kwargs):
+        """
+        Initialize the Controller decorator.
+        :param path: The base path for all routes defined in the controller.
+        :param kwargs: Additional metadata for the controller.
+        """
         self.path = path
         self.kwargs = kwargs
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls, **kwargs):
+        """
+        Register the class as a singleton in the container and set its route metadata.
+        :param cls: The class to be marked as a controller.
+        :return: The decorated class.
+        """
         self.container.add_singleton(cls)
         # put path and kwargs in controller property
         Reflect.set_metadata(cls, RouteKey.path, self.path)
@@ -45,6 +74,10 @@ class Controller:
 
 
 class Module:
+    """
+    Decorator that marks a class as a module.
+    Modules are used to organize the application structure and manage dependencies.
+    """
     providers: list[Union[Type, ModuleProviderDict]] = []
     controllers: list[Type] = []
     imports: list[Union[Type, Callable, ModuleProviderDict, DynamicModule]] = []
@@ -61,6 +94,14 @@ class Module:
         exports: Optional[list[Union[Type, Callable, str]]] = None,
         is_global: bool = False,
     ):
+        """
+        Initialize the Module decorator.
+        :param providers: List of providers that will be instantiated by the Nestipy injector.
+        :param controllers: List of controllers defined in this module which have to be instantiated.
+        :param imports: List of imported modules that export the providers which are required in this module.
+        :param exports: List of providers that should be available in other modules.
+        :param is_global: Whether the module should be globally available.
+        """
         self.providers = providers or []
         self.controllers = controllers or []
         self.imports = imports or []
@@ -69,6 +110,11 @@ class Module:
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls: Type):
+        """
+        Register the module and its metadata in the Reflect system and the container.
+        :param cls: The class to be marked as a module.
+        :return: The decorated class.
+        """
         Reflect.set_metadata(
             cls,
             ModuleMetadata.Providers,

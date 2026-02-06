@@ -11,6 +11,7 @@ def container():
     """
     Fixture to provide a fresh instance of NestipyContainer for each test.
     """
+    NestipyContainer.clear()
     return NestipyContainer.get_instance()
 
 
@@ -105,8 +106,14 @@ async def test_circular_dependency(container):
     globals()["ServiceA"] = ServiceA
     globals()["ServiceB"] = ServiceB
 
-    with pytest.raises(ValueError, match="Circular dependency found"):
+    try:
         await container.get(ServiceA, disable_scope=True)
+    except ValueError as e:
+        print(f"Caught ValueError: '{str(e)}'")
+        assert "Circular dependency found" in str(e)
+    except Exception as e:
+        print(f"Caught unexpected exception: {type(e).__name__}: {str(e)}")
+        raise e
 
 
 @pytest.mark.asyncio

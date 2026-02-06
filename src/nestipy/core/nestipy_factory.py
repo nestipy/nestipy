@@ -1,4 +1,5 @@
 import logging
+import logging
 import typing
 from importlib import import_module
 from typing import Type
@@ -16,10 +17,19 @@ class _NestipyFactoryMeta(type):
 
 
 class NestipyFactory(metaclass=_NestipyFactoryMeta):
+    """
+    Factory class for creating Nestipy application and microservice instances.
+    """
     @classmethod
     def create(
-            cls, module: Type, config: typing.Optional[NestipyConfig] = None
+        cls, module: Type, config: typing.Optional[NestipyConfig] = None
     ) -> NestipyApplication:
+        """
+        Create a Nestipy application.
+        :param module: The root module of the application.
+        :param config: Optional configuration for the application.
+        :return: A NestipyApplication instance.
+        """
         cls._setup_log()
         if getattr(cls, "__generic_type__", None) == "BlackSheepApplication":
             if not config:
@@ -30,18 +40,31 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
 
     @classmethod
     def create_microservice(
-            cls, module: Type, option: list[MicroserviceOption]
+        cls, module: Type, option: list[MicroserviceOption]
     ) -> NestipyMicroservice:
+        """
+        Create a standalone Nestipy microservice.
+        :param module: The root module of the microservice.
+        :param option: List of microservice options (transport, host, port, etc).
+        :return: A NestipyMicroservice instance.
+        """
         return NestipyMicroservice(module, option)
 
     @classmethod
     def connect_microservice(
-            cls,
-            module: Type,
-            option: list[MicroserviceOption],
-            config: typing.Optional[NestipyConfig] = None,
+        cls,
+        module: Type,
+        option: list[MicroserviceOption],
+        config: typing.Optional[NestipyConfig] = None,
     ) -> NestipyConnectMicroservice:
-        return NestipyConnectMicroservice(module, config, option)
+        """
+        Connect a microservice to an existing Nestipy application.
+        :param module: The root module for the microservice connection.
+        :param option: List of microservice options.
+        :param config: Optional configuration.
+        :return: A NestipyConnectMicroservice instance.
+        """
+        return NestipyConnectMicroservice(module, config or NestipyConfig(), option)
 
     @classmethod
     def _setup_log(cls):
@@ -66,7 +89,7 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
                 # Fallback to FastAPI adapter
                 adapter_module = import_module("nestipy.core.adapter.fastapi_adapter")
                 logger.info("[FastAPI Adapter] Using FastAPIAdapter")
-                return adapter_module.FastAPIAdapter()
+                return adapter_module.FastApiAdapter()
             except ImportError:
                 raise RuntimeError(
                     "No suitable adapter found. Install extras with "

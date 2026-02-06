@@ -29,8 +29,10 @@ def _dict_to_dataclass(data: dict[str, Any], cls: Any) -> Any:
     return cls(**filtered_data)
 
 
-def _get_json_of_body(body: Union[BaseModel, Type]):
+def _get_json_of_body(body: Optional[Union[BaseModel, Type]]):
     content: dict = {}
+    if body is None:
+        return content
     ref_template = "#/components/schemas/{model}"
     if dataclasses.is_dataclass(body):
         content = TypeAdapter(body).json_schema(ref_template=ref_template)
@@ -112,8 +114,8 @@ def ApiQuery(name: str, description: Optional[str] = None, required: bool = Fals
 #  API Response
 def ApiResponse(
     status: int,
-    response: Union[BaseModel, Type] = None,
-    description: str = None,
+    response: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
     example: Any = None,
     headers: Optional[Dict[str, Union[Header, Reference]]] = None,
     consumer: ApiConsumer = ApiConsumer.JSON,
@@ -142,7 +144,7 @@ def ApiExclude():
 
 
 def ApiOkResponse(
-    schema: Union[BaseModel, Type] = None,
+    schema: Optional[Union[BaseModel, Type]] = None,
     description: Optional[str] = None,
     example: Any = None,
 ):
@@ -152,7 +154,7 @@ def ApiOkResponse(
 
 
 def ApiCreatedResponse(
-    schema: Union[BaseModel, Type] = None,
+    schema: Union[BaseModel, Type, None] = None,
     description: Optional[str] = None,
     example: Any = None,
 ):
@@ -162,7 +164,7 @@ def ApiCreatedResponse(
 
 
 def ApiNotFoundResponse(
-    schema: Union[BaseModel, Type] = None,
+    schema: Optional[Union[BaseModel, Type]] = None,
     description: Optional[str] = None,
     example: Any = None,
 ):

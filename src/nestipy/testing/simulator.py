@@ -47,15 +47,24 @@ class TestSimulator:
         return parse_qs(parsed_url.query)
 
     async def make_request(
-        self, method: str, path: str, headers: Optional[dict[str, str]] = None, body=b""
+        self,
+        method: str,
+        path: str,
+        headers: Optional[dict[str, str]] = None,
+        body: bytes = b"",
     ):
+        extra_headers = None
         if headers is not None:
-            headers = [
-                (key.encode("utf-8"), value.encode("utf-8")) for key, value in headers
+            extra_headers = [
+                (key.encode("utf-8"), value.encode("utf-8"))
+                for key, value in headers.items()
             ]
         # app request
         self.scope = self._create_scope(
-            method, urlparse(path).path, headers, query=self._extract_query_params(path)
+            method,
+            urlparse(path).path,
+            extra_headers,
+            query=self._extract_query_params(path),
         )
         await self.receive_queue.put(
             {

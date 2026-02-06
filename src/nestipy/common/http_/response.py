@@ -22,7 +22,9 @@ class Response:
         self._headers = set()
         self._status_code = 200
         self._content = None
-        self.stream_content: Optional[Callable[[], AsyncIterator[Union[bytes, str]]]] = None
+        self.stream_content: Optional[
+            Callable[[], AsyncIterator[Union[bytes, str]]]
+        ] = None
         self.template_engine = template_engine
 
     async def _start(self) -> None:
@@ -86,7 +88,7 @@ class Response:
         self._cookies.add((name, value))
         return self
 
-    async def send(self, content: str, status_code: int = 200) -> "Response":
+    async def send(self, content: str, status_code: Optional[int] = None) -> "Response":
         """
         Send text
         Args:
@@ -96,7 +98,9 @@ class Response:
         Returns:
             response(Response): An instance of response
         """
-        await self.status(status_code)._write(content.encode())
+        if status_code is not None:
+            self.status(status_code)
+        await self._write(content.encode())
         return self
 
     async def html(self, content: str, status_code: Union[int, None] = None):
@@ -235,20 +239,37 @@ class Response:
         return self
 
     def content_type(self) -> str:
+        """
+        Get the Content-Type header value.
+        :return: The content type string.
+        """
         for key, value in self._headers:
             if str(key).lower() == "content-type":
                 return value
         return "text/plain"
 
     def status_code(self) -> int:
+        """
+        Get the current status code.
+        :return: The status code as an integer.
+        """
         return self._status_code
 
     def content(self) -> Union[bytes, None]:
+        """
+        Get the response content as bytes.
+        :return: Content bytes or None.
+        """
         return self._content
 
     def headers(
         self, headers: dict[str, str] = None
     ) -> Union[set[tuple[str, str]], Self]:
+        """
+        Get or set response headers.
+        :param headers: Optional dictionary of headers to set.
+        :return: The headers set or the Response instance.
+        """
         if headers is not None:
             for key, value in headers.items():
                 self.header(key, value)
@@ -256,7 +277,15 @@ class Response:
         return self._headers
 
     def cookies(self) -> set[tuple[str, str]]:
+        """
+        Get the set of cookies to be set.
+        :return: A set of (name, value) tuples.
+        """
         return self._cookies
 
     def is_stream(self) -> bool:
+        """
+        Check if the response is a streaming response.
+        :return: True if a stream callback is registered, False otherwise.
+        """
         return self.stream_content is not None

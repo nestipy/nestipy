@@ -27,7 +27,7 @@ class GrpcServer(pb2_grpc.GrpcServicer):
         try:
             while True:
                 await asyncio.sleep(0.01)
-        except grpc.aio.AioRpcError as e:
+        except grpc.aio.AioRpcError as e:  # type: ignore
             if self.verbose:
                 console.print(
                     f"ERROR:     Subscription error  {e}",
@@ -64,7 +64,7 @@ class GrpcServer(pb2_grpc.GrpcServicer):
                     await client_context.write(
                         pb2.DataResponse(topic=topic, data=request.data)
                     )
-                except grpc.aio.AioRpcError as e:
+                except grpc.aio.AioRpcError as e:  # type: ignore
                     if self.verbose:
                         console.print(
                             f"ERROR:     Sending data error  {e}",
@@ -77,7 +77,7 @@ class GrpcServer(pb2_grpc.GrpcServicer):
 
     async def serve(self, port: int = 50051) -> None:
         """Start the server."""
-        server = grpc.aio.server()
+        server = grpc.aio.server()  # type: ignore
         pb2_grpc.add_GrpcServicer_to_server(self, server)
         server.add_insecure_port(f"[::]:{port}")
         console.print(

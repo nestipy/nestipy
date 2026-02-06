@@ -2,8 +2,8 @@ import os.path
 from typing import Any
 
 import socketio
-import uvicorn
-
+from granian import Granian
+from granian.constants import Interfaces
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
 from nestipy.common import session
@@ -13,7 +13,7 @@ from nestipy.openapi import SwaggerModule, DocumentBuilder
 from nestipy.websocket import WebsocketAdapter
 
 # default use blacksheep
-app = NestipyFactory[BlackSheepApplication].create(AppModule)
+app = NestipyFactory.create(AppModule)
 # enable cors
 app.enable_cors()
 # setup swagger
@@ -73,6 +73,11 @@ async def startup():
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app", host="0.0.0.0", port=8001, reload=True, forwarded_allow_ips="*"
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
+        port=8001,
+        interface=Interfaces.ASGI,
+        reload=True,
     )
+    granian.serve()

@@ -31,16 +31,24 @@ class AppModule: ...
 
 
 async def run_server(host: str, port: int, workers: int, is_b: bool = False):
-    import uvicorn
+    from granian.server.embed import Server as Granian
+    from granian.constants import Interfaces
+
     if is_b:
         print("Running Black Sheep server .......")
         app = NestipyFactory[BlackSheepApplication].create(AppModule)
     else:
         print("Running Fastapi server .......")
         app = NestipyFactory[FastApiApplication].create(AppModule)
-    config = uvicorn.Config(app=app, host=host, port=port, workers=workers, log_level="warning")
-    server = uvicorn.Server(config)
-    await server.serve()
+
+    granian_instance = Granian(
+        target=app,
+        address=host,
+        port=port,
+        runtime_threads=workers,
+        interface=Interfaces.ASGI,
+    )
+    await granian_instance.serve()
 
 
 import asyncio
@@ -84,7 +92,10 @@ class Benchmark:
         self.start = time.time()
         self.end = self.start + self.duration
         async with httpx.AsyncClient(timeout=10) as client:
-            tasks = [asyncio.create_task(self.worker(client)) for _ in range(self.concurrency)]
+            tasks = [
+                asyncio.create_task(self.worker(client))
+                for _ in range(self.concurrency)
+            ]
             await asyncio.gather(*tasks)
 
     def report(self, outdir="bench_out"):
@@ -107,9 +118,11 @@ class Benchmark:
         percentiles = {p: np.percentile(lats, p) for p in [50, 60, 70, 80, 90, 95, 99]}
 
         print("\n=== Request Statistics ===")
-        print(f"Requests: {stats['requests']}, Fails: {stats['fails']}, "
-              f"Avg: {stats['avg']:.2f} ms, Min: {stats['min']:.2f}, "
-              f"Max: {stats['max']:.2f}, RPS: {stats['rps']:.2f}")
+        print(
+            f"Requests: {stats['requests']}, Fails: {stats['fails']}, "
+            f"Avg: {stats['avg']:.2f} ms, Min: {stats['min']:.2f}, "
+            f"Max: {stats['max']:.2f}, RPS: {stats['rps']:.2f}"
+        )
 
         print("\n=== Response Time Statistics (ms) ===")
         for p, v in percentiles.items():
@@ -132,8 +145,13 @@ class Benchmark:
         plt.close()
 
         # Response times (median + 95th percentile)
-        medians = [np.median(self.timeline[t]) if self.timeline[t] else 0 for t in times]
-        p95s = [np.percentile(self.timeline[t], 95) if self.timeline[t] else 0 for t in times]
+        medians = [
+            np.median(self.timeline[t]) if self.timeline[t] else 0 for t in times
+        ]
+        p95s = [
+            np.percentile(self.timeline[t], 95) if self.timeline[t] else 0
+            for t in times
+        ]
         plt.figure(figsize=(8, 4))
         plt.plot(times, medians, label="Median Response Time", color="green")
         plt.plot(times, p95s, label="95% percentile", color="orange")
@@ -159,11 +177,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     s1 = sub.add_parser("serve")
-    s1.add_argument("--port", type=int, default=8000);
-    s1.add_argument("--workers", type=int, default=1)
+    s1.add_argument("--port", type=int, default=8000)
+    s1.add_argument("--workers", type=int, default=5)
     s1.add_argument("--is-bs", type=bool, default=False)
     s2 = sub.add_parser("bench")
-    s2.add_argument("--url", type=str, required=True, help="Target URL")
+    s2.add_argument("--url", type=str,  help="Target URL", default="http://127.0.0.1:8000")
     s2.add_argument("-c", "--concurrency", type=int, default=100)
     s2.add_argument("-d", "--duration", type=int, default=15)
     s2.add_argument("--out", type=str, default="bench_out")

@@ -41,7 +41,7 @@ class GrpcClientProxy(ClientProxy):
     async def connect(self):
         """Establish a connection to the gRPC server."""
         if not self.channel:
-            self.channel = grpc.aio.insecure_channel(
+            self.channel = grpc.aio.insecure_channel(  # type: ignore
                 f"{self._config.host}:{self._config.port}"
             )
             self.stub = pb2_grpc.GrpcStub(self.channel)
@@ -49,7 +49,8 @@ class GrpcClientProxy(ClientProxy):
     async def _publish(self, topic, data):
         """Publish data"""
         request = pb2.DataRequest(topic=topic, data=data)
-        await self.stub.SendData(request)
+        if self.stub:
+            await self.stub.SendData(request)
 
     async def send_response(self, topic, data):
         """Send a response message."""
@@ -57,30 +58,36 @@ class GrpcClientProxy(ClientProxy):
 
     async def subscribe(self, topic: str, *args, **kwargs):
         sub_request = pb2.SubRequest(topic=topic)
-        self.subscription = self.stub.Subscribe(sub_request)
+        if self.stub:
+            self.subscription = self.stub.Subscribe(sub_request)
 
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
         """Listen for a response using an async queue."""
         try:
             async with asyncio.timeout(timeout):
-                async for response in self.subscription:
-                    if response.topic == from_topic:
-                        return response.data
+                if self.subscription:
+                    async for response in self.subscription:
+                        if response.topic == from_topic:
+                            return response.data
         except asyncio.TimeoutError:
             raise RpcException(
                 status_code=RPCErrorCode.DEADLINE_EXCEEDED,
                 message=RPCErrorMessage.DEADLINE_EXCEEDED,
             )
+        return ""
 
     async def listen(self) -> AsyncIterator[str]:
         """Continuously listen for incoming responses."""
-        async for response in self.subscription:
-            yield response.data
+        if self.subscription:
+            async for response in self.subscription:
+                yield response.data
 
-    async def unsubscribe(self, topic: str, *args):
+    async def unsubscribe(self, *args):
         """Unsubscribe from topics (not applicable for gRPC)."""
+        topic = args[0] if args else ""
         unsub_request = pb2.UnsubRequest(topic=topic)
-        await self.stub.Unsubscribe(unsub_request)
+        if self.stub:
+            await self.stub.Unsubscribe(unsub_request)
 
     async def close(self):
         """Close the gRPC channel."""

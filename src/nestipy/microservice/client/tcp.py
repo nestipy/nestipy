@@ -136,22 +136,26 @@ class TCPClientProxy(ClientProxy):
     async def _publish(self, topic: str, data: str):
         """Publish a message to the specified topic."""
         await self.connect()
-        self.writer.write(
-            f"PUBLISH{__SPLIT__}{topic}{__SPLIT__}{data}\n".encode("utf-8")
-        )
-        await self.writer.drain()
+        if self.writer:
+            self.writer.write(
+                f"PUBLISH{__SPLIT__}{topic}{__SPLIT__}{data}\n".encode("utf-8")
+            )
+            await self.writer.drain()
 
     async def subscribe(self, topic: str):
         """Subscribe to a topic."""
         await self.connect()
-        self.writer.write(f"SUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
-        await self.writer.drain()
+        if self.writer:
+            self.writer.write(f"SUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
+            await self.writer.drain()
 
-    async def unsubscribe(self, topic: str):
+    async def unsubscribe(self, *args):
         """Unsubscribe from a topic."""
+        topic = args[0] if args else ""
         await self.connect()
-        self.writer.write(f"UNSUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
-        await self.writer.drain()
+        if self.writer:
+            self.writer.write(f"UNSUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
+            await self.writer.drain()
 
     async def send_response(self, topic: str, data: str):
         """Send a response to a topic."""
@@ -160,21 +164,25 @@ class TCPClientProxy(ClientProxy):
     async def listen(self) -> AsyncIterator[str]:
         """Listen for incoming messages."""
         while True:
-            data = await self.reader.readline()
-            if data:
-                yield data.decode("utf-8").strip().split(__SPLIT__)[-1]
+            if self.reader:
+                data = await self.reader.readline()
+                if data:
+                    yield data.decode("utf-8").strip().split(__SPLIT__)[-1]
+            else:
+                await asyncio.sleep(0.1)
 
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
         """Listen for a response on a given topic."""
         await self.subscribe(from_topic)
         try:
             while True:
-                data = await self.reader.readline()
-                if data:
-                    message = data.decode("utf-8").strip()
-                    key = f"[{from_topic}]{__SPLIT__}"
-                    if message.startswith(key):
-                        return message[len(key) :]
+                if self.reader:
+                    data = await self.reader.readline()
+                    if data:
+                        message = data.decode("utf-8").strip()
+                        key = f"[{from_topic}]{__SPLIT__}"
+                        if message.startswith(key):
+                            return message[len(key) :]
                 await asyncio.sleep(0.01)
         finally:
             await self.unsubscribe(from_topic)

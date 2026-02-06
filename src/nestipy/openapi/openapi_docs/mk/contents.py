@@ -4,6 +4,7 @@ This module contains classes to generate representations of content types by mim
 
 import os
 from abc import ABC, abstractmethod
+from typing import Any
 from datetime import datetime
 from json import JSONEncoder
 from urllib.parse import urlencode
@@ -12,17 +13,17 @@ from essentials.json import FriendlyEncoder, dumps
 
 
 class OADJSONEncoder(JSONEncoder):
-    def default(self, obj):
+    def default(self, o: Any) -> Any:
         try:
-            return JSONEncoder.default(self, obj)
+            return JSONEncoder.default(self, o)
         except TypeError:
-            if isinstance(obj, datetime):
+            if isinstance(o, datetime):
                 datetime_format = os.environ.get("OPENAPI_DATETIME_FORMAT")
                 if datetime_format:
-                    return obj.strftime(datetime_format)
+                    return o.strftime(datetime_format)
                 else:
-                    return obj.isoformat()
-            return FriendlyEncoder.default(self, obj)  # type: ignore
+                    return o.isoformat()
+            return FriendlyEncoder.default(self, o)  # type: ignore
 
 
 class ContentWriter(ABC):

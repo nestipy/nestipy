@@ -1,6 +1,7 @@
 import random
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
 
 from app_module import AppModule
 
@@ -20,10 +21,11 @@ app = NestipyFactory.connect_microservice(
 # app.use(session())
 app.start_all_microservices()
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
         port=random.randint(5000, 7000),
+        interface=Interfaces.ASGI,
         reload=True,
-        # log_level="critical",
     )
+    granian.serve()

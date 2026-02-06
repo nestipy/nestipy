@@ -1,6 +1,7 @@
 import dataclasses
 import os.path
 import traceback
+import typing
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
 from rich.traceback import install
@@ -52,6 +53,10 @@ class NestipyConfig:
 
 
 class NestipyApplication:
+    """
+    Main application class for Nestipy.
+    Coordinates the HTTP adapter, dependency injection, routing, middleware, and lifecycle events.
+    """
     _root_module: Optional[Type] = None
     _openapi_paths: dict = {}
     _openapi_schemas: dict = {}
@@ -62,6 +67,10 @@ class NestipyApplication:
     _background_tasks: BackgroundTasks
 
     def __init__(self, config: Optional[NestipyConfig] = None):
+        """
+        Initialize the Nestipy application.
+        :param config: Configuration object for the application.
+        """
         config = config if config is not None else NestipyConfig()
         # self._http_adapter: HttpServer = FastAPIAdapter()
         self._http_adapter: HttpAdapter = (
@@ -77,10 +86,20 @@ class NestipyApplication:
         self.on_shutdown(self._destroy)
 
     def on_startup(self, callback: Callable):
+        """
+        Register a callback to be executed on application startup.
+        :param callback: The callback function.
+        :return: The callback function.
+        """
         self._http_adapter.on_startup_callback(callback)
         return callback
 
     def on_shutdown(self, callback: Callable):
+        """
+        Register a callback to be executed on application shutdown.
+        :param callback: The callback function.
+        :return: The callback function.
+        """
         self._http_adapter.on_shutdown_callback(callback)
         return callback
 
@@ -135,22 +154,24 @@ class NestipyApplication:
         module_metadata_maker.create()
 
     async def setup(self):
+        if self._ready:
+            return
         try:
-            modules = self._get_modules(self._root_module)
+            modules = self._get_modules(typing.cast(Type, self._root_module))
             graphql_module_instance = await self.instance_loader.create_instances(
                 modules
             )
             # create and register route to platform adapter
             self._openapi_paths, self._openapi_schemas, self._list_routes = (
-                self._router_proxy.apply_routes(modules, self._prefix)
+                self._router_proxy.apply_routes(typing.cast(list[Union[Type, object]], modules), self._prefix or "")
             )
             # check if graphql is enabled
             if graphql_module_instance is not None:
                 await GraphqlProxy(
                     self._http_adapter, self._graphql_adapter
-                ).apply_resolvers(graphql_module_instance, modules)
+                ).apply_resolvers(graphql_module_instance, typing.cast(list[Union[Type, object]], modules))
             if self._http_adapter.get_io_adapter() is not None:
-                IoSocketProxy(self._http_adapter).apply_routes(modules)
+                IoSocketProxy(self._http_adapter).apply_routes(typing.cast(list[Union[Type, object]], modules))
             # Register open api catch asynchronously
             from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
 
@@ -160,12 +181,14 @@ class NestipyApplication:
             if openapi_register is not None:
                 openapi_register()
 
+            await self._http_adapter.start()
             self._ready = True
 
         except Exception as e:
             _tb = traceback.format_exc()
             logger.error(e)
             logger.error(_tb)
+            raise e
         finally:
             # Register devtools static path
             self.use_static_assets(
@@ -181,7 +204,9 @@ class NestipyApplication:
                 "/_devtools/static",
             )
             # Not found
-            not_found_path = self._http_adapter.create_wichard().lstrip("/")
+            not_found_path = self._http_adapter.create_wichard()
+            if not not_found_path.startswith("/"):
+                not_found_path = "/" + not_found_path
             self._http_adapter.all(
                 not_found_path,
                 self._router_proxy.create_request_handler(
@@ -222,7 +247,7 @@ class NestipyApplication:
 
     def use(self, *middleware: Union[Type[NestipyMiddleware], Callable]):
         for m in middleware:
-            if issubclass(m, NestipyMiddleware) or callable(m):
+            if (isinstance(m, type) and issubclass(m, NestipyMiddleware)) or callable(m):
                 proxy = MiddlewareProxy(m)
                 self._middleware_container.add_singleton(proxy)
         self._add_root_module_provider(*middleware)
@@ -268,11 +293,11 @@ class NestipyApplication:
 
     def use_global_interceptors(self, *interceptors: Union[Type, "NestipyInterceptor"]):
         self._http_adapter.add_global_interceptors(*interceptors)
-        self._add_root_module_provider(*interceptors)
+        self._add_root_module_provider(*typing.cast(tuple[Union[ModuleProviderDict, Type, Callable]], interceptors))
 
     def use_global_filters(self, *filters: Union[Type, "ExceptionFilter"]):
         self._http_adapter.add_global_filters(*filters)
-        self._add_root_module_provider(*filters)
+        self._add_root_module_provider(*typing.cast(tuple[Union[ModuleProviderDict, Type, Callable]], filters))
 
     def use_global_guards(self, *guards: Union[Type, "CanActivate"]):
         self._http_adapter.add_global_guards(*guards)

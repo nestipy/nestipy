@@ -20,11 +20,11 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
     _event_emitter: Annotated[EventEmitter, Inject()]
 
     @classmethod
-    def _is_listener(cls, method: callable):
+    def _is_listener(cls, method: Callable):
         v = Reflect.get_metadata(method, EventMetadata.Event)
         return v is not None
 
-    def _register_listener(self, method: callable):
+    def _register_listener(self, method: Callable):
         event_data: Union[EventData, None] = Reflect.get_metadata(
             method, EventMetadata.Event, None
         )
@@ -36,7 +36,7 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
                 self._event_emitter.add_listener(event_data.name, callback)
 
     @classmethod
-    def _create_async_handler(cls, callback: Callable) -> callable:
+    def _create_async_handler(cls, callback: Callable) -> Callable:
         async def async_handler(*args, **kwargs):
             if inspect.iscoroutinefunction(callback):
                 return await callback(*args, **kwargs)
@@ -52,9 +52,11 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
         for p in instances:
             elements = inspect.getmembers(
                 p,
-                lambda a: inspect.isfunction(a)
-                or inspect.iscoroutinefunction(a)
-                or inspect.ismethod(a),
+                lambda a: (
+                    inspect.isfunction(a)
+                    or inspect.iscoroutinefunction(a)
+                    or inspect.ismethod(a)
+                ),
             )
             methods = [
                 method
