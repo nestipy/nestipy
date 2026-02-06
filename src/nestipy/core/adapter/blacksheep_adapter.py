@@ -31,6 +31,9 @@ class BlackSheepAdapter(HttpAdapter):
         self.instance.on_start(self.on_startup)
         self.instance.on_stop(self.on_shutdown)
 
+    async def start(self):
+        await self.instance.start()
+
     def get_instance(self) -> Application:
         return self.instance
 
@@ -46,55 +49,91 @@ class BlackSheepAdapter(HttpAdapter):
         )
 
     def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
-        return f"/{prefix.strip('/')}" + "/{" + f"path:{name}" + "}"
+        prefix = prefix.strip("/")
+        base = "/" + prefix if prefix else ""
+        return base + "/{path:" + name + "}"
 
     def use(self, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
         # need to transform
         self.instance.middlewares.append(callback)
 
     def static(
-            self, route: str, directory: str, name: str = None, option: dict = None
+        self, route: str, directory: str, name: str = None, option: dict = None
     ) -> None:
         # self.instance.serve_files()
         pass
 
-    def get(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        get(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def post(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        post(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def put(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        put(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def delete(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        delete(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def options(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        options(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def head(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        head(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def patch(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        patch(route)(self._create_blacksheep_handler(callback, metadata))
-
-    def all(self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None) -> None:
-        all_route(route,["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"])(
-            self._create_blacksheep_handler(callback, metadata)
+    def get(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "GET", route, self._create_blacksheep_handler(callback, metadata)
         )
 
-    def ws(self, route: str, callback: WebsocketHandler, metadata: Optional[dict] = None) -> None:
-        websocket(route)(self._create_blacksheep_websocket_handler(callback, metadata))
+    def post(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "POST", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def put(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "PUT", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def delete(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "DELETE", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def options(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "OPTIONS", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def head(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "HEAD", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def patch(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.add(
+            "PATCH", route, self._create_blacksheep_handler(callback, metadata)
+        )
+
+    def all(
+        self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
+    ) -> None:
+        handler = self._create_blacksheep_handler(callback, metadata)
+        for method in ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]:
+            self.instance.router.add(method, route, handler)
+
+    def ws(
+        self, route: str, callback: WebsocketHandler, metadata: Optional[dict] = None
+    ) -> None:
+        self.instance.router.ws(route)(self._create_blacksheep_websocket_handler(callback, metadata))
 
     def mount(self, route: str, callback: MountHandler) -> None:
         self.instance.mount(route, callback)
 
-    def _create_blacksheep_handler(self, callback: CallableHandler, metadata: Optional[dict] = None):
+    def _create_blacksheep_handler(
+        self, callback: CallableHandler, metadata: Optional[dict] = None
+    ):
         # path = metadata['path']
         # params = RouteParamsExtractor.extract_params(path)
         async def blacksheep_handler(
-                _bs_request: BlackSheepRequest,
+            _bs_request: BlackSheepRequest,
         ) -> BlackSheepResponse:
             result: Response = await self.process_callback(callback, metadata)
             if result.is_stream():
@@ -117,8 +156,7 @@ class BlackSheepAdapter(HttpAdapter):
         return blacksheep_handler
 
     def _create_blacksheep_websocket_handler(
-            self, callback: WebsocketHandler,
-            _metadata: Optional[dict] = None
+        self, callback: WebsocketHandler, _metadata: Optional[dict] = None
     ):
         async def blacksheep_websocket_handler(bsw: BSWebSocket):
             ws = Websocket(self.scope, self.receive, self.send)

@@ -1,6 +1,6 @@
 import dataclasses
 import os.path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import aiofiles
 import ujson
@@ -40,11 +40,12 @@ class SwaggerModule:
     def _create_document(cls, app: "NestipyApplication", config: OpenAPI) -> _Document:
         paths = app.get_openapi_paths()
         config.paths = paths
-        schemas = app.get_open_api_schemas()
-        if "schemas" in schemas:
+        schemas_data = app.get_open_api_schemas()
+        if schemas_data and "schemas" in schemas_data and config.components:
+            existing_schemas = config.components.schemas or {}
             config.components.schemas = {
-                **config.components.schemas,
-                **schemas["schemas"],
+                **existing_schemas,
+                **cast(dict, schemas_data["schemas"]),
             }
         serializer = Serializer()
         json = serializer.to_json(config)

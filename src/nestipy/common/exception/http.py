@@ -8,18 +8,27 @@ from typing import Union
 
 @dataclass
 class FrameworkTrack:
+    """
+    Metadata about the environment when an exception occurred.
+    """
     python: str
     nestipy: str
 
 
 @dataclass
 class RequestTrack:
+    """
+    Metadata about the request that triggered the exception.
+    """
     method: str
     host: str
 
 
 @dataclass
 class Traceback:
+    """
+    Detailed information about a single frame in a traceback.
+    """
     filename: str
     lineno: int
     name: str
@@ -30,6 +39,9 @@ class Traceback:
 
 @dataclass
 class ExceptionDetail:
+    """
+    Comprehensive details about an exception, including request info and traceback.
+    """
     exception: str
     type: str
     message: str
@@ -46,6 +58,10 @@ class ExceptionDetail:
 
 
 class HttpException(Exception):
+    """
+    Base exception class for all HTTP-related errors in Nestipy.
+    Includes status code, message, and detailed traceback information.
+    """
     def __init__(
         self,
         status_code: int,
@@ -53,6 +69,13 @@ class HttpException(Exception):
         details: Union[dict, str, None] = None,
         track_back: Union[ExceptionDetail, None] = None,
     ):
+        """
+        Initialize HttpException.
+        :param status_code: HTTP status code.
+        :param message: Error message.
+        :param details: Additional error details.
+        :param track_back: Detailed traceback info.
+        """
         self.status_code = status_code
         self.message = message
         self.details = details
@@ -65,4 +88,7 @@ class HttpException(Exception):
         super().__init__(self.message)
 
     def __str__(self):
+        """
+        Return a string representation of the exception.
+        """
         return f"{self.status_code} - {self.message} {f' - {self.details}' if self.details is not None else ''}"

@@ -11,8 +11,8 @@ from urllib.parse import unquote_plus
 from .upload_file import UploadFile
 
 try:
-    import multipart
-    from multipart.multipart import parse_options_header
+    import python_multipart as multipart
+    from python_multipart.multipart import parse_options_header
 except ModuleNotFoundError:  # pragma: nocover
     parse_options_header = None
     multipart = None

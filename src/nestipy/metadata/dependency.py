@@ -1,4 +1,7 @@
 class CtxDepKey:
+    """
+    Constant keys used for identifying different types of injectable context dependencies.
+    """
     Service: str = "service"
     Request: str = "request"
     Response: str = "response"
@@ -22,6 +25,10 @@ class CtxDepKey:
 
     @classmethod
     def to_list(cls) -> list:
+        """
+        Get a list of all dependency keys.
+        :return: List of strings.
+        """
         return [
             cls.Service,
             cls.Request,

@@ -21,10 +21,12 @@ from .dependency import (
 )
 from .middleware import MiddlewareProxy, MiddlewareRouteConfig, MiddlewareContainer
 from .provider import ModuleProviderDict
+from .interface import NestipyIContainer
 
 __all__ = [
     "ParamAnnotation",
     "NestipyContainer",
+    "NestipyIContainer",
     "RequestContextContainer",
     "ModuleProviderDict",
     "Inject",

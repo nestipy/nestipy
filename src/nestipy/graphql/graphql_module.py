@@ -12,8 +12,7 @@ class ASGIOption:
     allow_queries_via_get: bool = True
     keep_alive: bool = False
     keep_alive_interval: float = 1
-    debug: bool = False
-    subscription_protocols: Sequence[str] = None
+    subscription_protocols: Optional[Sequence[str]] = None
     connection_init_wait_timeout: timedelta = timedelta(minutes=1)
 
 

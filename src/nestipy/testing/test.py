@@ -1,7 +1,9 @@
-from typing import Type, Callable, Union, Optional, Any
+from typing import Type, Callable, Union, Optional, Any, TYPE_CHECKING
 
 from nestipy.common import Module
+from nestipy.core.nestipy_application import NestipyApplication
 from nestipy.core.nestipy_factory import NestipyFactory
+
 from nestipy.core.platform import BlackSheepApplication, FastApiApplication
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer
@@ -14,10 +16,27 @@ class TestingModuleRef:
 
     def __init__(self, root_module: Type):
         self._root_module = root_module
+        self._app: Optional[NestipyApplication] = None
+
+    async def compile(self) -> "TestingModuleRef":
+        if self._app is None:
+            self._app = NestipyFactory.create(self._root_module)
+            await self._app.ready()
+        return self
 
     async def get(self, key: Any):
-        await NestipyFactory.create(self._root_module).ready()
+        if self._app is None:
+            await self.compile()
         return await NestipyContainer.get_instance().get(key)
+
+    def create_nestipy_application(
+        self,
+        platform: Union[
+            Type[BlackSheepApplication], Type[FastApiApplication]
+        ] = FastApiApplication,
+    ) -> NestipyApplication:
+        self._app = NestipyFactory[platform].create(self._root_module)
+        return self._app
 
     def create_nestipy_client(
         self,
@@ -25,7 +44,8 @@ class TestingModuleRef:
             Type[BlackSheepApplication], Type[FastApiApplication]
         ] = FastApiApplication,
     ) -> TestClient:
-        return TestClient(NestipyFactory[platform].create(self._root_module))
+        app = self.create_nestipy_application(platform)
+        return TestClient(app)
 
 
 class Test:

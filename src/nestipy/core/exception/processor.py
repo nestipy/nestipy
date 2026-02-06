@@ -1,3 +1,4 @@
+import typing
 from typing import Union, Any, Callable
 
 from nestipy.common.decorator import Injectable
@@ -14,7 +15,7 @@ from nestipy.metadata import Reflect, ClassMetadata
 
 @Injectable()
 class ExceptionFilterHandler(SpecialProviderExtractor):
-    context: ArgumentHost = None
+    context: Union[ArgumentHost, None] = None
 
     def __init__(
         self,
@@ -28,9 +29,13 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         handler_module_class = self.context.get_module()
         handler_class = self.context.get_class()
         handler = self.context.get_handler()
-        global_filters = context.get_adapter().get_global_filters() if is_http else []
+        global_filters = (
+            typing.cast(Any, context.get_adapter()).get_global_filters() or []
+            if is_http
+            else []
+        )
         module_filters = self.extract_special_providers(
-            handler_module_class, ExceptionFilter, APP_FILTER
+            typing.cast(typing.Type, handler_module_class), ExceptionFilter, APP_FILTER
         )
         class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
         handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
@@ -104,4 +109,4 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
             if not isinstance(exception_filter, ExceptionFilter)
             else exception_filter
         )
-        return await instance.catch(exception, self.context)
+        return await instance.catch(exception, typing.cast(ArgumentHost, self.context))

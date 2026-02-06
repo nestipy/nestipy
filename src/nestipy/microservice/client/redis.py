@@ -46,6 +46,7 @@ class RedisClientProxy(ClientProxy):
                 if message["type"] == "message":
                     response = message["data"]
                     return response
+        return ""
 
     async def close(self):
         await self.pub_sub.aclose()

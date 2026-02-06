@@ -26,6 +26,8 @@ class IoSocketProxy:
 
     def apply_routes(self, modules: list[Union[Type, object]]):
         io_adapter = self.adapter.get_io_adapter()
+        if io_adapter is None:
+            return
         for module_ref in modules:
             gateways = self._get_module_provider_gateway(module_ref)
             for gateway in gateways:
@@ -81,7 +83,7 @@ class IoSocketProxy:
 
     def _create_io_handler(
         self,
-        module_ref: Type,
+        module_ref: Any,
         gateway: Type,
         method_name: str,
         namespace: str,
@@ -89,6 +91,8 @@ class IoSocketProxy:
     ) -> Callable[..., Any]:
         async def io_handler(event: Any, client: Any, data: Any):
             io_adapter = self.adapter.get_io_adapter()
+            if io_adapter is None:
+                return
             context_container = RequestContextContainer.get_instance()
             container = NestipyContainer.get_instance()
             gateway_method = getattr(gateway, method_name)

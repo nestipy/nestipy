@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from openapidocs.logs import logger
+from nestipy.common.logger import logger
 
 from .web import ensure_success, http_get
 

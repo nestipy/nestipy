@@ -1,5 +1,5 @@
-from openapi_docs.common import Serializer
-from openapi_docs.v3 import (
+from .openapi_docs.common import Serializer
+from .openapi_docs.v3 import (
     OpenAPI,
     Info,
     Response,
@@ -8,8 +8,8 @@ from openapi_docs.v3 import (
     SecuritySchemeType,
     MediaType,
 )
-from openapi_docs.v3 import PathItem, Operation, SecurityRequirement, ValueType
-from openapi_docs.v3 import (
+from .openapi_docs.v3 import PathItem, Operation, SecurityRequirement, ValueType
+from .openapi_docs.v3 import (
     Tag,
     HTTPSecurity,
     APIKeySecurity,

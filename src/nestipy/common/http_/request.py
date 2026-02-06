@@ -4,7 +4,7 @@ from typing import Callable, Optional, Any
 from urllib.parse import parse_qsl
 
 import ujson
-from multipart.multipart import parse_options_header
+from python_multipart.multipart import parse_options_header
 from starlette._utils import AwaitableOrContextManagerWrapper, AwaitableOrContextManager
 
 from .form_parsers import MultiPartParser, MultiPartException, FormParser, FormData
@@ -29,7 +29,17 @@ class ClientDisconnect(Exception):
 
 
 class Request:
+    """
+    HTTP Request wrapper.
+    Provides access to request components like headers, body, query parameters, and more.
+    """
     def __init__(self, scope: dict, receive: Callable, send: Callable) -> None:
+        """
+        Initialize the Request object.
+        :param scope: ASGI scope.
+        :param receive: ASGI receive callable.
+        :param send: ASGI send callable.
+        """
         self.scope = scope
         self.receive = receive
         self.send = send
@@ -51,6 +61,10 @@ class Request:
 
     @property
     def query_params(self) -> dict:
+        """
+        Get the query parameters.
+        :return: A dictionary of query parameters.
+        """
         if self._query_params is None:
             self._query_params = {
                 k.decode(): v.decode()
@@ -60,30 +74,54 @@ class Request:
 
     @property
     def path_params(self) -> dict[str, Any]:
+        """
+        Get the path parameters extracted from the URL.
+        :return: A dictionary of path parameters.
+        """
         return self.scope.get("path_params", {})
 
     @property
     def path(self) -> str:
+        """
+        Get the request path.
+        :return: The path as a string.
+        """
         if self._path is None:
             self._path = self.scope.get("raw_path").decode()
         return self._path
 
     @property
     def method(self) -> str:
+        """
+        Get the HTTP method (GET, POST, etc).
+        :return: The HTTP method as a string.
+        """
         if self._method is None:
             self._method = self.scope.get("method")
         return self._method
 
     @property
     def user(self) -> Any:
+        """
+        Get the authenticated user attached to the request.
+        :return: The user object, or None if not authenticated.
+        """
         return self._user
 
     @user.setter
     def user(self, u: Any):
+        """
+        Set the authenticated user for the request.
+        :param u: The user object.
+        """
         self._user = u
 
     @property
     def host(self) -> str:
+        """
+        Get the request host URL.
+        :return: The host URL string.
+        """
         if self._host is None:
             host: tuple[str, int] = self.scope.get("server")
             self._host = f"{self.scope.get('scheme')}://{host[0]}:{host[1]}"
@@ -91,6 +129,10 @@ class Request:
 
     @property
     def headers(self) -> dict:
+        """
+        Get the request headers.
+        :return: A dictionary of headers.
+        """
         if self._headers is None:
             self._headers = {}
             scope_headers: list[tuple[bytes, bytes]] = list(self.scope["headers"])
@@ -100,24 +142,36 @@ class Request:
 
     @property
     def client(self) -> list:
+        """
+        Get client information (host, port).
+        :return: Client info.
+        """
         if self._client is None:
             self._client = self.scope.get("client", ())
         return self._client
 
     @property
     def session(self) -> dict:
+        """
+        Get the session data.
+        :return: A dictionary of session data.
+        """
         if self._session is None:
             self._session = {}
         return self._session
 
     @session.setter
     def session(self, session: dict):
+        """
+        Set the session data.
+        :param session: The session dictionary.
+        """
         self._session = session
 
     async def stream(self) -> typing.AsyncGenerator[bytes, None]:
         """
-        Returns:
-            stream: A stream generator value form request
+        Read the request body as a stream of bytes.
+        :return: An async generator of bytes.
         """
         if self._body is not None:
             yield self._body

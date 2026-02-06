@@ -7,7 +7,7 @@ not included in documentation files.
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, ClassVar, Dict, Iterable, List, Type
+from typing import Any, Callable, ClassVar, Dict, Iterable, List, Type, cast
 from uuid import uuid4
 
 
@@ -140,8 +140,8 @@ def get_example_from_schema(schema) -> Any:
         return schema["example"]
 
     # does it have a type?
-    handlers_types: List[Type[SchemaExampleHandler]] = list(
-        get_subclasses(SchemaExampleHandler)
+    handlers_types: List[Type[SchemaExampleHandler]] = cast(
+        List[Type[SchemaExampleHandler]], list(get_subclasses(SchemaExampleHandler))
     )
 
     schema_type = schema.get("type")

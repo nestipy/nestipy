@@ -11,7 +11,7 @@ from nestipy.graphql.graphql_module import GraphqlOption
 
 
 class GraphqlASGI:
-    option: Optional[GraphqlOption] = None
+    option: Optional[GraphqlOption] = GraphqlOption()
 
     @abstractmethod
     def print_schema(self) -> str:
@@ -24,7 +24,7 @@ class GraphqlASGI:
         playground_path = os.path.join(
             os.path.dirname(__file__),
             "playground",
-            f"graphql-playground-{self.option.ide}.html",
+            f"graphql-playground-{self.option.ide if self.option else 'apollo'}.html",
         )
         file = await aiofiles.open(playground_path, "r")
         content = await file.read()
@@ -36,7 +36,7 @@ class GraphqlASGI:
         self._setup_request(scope, receive, send)
 
     async def modify_default_context(self, context: dict) -> dict:
-        if self.option.context_callback:
+        if self.option and self.option.context_callback:
             return await NestipyContainer.get_instance().resolve_factory(
                 self.option.context_callback,
                 inject=[],

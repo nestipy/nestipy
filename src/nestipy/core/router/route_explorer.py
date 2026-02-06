@@ -11,15 +11,28 @@ from .route_extractor import RouteParamsExtractor
 
 
 class RouteExplorer:
+    """
+    Utility class for exploring modules and controllers to find route definitions.
+    """
     _middleware_container: MiddlewareContainer
     _openapi_scanner = OpenApiExplorer()
 
     @classmethod
     def _normalize_path(cls, path: str) -> str:
+        """
+        Normalize a URI path by stripping leading and trailing slashes.
+        :param path: The path to normalize.
+        :return: Normalized path.
+        """
         return path.strip("/")
 
     @classmethod
     def explore(cls, module_ref: Union[Type, object]):
+        """
+        Explore a module for controllers and their routes.
+        :param module_ref: The module class or instance to explore.
+        :return: A list of dictionaries, each containing route information.
+        """
         controllers = Reflect.get_metadata(module_ref, ModuleMetadata.Controllers, [])
         routes = []
         ins = cls()
@@ -29,6 +42,11 @@ class RouteExplorer:
         return routes
 
     def explore_controller(self, controller: Type) -> List[dict]:
+        """
+        Explore a controller class for route methods decorated with @Route, @Get, etc.
+        :param controller: The controller class to explore.
+        :return: A list of route definitions.
+        """
         docs, schemas = self._openapi_scanner.explore(controller)
         routes = []
         # need to extract middleware, guards, exception_handler,

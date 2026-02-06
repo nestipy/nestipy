@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union, Type, Callable, Literal, Optional
+from typing import Union, Type, Callable, Literal, Optional, cast
 
 from nestipy.metadata import Reflect, RouteKey, ClassMetadata
 from .container import NestipyContainer
@@ -16,7 +16,15 @@ class MiddlewareRouteConfig:
 
 
 class MiddlewareProxy:
+    """
+    Proxy class for configuring middleware.
+    Allows specifying routes, methods, and excluded paths for a set of middleware functions or classes.
+    """
     def __init__(self, *middleware: Union[Type, Callable]):
+        """
+        Initialize the MiddlewareProxy with one or more middleware.
+        :param middleware: Middleware classes or functions.
+        """
         self.middlewares = list(middleware)
         self.middleware = None
         self.path_excludes = []
@@ -38,9 +46,9 @@ class MiddlewareProxy:
         return m
 
     def for_route(
-        self, route: Union[Type, str], method: list[HTTPMethod] = None
+        self, route: Union[Type, str], method: Optional[list[HTTPMethod]] = None
     ) -> "MiddlewareProxy":
-        self.route.method = method or ["ALL"]
+        self.route.method = method or cast(list[HTTPMethod], ["ALL"])
         if isinstance(route, str):
             self.route.url = route
         else:
@@ -60,11 +68,17 @@ class MiddlewareProxy:
 
 
 class MiddlewareContainer:
+    """
+    Singleton container for managing registered middleware configurations and instances.
+    """
     _instance: Optional["MiddlewareContainer"] = None
     _middlewares: list = []
     _middleware_instances: dict = {}
 
     def __new__(cls, *args, **kwargs):
+        """
+        Ensure singleton instance.
+        """
         if cls._instance is None:
             cls._instance = super(MiddlewareContainer, cls).__new__(
                 cls, *args, **kwargs
@@ -73,6 +87,9 @@ class MiddlewareContainer:
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
+        """
+        Get the singleton instance.
+        """
         return MiddlewareContainer(*args, **kwargs)
 
     def add_singleton(

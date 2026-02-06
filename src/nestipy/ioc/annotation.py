@@ -8,12 +8,22 @@ TypeAnnotatedCallable = Callable[
 
 
 class ParamAnnotation:
+    """
+    Metadata class for defining custom parameter annotations.
+    Used for extracting values from the execution context (e.g., @Body, @Param).
+    """
     def __init__(
         self,
         callback: TypeAnnotatedCallable,
-        key: str,
+        key: Union[str, None],
         token: Union[str | Any, None] = None,
     ):
+        """
+        Initialize ParamAnnotation.
+        :param callback: The function to call for resolving the dependency value.
+        :param key: The CtxDepKey identifier for the dependency type.
+        :param token: Optional token for specific items (e.g., parameter name).
+        """
         self.key: Union[str, None] = key
         self.token: Union[str | Any, None] = token
         self.callback = callback

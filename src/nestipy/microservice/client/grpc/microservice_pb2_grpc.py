@@ -122,7 +122,7 @@ class Grpc(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_stream(
+        return grpc.experimental.unary_stream(  # type: ignore
             request,
             target,
             "/ms.Grpc/Subscribe",
@@ -152,7 +152,7 @@ class Grpc(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_unary(
+        return grpc.experimental.unary_unary(  # type: ignore
             request,
             target,
             "/ms.Grpc/Unsubscribe",
@@ -182,7 +182,7 @@ class Grpc(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_unary(
+        return grpc.experimental.unary_unary(  # type: ignore
             request,
             target,
             "/ms.Grpc/SendData",

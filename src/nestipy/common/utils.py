@@ -4,13 +4,9 @@ def uniq(data: list) -> list:
 
 def uniq_list(data: list) -> list:
     """
-    Make a list to unique value
-    :return:
-    :rtype:
-    :param data:
-    :type data:
-    :return: []
-    :rtype: []
+    Remove duplicates from a list while preserving order.
+    :param data: Input list with potential duplicates.
+    :return: A list with unique elements in the original order.
     """
     uniq_data = []
     for d in data:

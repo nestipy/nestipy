@@ -13,10 +13,12 @@ from .http_adapter import HttpAdapter
 
 
 class FastApiAdapter(HttpAdapter):
+    """
+    HTTP adapter for FastAPI.
+    """
     def __init__(self):
         self.instance = FastAPI(
-            on_startup=[self.on_startup],
-            on_shutdown=[self.on_shutdown],
+            lifespan=self.lifespan,
             openapi_url=None,
         )
         self.instance.redirect_slashes = False
@@ -25,7 +27,8 @@ class FastApiAdapter(HttpAdapter):
         return self.instance
 
     def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
-        return f"/{prefix.strip('/')}" + "/{" + f"{name}:path" + "}"
+        prefix = prefix.strip("/")
+        return ("/" + prefix).rstrip("/") + "/{" + f"{name}:path" + "}"
 
     def use(
         self, callback: CallableHandler, metadata: typing.Optional[dict] = None

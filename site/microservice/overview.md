@@ -9,7 +9,9 @@ To instantiate a microservice, use the `create_microservice() `method of the `Ne
 ```python
 import random
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
+
 from app_module import AppModule
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport
@@ -24,10 +26,14 @@ app = NestipyFactory.create_microservice(
 )
 
 if __name__ == '__main__':
-    uvicorn.run(
-        'main:app', host="0.0.0.0", port=random.randint(5000, 7000), reload=True, log_level="critical",
-        lifespan="on"
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
+        port=random.randint(5000, 7000),
+        interface=Interfaces.ASGI,
+        reload=True,
     )
+    granian.serve()
 
 ```
 
@@ -236,7 +242,9 @@ Nestipy support hybrid application. To achieve this, we need to use `connect_mic
 ```python
 
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
+
 from app_module import AppModule
 
 from nestipy.core import NestipyFactory
@@ -254,8 +262,14 @@ app = NestipyFactory.connect_microservice(
 app.start_all_microservices()
 
 if __name__ == '__main__':
-    uvicorn.run(
-        'main:app', host="0.0.0.0", port=8000, reload=True)
+    granian = Granian(
+        target="main:app",
+        address="0.0.0.0",
+        port=8000,
+        interface=Interfaces.ASGI,
+        reload=True,
+    )
+    granian.serve()
 ```
 
 We need to call `app.start_all_microservice()` to prevent HTTP server for starting all microservices servers after

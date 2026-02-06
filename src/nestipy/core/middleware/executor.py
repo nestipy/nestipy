@@ -11,6 +11,11 @@ from nestipy.types_ import HTTPMethod
 
 
 def uniq_middleware_list(data: list[MiddlewareProxy]) -> list:
+    """
+    Remove duplicate middleware from the list, keeping only the first occurrence.
+    :param data: List of MiddlewareProxy objects.
+    :return: List of unique MiddlewareProxy objects.
+    """
     uniq_middleware: list = []
     uniq_data: list = []
     for d in data:
@@ -21,7 +26,17 @@ def uniq_middleware_list(data: list[MiddlewareProxy]) -> list:
 
 
 class MiddlewareExecutor:
+    """
+    Class responsible for executing the middleware chain for a given request.
+    Handles matching routes, excluding paths, and recursive execution of middleware functions.
+    """
     def __init__(self, req: Request, res: Response, next_fn: Callable):
+        """
+        Initialize the MiddlewareExecutor.
+        :param req: The current Request object.
+        :param res: The current Response object.
+        :param next_fn: The next function to call after the middleware chain (usually the route handler).
+        """
         self.container = MiddlewareContainer.get_instance()
         # load all middleware inside a container
         self._middlewares: list[MiddlewareProxy] = self.container.all()
@@ -30,6 +45,11 @@ class MiddlewareExecutor:
         self._next_fn = next_fn
 
     async def execute(self):
+        """
+        Match and execute the middleware chain.
+        If no middleware matches, it immediately calls the next_fn.
+        :return: The result of the middleware chain execution.
+        """
         middleware_to_apply = []
         for proxy in self._middlewares:
             if (

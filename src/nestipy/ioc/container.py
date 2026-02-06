@@ -1,4 +1,5 @@
 import inspect
+import sys
 from functools import lru_cache
 from typing import (
     ForwardRef,
@@ -57,6 +58,18 @@ class NestipyContainer:
         Returns the singleton instance of the container.
         """
         return NestipyContainer(*args, **kwargs)
+
+    @classmethod
+    def clear(cls):
+        """
+        Resets the singleton instance and all registered services.
+        Used primarily for testing.
+        """
+        cls._instance = None
+        cls._services = {}
+        cls._global_service_instances = {}
+        cls._singleton_instances = {}
+        cls._singleton_classes = set()
 
     def add_transient(self, service: Type):
         """
@@ -217,7 +230,7 @@ class NestipyContainer:
         else:
             return None
 
-    async def _check_exist_singleton(self, key: Union[Type, str]):
+    async def _check_exist_singleton(self, key: Union[Type, str, object]):
         """
         Checks if a singleton instance exists for a given service key.
 
@@ -247,7 +260,7 @@ class NestipyContainer:
         return None
 
     def _check_service(
-        self, key: Union[Type, str], origin: Optional[list] = None
+        self, key: Union[Type, str, object], origin: Optional[set] = None
     ) -> tuple:
         """
         Checks if a service is registered and detects circular dependencies.
@@ -268,8 +281,8 @@ class NestipyContainer:
 
     async def _resolve_property(
         self,
-        key: Union[Type, str],
-        origin: Optional[list] = None,
+        key: Union[Type, str, object],
+        origin: Optional[set] = None,
         disable_scope: bool = False,
     ):
         """
@@ -302,8 +315,12 @@ class NestipyContainer:
                     key = dep_key.metadata.token or annotation
                     # A modifier
                     if isinstance(key, ForwardRef):
-                        key = eval(key.__forward_arg__, globals(), locals())
-                    dependency = await self.get(key)
+                        module = sys.modules.get(service.__module__)
+                        global_ns = vars(module) if module else globals()
+                        key = eval(key.__forward_arg__, global_ns, locals())
+                    dependency = await self.get(
+                        key, origin=origin, disable_scope=disable_scope
+                    )
                     setattr(service, name, dependency)
                 else:
                     _name: str = (
@@ -316,12 +333,16 @@ class NestipyContainer:
                     )
         origin.remove(service)
         self._services[key] = service
+        """
+        Update the service in the container after resolving its properties.
+        """
 
     async def _get_method_dependency(
         self,
         method_to_resolve: Callable,
         search_scope: list,
         disable_scope: bool = False,
+        origin: Optional[set] = None,
     ):
         """
         Resolves dependencies for a method's parameters.
@@ -348,7 +369,11 @@ class NestipyContainer:
                     or annotation in search_scope
                     or disable_scope
                 ):
-                    dependency = await self.get(dep_key.metadata.token or annotation)
+                    dependency = await self.get(
+                        dep_key.metadata.token or annotation,
+                        origin=origin,
+                        disable_scope=disable_scope,
+                    )
                     args[name] = dependency
                 else:
                     _name: str = (
@@ -363,6 +388,12 @@ class NestipyContainer:
 
     @classmethod
     async def _call_method(cls, method: Callable, args: dict):
+        """
+        Call a method (sync or async) with the provided arguments.
+        :param method: The method to call.
+        :param args: The arguments to pass.
+        :return: The result of the call.
+        """
         if inspect.iscoroutinefunction(method):
             return await method(**args)
         return method(**args)
@@ -388,6 +419,7 @@ class NestipyContainer:
             method_to_resolve=factory,
             search_scope=search_scope_by_inject,
             disable_scope=disable_scope,
+            origin=None,  # Or should we pass something here?
         )
         return await self._call_method(method=factory, args=args)
 
@@ -395,7 +427,7 @@ class NestipyContainer:
         self,
         key: Union[Type, str, object],
         method: str = _INIT,
-        origin: Optional[list] = None,
+        origin: Optional[set] = None,
         disable_scope: bool = False,
     ):
         service, origin = self._check_service(key, origin)
@@ -405,7 +437,7 @@ class NestipyContainer:
         if not method_to_resolve:
             raise Exception(f"Method {method} not found in {service.__name__} service ")
         args = await self._get_method_dependency(
-            method_to_resolve, search_scope, disable_scope=disable_scope
+            method_to_resolve, search_scope, disable_scope=disable_scope, origin=origin
         )
         if method == _INIT:
             result = service(**args)
@@ -422,10 +454,10 @@ class NestipyContainer:
 
     async def get(
         self,
-        key: Union[Type, str],
+        key: Union[Type, str, object],
         method: str = _INIT,
-        origin: Optional[list] = None,
-        disable_scope: Optional[bool] = False,
+        origin: Optional[set] = None,
+        disable_scope: bool = False,
     ) -> Union[object, Awaitable[object]]:
         """
         Retrieves an instance of a service, creating it if necessary.

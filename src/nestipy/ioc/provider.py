@@ -1,4 +1,4 @@
-from typing import Union, Awaitable, Any, Callable, Type
+from typing import Union, Awaitable, Any, Callable, Type, Optional
 
 from .container import NestipyContainer
 
@@ -8,9 +8,9 @@ class ModuleProviderDict:
     imports: list = []
     token: Union[str, Type]
     value: Any = None
-    factory: Callable[..., Union[Awaitable, Any]] = None
-    existing: Union[Type, str] = None
-    use_class: Union[Type] = None
+    factory: Optional[Callable[..., Union[Awaitable, Any]]] = None
+    existing: Optional[Union[Type, str]] = None
+    use_class: Optional[Type] = None
 
     def __init__(
         self,

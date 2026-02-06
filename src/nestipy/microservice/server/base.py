@@ -59,32 +59,35 @@ class MicroServiceServer(ABC):
             if pattern == request.pattern:
                 # resolve dependencies
                 response = await callback(self, request)
-                rpc_response = RpcResponse(
-                    pattern=request.response_topic, data=response, status="success"
-                )
-                await slave.send_response(
-                    f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
-                    await self._pub_sub.option.serializer.serialize(
-                        asdict(rpc_response)
-                    ),
-                )
+                if request.response_topic:
+                    rpc_response = RpcResponse(
+                        pattern=request.response_topic, data=response, status="success"
+                    )
+                    await slave.send_response(
+                        f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
+                        await self._pub_sub.option.serializer.serialize(
+                            asdict(rpc_response)
+                        ),
+                    )
                 return
-        rpc_response: Any = await self._pub_sub.option.serializer.serialize(
-            asdict(
-                RpcResponse(
-                    pattern=request.pattern,
-                    data=None,
-                    status="error",
-                    exception=RpcException(
-                        status_code=RPCErrorCode.NOT_FOUND,
-                        message=RPCErrorMessage.NOT_FOUND,
-                    ),
+        if request.response_topic:
+            rpc_response_data: Any = await self._pub_sub.option.serializer.serialize(
+                asdict(
+                    RpcResponse(
+                        pattern=request.pattern,
+                        data=None,
+                        status="error",
+                        exception=RpcException(
+                            status_code=RPCErrorCode.NOT_FOUND,
+                            message=RPCErrorMessage.NOT_FOUND,
+                        ),
+                    )
                 )
             )
-        )
-        await slave.send_response(
-            f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}", rpc_response
-        )
+            await slave.send_response(
+                f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
+                rpc_response_data,
+            )
         await slave.close()
 
     async def handle_event(self, request: RpcRequest):

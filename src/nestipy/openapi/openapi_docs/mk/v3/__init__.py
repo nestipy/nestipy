@@ -10,20 +10,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Union
 
-from openapidocs.logs import logger
-from openapidocs.mk import read_dict, sort_dict
-from openapidocs.mk.common import (
+from nestipy.common.logger import logger
+from nestipy.openapi.openapi_docs.mk import read_dict, sort_dict
+from nestipy.openapi.openapi_docs.mk.common import (
     DocumentsWriter,
     get_ref_type_name,
     is_array_schema,
     is_object_schema,
     is_reference,
 )
-from openapidocs.mk.contents import ContentWriter, FormContentWriter, JSONContentWriter
-from openapidocs.mk.jinja import Jinja2DocumentsWriter, OutputStyle
-from openapidocs.mk.texts import EnglishTexts, Texts
-from openapidocs.mk.v3.examples import get_example_from_schema
-from openapidocs.utils.source import read_from_source
+from nestipy.openapi.openapi_docs.mk.contents import ContentWriter, FormContentWriter, JSONContentWriter
+from nestipy.openapi.openapi_docs.mk.jinja import Jinja2DocumentsWriter, OutputStyle
+from nestipy.openapi.openapi_docs.mk.texts import EnglishTexts, Texts
+from nestipy.openapi.openapi_docs.mk.v3.examples import get_example_from_schema
+from nestipy.openapi.openapi_docs.utils.source import read_from_source
 
 
 def _can_simplify_json(content_type) -> bool:

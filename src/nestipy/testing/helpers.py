@@ -19,7 +19,7 @@ def _get_tuple(value: Union[List, Tuple[str, int]]) -> tuple:
     if isinstance(value, tuple):
         return value
     assert len(value) == 2
-    return tuple(value)  # type: ignore
+    return tuple(value)
 
 
 HeadersType = Union[None, Sequence[Tuple[bytes, bytes]], Dict[str, str]]
@@ -71,7 +71,8 @@ def get_example_scope(
 
     if isinstance(extra_headers, dict):
         extra_headers = [
-            (key.encode(), value.encode()) for key, value in extra_headers.items()
+            (str(key).encode(), str(value).encode())
+            for key, value in extra_headers.items()
         ]
 
     query_string: bytes = b""
@@ -90,12 +91,20 @@ def get_example_scope(
     if cookies:
         if isinstance(cookies, list):
             cookies_headers = [
-                (b"cookie", quote(key).encode() + b"=" + quote(value).encode())
+                (
+                    b"cookie",
+                    quote(key if isinstance(key, str) else key.decode()).encode()
+                    + b"="
+                    + quote(value if isinstance(value, str) else value.decode()).encode(),
+                )
                 for key, value in cookies
             ]
         elif isinstance(cookies, dict):
             cookies_headers = [
-                (b"cookie", quote(key).encode() + b"=" + quote(value).encode())
+                (
+                    b"cookie",
+                    quote(str(key)).encode() + b"=" + quote(str(value)).encode(),
+                )
                 for key, value in cookies.items()
             ]
 

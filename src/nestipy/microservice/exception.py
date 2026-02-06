@@ -77,10 +77,13 @@ class RpcException(HttpException):
 
     @classmethod
     def from_json(cls, data: dict):
-        return cls(data.get("status_code"), data.get("message"))
+        return cls(
+            data.get("status_code", RPCErrorCode.INTERNAL),
+            data.get("message", RPCErrorMessage.INTERNAL),
+        )
 
 
 class RpcExceptionFilter(ExceptionFilter, ABC):
     @abstractmethod
-    async def catch(self, exception: "RpcException", host: "ArgumentHost") -> Any:
+    async def catch(self, exception: Any, host: "ArgumentHost") -> Any:
         pass

@@ -150,7 +150,8 @@ class GraphqlProxy:
                         key.decode(): value.decode()
                         for key, value in message["headers"]
                     }
-                    res.headers(headers).status(message["status"])
+                    res.headers(headers)
+                    res.status(message["status"] or 200)
 
                 elif message["type"] == "http.response.body":
                     body = message.get("body", b"")
