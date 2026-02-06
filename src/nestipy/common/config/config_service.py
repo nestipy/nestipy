@@ -11,7 +11,7 @@ from .config_builder import CONFIG_OPTION, ConfigOption
 @Injectable()
 class ConfigService:
     options: Annotated[ConfigOption, Inject(CONFIG_OPTION)]
-    env: dict = []
+    env: dict[str, str] = {}
 
     def __init__(self):
         if self.options.ignore_env_file:
