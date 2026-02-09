@@ -60,6 +60,7 @@ class NestipyConfig:
     profile: bool = False
     dependency_graph_debug: bool = False
     dependency_graph_limit: int = 200
+    dependency_graph_json_path: Optional[str] = None
 
 
 class NestipyApplication:
@@ -81,6 +82,7 @@ class NestipyApplication:
     _profile: bool = False
     _dependency_graph_debug: bool = False
     _dependency_graph_limit: int = 200
+    _dependency_graph_json_path: Optional[str] = None
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -101,6 +103,7 @@ class NestipyApplication:
         self._profile = config.profile
         self._dependency_graph_debug = config.dependency_graph_debug
         self._dependency_graph_limit = config.dependency_graph_limit
+        self._dependency_graph_json_path = config.dependency_graph_json_path
         self.instance_loader.enable_profile(self._profile)
         self.on_startup(self._startup)
         self.on_shutdown(self._destroy)
@@ -204,6 +207,12 @@ class NestipyApplication:
                         )
                         break
                     logger.info("[DEPENDENCY GRAPH] %s -> %s", svc, deps)
+            if self._dependency_graph_json_path:
+                import json
+
+                graph = NestipyContainer.get_instance().get_dependency_graph()
+                with open(self._dependency_graph_json_path, "w") as f:
+                    json.dump(graph, f, indent=2)
             if self._profile:
                 di_elapsed = (time.perf_counter() - di_start) * 1000
             # create and register route to platform adapter

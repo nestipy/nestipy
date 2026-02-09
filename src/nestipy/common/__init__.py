@@ -39,6 +39,7 @@ from .pipes import (
 )
 from .logger import logger, console
 from .constant import NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON, SCOPE_TRANSIENT, SCOPE_REQUEST
+from .openapi_error import OpenApiErrorResponse, OpenApiErrorDetail
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
 from .middleware import cookie_session, SessionCookieOption, SessionStore
 from .template import Render, TemplateEngine
@@ -99,4 +100,6 @@ __all__ = [
     "SCOPE_SINGLETON",
     "SCOPE_TRANSIENT",
     "SCOPE_REQUEST",
+    "OpenApiErrorResponse",
+    "OpenApiErrorDetail",
 ]

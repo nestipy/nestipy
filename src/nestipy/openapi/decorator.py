@@ -135,6 +135,22 @@ def ApiResponse(
     )
     return _ApiResponse(status, response_body)
 
+def ApiBadRequestResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    if schema is None:
+        try:
+            from nestipy.common.openapi_error import OpenApiErrorResponse
+
+            schema = OpenApiErrorResponse
+        except Exception:
+            schema = None
+    return ApiResponse(
+        status=400, description=description, response=schema, example=example
+    )
+
 
 def _ApiResponse(status: int, response: Response):
     return SetMetadata(
@@ -301,16 +317,6 @@ def ApiCookie(name: str, description: Optional[str] = None, required: bool = Fal
             required=required,
         )
     )
-
-def ApiBadRequestResponse(
-    schema: Optional[Union[BaseModel, Type]] = None,
-    description: Optional[str] = None,
-    example: Any = None,
-):
-    return ApiResponse(
-        status=400, description=description, response=schema, example=example
-    )
-
 
 def ApiUnauthorizedResponse(
     schema: Optional[Union[BaseModel, Type]] = None,

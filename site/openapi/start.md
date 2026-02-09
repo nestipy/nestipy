@@ -12,7 +12,19 @@ from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import Request, Response
 from nestipy.ioc import Req, Res, Body
-from nestipy.openapi import ApiTags, ApiOkResponse, ApiNotFoundResponse, ApiCreatedResponse, ApiBearerAuth, ApiBody, ApiExclude
+from nestipy.openapi import (
+    ApiTags,
+    ApiOkResponse,
+    ApiNotFoundResponse,
+    ApiCreatedResponse,
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiBody,
+    ApiQuery,
+    ApiHeader,
+    ApiOperation,
+    ApiExclude,
+)
 
 
 @dataclasses.dataclass
@@ -26,6 +38,7 @@ class TestBody:
 @ApiNotFoundResponse()
 class AppController:
 
+    @ApiOperation(summary="Render index", description="Example HTML response")
     @ApiExclude() # this will hide it in swagger ui.
     @Render('index.html')
     @Get()
@@ -35,9 +48,12 @@ class AppController:
 
     @Post()
     @ApiBody(TestBody)
+    @ApiQuery("trace", required=False)
+    @ApiHeader("x-trace-id", required=False)
     # @ApiBody(TestBody, 'application/json')
     @ApiBearerAuth()  # Enable security bearer
     @ApiCreatedResponse()
+    @ApiBadRequestResponse()
     async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body()]):
         raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
 ```
