@@ -17,6 +17,7 @@ from nestipy.common.utils import snakecase_to_camelcase
 from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards import GuardProcessor
 from nestipy.core.interceptor import RequestInterceptor
+from nestipy.core.pipes.processor import PipeProcessor
 from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
 from nestipy.ioc import NestipyContainer, NestipyIContainer
@@ -174,6 +175,12 @@ class RouterProxy:
                             HttpStatusMessages.UNAUTHORIZED,
                             details=f"Not authorized from guard {passed[1]}",
                         )
+
+                    pipe_processor: PipeProcessor = typing.cast(
+                        PipeProcessor, await container.get(PipeProcessor)
+                    )
+                    pipes = await pipe_processor.get_pipes(execution_context)
+                    execution_context.set_pipes(pipes)
 
                     interceptor: RequestInterceptor = typing.cast(
                         RequestInterceptor, await container.get(RequestInterceptor)

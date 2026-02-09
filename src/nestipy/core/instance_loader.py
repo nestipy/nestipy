@@ -10,6 +10,12 @@ from nestipy.dynamic_module.module.interface import NestipyModule
 from nestipy.ioc import NestipyContainer, ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.core.providers.discover import DiscoverService
+from nestipy.common.constant import (
+    NESTIPY_SCOPE_ATTR,
+    SCOPE_REQUEST,
+    SCOPE_SINGLETON,
+    SCOPE_TRANSIENT,
+)
 from .on_application_bootstrap import OnApplicationBootstrap
 from .on_application_shutdown import OnApplicationShutdown
 from .on_destroy import OnDestroy
@@ -85,6 +91,9 @@ class InstanceLoader:
                 module = module.module
             if module in self._module_instances:
                 continue
+            container = NestipyContainer.get_instance()
+            if module not in container.get_all_services():
+                container.add_singleton(module)
             module_start = time.perf_counter() if self._profile_enabled else None
             providers = await self._create_providers(module)
             self.discover.add_provider(*providers)
@@ -130,9 +139,18 @@ class InstanceLoader:
 
     async def _create_providers(self, module: Type) -> list:
         provider_instance: list = []
+        container = NestipyContainer.get_instance()
         for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
             if isinstance(provider, ModuleProviderDict):
                 continue
+            if provider not in container.get_all_services():
+                scope = getattr(provider, NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON)
+                if scope == SCOPE_TRANSIENT:
+                    container.add_transient(provider)
+                elif scope == SCOPE_REQUEST:
+                    container.add_request_scoped(provider)
+                else:
+                    container.add_singleton(provider)
             start = time.perf_counter() if self._profile_enabled else None
             ins = await self.create_instance(provider)
             if self._profile_enabled and start is not None:
@@ -143,7 +161,10 @@ class InstanceLoader:
 
     async def _create_controllers(self, module: Type) -> list:
         controller_instance = []
+        container = NestipyContainer.get_instance()
         for controller in Reflect.get_metadata(module, ModuleMetadata.Controllers, []):
+            if controller not in container.get_all_services():
+                container.add_singleton(controller)
             start = time.perf_counter() if self._profile_enabled else None
             ins = await self.create_instance(controller)
             if self._profile_enabled and start is not None:

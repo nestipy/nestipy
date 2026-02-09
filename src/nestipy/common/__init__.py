@@ -24,7 +24,9 @@ from .exception import (
 from .guards import CanActivate, UseGuards
 from .http_ import Request, Response, Websocket, UploadFile
 from .interceptor import NestipyInterceptor, UseInterceptors
+from .pipes import PipeTransform, PipeArgumentMetadata, UsePipes
 from .logger import logger, console
+from .constant import NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON, SCOPE_TRANSIENT, SCOPE_REQUEST
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
 from .middleware import cookie_session, SessionCookieOption, SessionStore
 from .template import Render, TemplateEngine
@@ -56,6 +58,9 @@ __all__ = [
     "UploadFile",
     "NestipyInterceptor",
     "UseInterceptors",
+    "PipeTransform",
+    "PipeArgumentMetadata",
+    "UsePipes",
     "cors",
     "helmet",
     "NestipyMiddleware",
@@ -70,4 +75,8 @@ __all__ = [
     "cookie_session",
     "SessionStore",
     "SessionCookieOption",
+    "NESTIPY_SCOPE_ATTR",
+    "SCOPE_SINGLETON",
+    "SCOPE_TRANSIENT",
+    "SCOPE_REQUEST",
 ]

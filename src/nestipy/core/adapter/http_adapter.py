@@ -35,6 +35,7 @@ class HttpAdapter(ABC):
     _global_interceptors: list = []
     _global_filters: list = []
     _global_guards: list = []
+    _global_pipes: list = []
 
     startup_hooks: list = []
     shutdown_hook: list = []
@@ -241,6 +242,12 @@ class HttpAdapter(ABC):
 
     def get_global_guards(self):
         return self._global_guards
+
+    def add_global_pipes(self, *pipes: Union[Type, object]):
+        self._global_pipes = self._global_pipes + list(pipes)
+
+    def get_global_pipes(self):
+        return self._global_pipes
 
     def get_template_engine(self) -> TemplateEngine:
         return self.get_state(TemplateKey.MetaEngine)

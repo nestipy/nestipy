@@ -3,7 +3,9 @@ from typing import Annotated
 import pytest
 
 from nestipy.common import Injectable
-from nestipy.ioc import NestipyContainer, Inject
+from nestipy.ioc import NestipyContainer, Inject, RequestContextContainer
+from nestipy.core import ExecutionContext
+from nestipy.common.http_ import Request, Response
 
 
 @pytest.fixture
@@ -205,3 +207,45 @@ async def test_check_service(container):
     service, origin = container._check_service(ServiceA)
     assert service is ServiceA, "ServiceA should be correctly checked and returned."
     assert origin == set(), "Origin should be empty for first service resolution."
+
+
+@pytest.mark.asyncio
+async def test_request_scoped_service(container):
+    class RequestScopedService:
+        pass
+
+    container.add_request_scoped(RequestScopedService)
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(_msg):
+        return None
+
+    scope = {
+        "type": "http",
+        "query_string": b"",
+        "headers": [],
+        "raw_path": b"/",
+        "method": "GET",
+        "server": ("localhost", 80),
+        "scheme": "http",
+    }
+
+    req = Request(scope, receive, send)
+    res = Response()
+    ctx = ExecutionContext(None, None, None, None, req, res)
+
+    RequestContextContainer.set_execution_context(ctx)
+    instance1 = await container.get(RequestScopedService)
+    instance2 = await container.get(RequestScopedService)
+    assert instance1 is instance2, "Request-scoped should be cached per request."
+
+    RequestContextContainer.get_instance().destroy()
+
+    req2 = Request(scope, receive, send)
+    res2 = Response()
+    ctx2 = ExecutionContext(None, None, None, None, req2, res2)
+    RequestContextContainer.set_execution_context(ctx2)
+    instance3 = await container.get(RequestScopedService)
+    assert instance1 is not instance3, "Request-scoped should not leak across requests."

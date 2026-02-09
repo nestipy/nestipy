@@ -4,6 +4,7 @@ from typing import Type, Callable, Union, Optional
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer, ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
+from nestipy.common.constant import NESTIPY_SCOPE_ATTR
 
 
 class Scope(enum.Enum):
@@ -37,6 +38,7 @@ class Injectable:
         :param cls: The class to be marked as injectable.
         :return: The decorated class.
         """
+        setattr(cls, NESTIPY_SCOPE_ATTR, self.scope.value)
         match self.scope:
             case Scope.Transient:
                 self.container.add_transient(cls)

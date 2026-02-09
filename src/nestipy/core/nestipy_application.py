@@ -23,6 +23,12 @@ from nestipy.ioc import (
     NestipyContainer,
     ModuleProviderDict,
 )
+from nestipy.common.constant import (
+    NESTIPY_SCOPE_ATTR,
+    SCOPE_REQUEST,
+    SCOPE_SINGLETON,
+    SCOPE_TRANSIENT,
+)
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
 from .adapter.fastapi_adapter import FastApiAdapter
@@ -359,12 +365,30 @@ class NestipyApplication:
         self._http_adapter.add_global_guards(*guards)
         # self._add_root_module_provider(*guards)
 
+    def use_global_pipes(self, *pipes: Union[Type, object]):
+        self._http_adapter.add_global_pipes(*pipes)
+        self._add_root_module_provider(
+            *typing.cast(tuple[Union[ModuleProviderDict, Type, Callable]], pipes)
+        )
+
     def use_global_prefix(self, prefix: str = ""):
         self._prefix = prefix or ""
 
     def _add_root_module_provider(
         self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
     ):
+        container = NestipyContainer.get_instance()
+        for provider in providers:
+            if isinstance(provider, ModuleProviderDict):
+                continue
+            if isinstance(provider, type) and provider not in container.get_all_services():
+                scope = getattr(provider, NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON)
+                if scope == SCOPE_TRANSIENT:
+                    container.add_transient(provider)
+                elif scope == SCOPE_REQUEST:
+                    container.add_request_scoped(provider)
+                else:
+                    container.add_singleton(provider)
         root_providers: list = Reflect.get_metadata(
             self._root_module, ModuleMetadata.Providers, []
         )

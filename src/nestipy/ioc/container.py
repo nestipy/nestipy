@@ -19,6 +19,13 @@ from nestipy.metadata import (
     ProviderToken,
     Reflect,
 )
+from nestipy.common.pipes import PipeTransform, PipeArgumentMetadata
+from nestipy.common.constant import (
+    NESTIPY_SCOPE_ATTR,
+    SCOPE_REQUEST,
+    SCOPE_SINGLETON,
+    SCOPE_TRANSIENT,
+)
 from .context_container import RequestContextContainer
 from .dependency import TypeAnnotated
 from .helper import ContainerHelper
@@ -281,7 +288,16 @@ class NestipyContainer:
         :raises ValueError: If the service is not found or circular dependency is detected.
         """
         if key not in self._services:
-            raise ValueError(f"Service {key} not found")
+            if inspect.isclass(key) and hasattr(key, NESTIPY_SCOPE_ATTR):
+                scope = getattr(key, NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON)
+                if scope == SCOPE_TRANSIENT:
+                    self.add_transient(key)
+                elif scope == SCOPE_REQUEST:
+                    self.add_request_scoped(key)
+                else:
+                    self.add_singleton(key)
+            else:
+                raise ValueError(f"Service {key} not found")
         service = self._services[key]
         if service in (origin or []):
             raise ValueError(
@@ -364,6 +380,9 @@ class NestipyContainer:
         """
         params = inspect.signature(method_to_resolve).parameters
         args = {}
+        context_container = RequestContextContainer.get_instance()
+        execution_context = context_container.execution_context
+        pipes = execution_context.get_pipes() if execution_context else []
         for name, param in params.items():
             if name != "self" and param.annotation is not inspect.Parameter.empty:
                 annotation, dep_key = ContainerHelper.get_type_from_annotation(
@@ -373,6 +392,19 @@ class NestipyContainer:
                     dependency = await self._resolve_contextual_service(
                         name, dep_key, annotation
                     )
+                    if self._can_apply_pipes(dep_key.metadata.key):
+                        metadata = PipeArgumentMetadata(
+                            type=self._pipe_type_from_key(dep_key.metadata.key),
+                            metatype=annotation if isinstance(annotation, type) else None,
+                            data=dep_key.metadata.token or name,
+                        )
+                        dependency = await self._apply_pipes(
+                            dependency,
+                            pipes,
+                            metadata,
+                            origin=origin,
+                            disable_scope=disable_scope,
+                        )
                     args[name] = dependency
                 elif (
                     dep_key.metadata.token in search_scope
@@ -395,6 +427,75 @@ class NestipyContainer:
                         f"Service {_name} not found in scope {search_scope}"
                     )
         return args
+
+    @staticmethod
+    def _pipe_type_from_key(key: str) -> str:
+        mapping = {
+            CtxDepKey.Body: "body",
+            CtxDepKey.Query: "query",
+            CtxDepKey.Queries: "query",
+            CtxDepKey.Param: "param",
+            CtxDepKey.Params: "param",
+            CtxDepKey.Header: "header",
+            CtxDepKey.Headers: "header",
+            CtxDepKey.Cookie: "cookie",
+            CtxDepKey.Cookies: "cookie",
+            CtxDepKey.Session: "session",
+            CtxDepKey.Sessions: "session",
+            CtxDepKey.Args: "args",
+            CtxDepKey.Arg: "args",
+        }
+        return mapping.get(key, "custom")
+
+    @staticmethod
+    def _can_apply_pipes(key: str) -> bool:
+        return key in {
+            CtxDepKey.Body,
+            CtxDepKey.Query,
+            CtxDepKey.Queries,
+            CtxDepKey.Param,
+            CtxDepKey.Params,
+            CtxDepKey.Header,
+            CtxDepKey.Headers,
+            CtxDepKey.Cookie,
+            CtxDepKey.Cookies,
+            CtxDepKey.Session,
+            CtxDepKey.Sessions,
+            CtxDepKey.Args,
+            CtxDepKey.Arg,
+        }
+
+    async def _apply_pipes(
+        self,
+        value: Any,
+        pipes: list,
+        metadata: PipeArgumentMetadata,
+        origin: Optional[set] = None,
+        disable_scope: bool = False,
+    ) -> Any:
+        if not pipes:
+            return value
+        current = value
+        for pipe in pipes:
+            instance = pipe
+            if inspect.isclass(pipe) and issubclass(pipe, PipeTransform):
+                if pipe in self._services:
+                    instance = await self.get(
+                        pipe, origin=origin, disable_scope=disable_scope
+                    )
+                else:
+                    instance = pipe()
+            if hasattr(instance, "transform"):
+                transform = getattr(instance, "transform")
+                if inspect.iscoroutinefunction(transform):
+                    current = await transform(current, metadata)
+                else:
+                    current = transform(current, metadata)
+            else:
+                raise ValueError(
+                    f"Pipe {pipe} does not implement transform(value, metadata)"
+                )
+        return current
 
     @classmethod
     async def _call_method(cls, method: Callable, args: dict):

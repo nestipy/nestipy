@@ -104,3 +104,9 @@ class ExecutionContext(ArgumentHost):
         :return: The ExecutionContext instance.
         """
         return self
+
+    def set_pipes(self, pipes: list) -> None:
+        self._pipes = pipes
+
+    def get_pipes(self) -> list:
+        return getattr(self, "_pipes", [])
