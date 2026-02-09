@@ -13,6 +13,9 @@ from .openapi_docs.v3 import (
     ParameterLocation,
     Header,
     Reference,
+    ExternalDocs,
+    Server,
+    Callback,
 )
 from .openapi_docs.v3 import SecurityRequirement, MediaType, Schema
 
@@ -186,6 +189,77 @@ def ApiId(api_id: str):
     return SetMetadata(key="__openapi__operation_id", data=api_id)
 
 
+def ApiSummary(summary: str):
+    return SetMetadata(key="__openapi__summary", data=summary)
+
+
+def ApiDescription(description: str):
+    return SetMetadata(key="__openapi__description", data=description)
+
+
+def ApiDeprecated(deprecated: bool = True):
+    return SetMetadata(key="__openapi__deprecated", data=deprecated)
+
+
+def ApiOperation(
+    summary: Optional[str] = None,
+    description: Optional[str] = None,
+    deprecated: Optional[bool] = None,
+    operation_id: Optional[str] = None,
+):
+    decorators: list = []
+    if summary is not None:
+        decorators.append(ApiSummary(summary))
+    if description is not None:
+        decorators.append(ApiDescription(description))
+    if deprecated is not None:
+        decorators.append(ApiDeprecated(deprecated))
+    if operation_id is not None:
+        decorators.append(ApiId(operation_id))
+
+    def wrapper(cls: Union[Type, Callable]):
+        for deco in decorators:
+            cls = deco(cls)
+        return cls
+
+    return wrapper
+
+
+def ApiExternalDocs(url: str, description: Optional[str] = None):
+    return SetMetadata(
+        key="__openapi__external_docs", data=ExternalDocs(url=url, description=description)
+    )
+
+
+def ApiServer(url: str, description: Optional[str] = None, variables: Optional[dict] = None):
+    return SetMetadata(
+        key="__openapi__servers",
+        data=[Server(url=url, description=description, variables=variables)],
+        as_list=True,
+    )
+
+
+def ApiServers(servers: list[Server]):
+    return SetMetadata(key="__openapi__servers", data=servers, as_list=True)
+
+
+def ApiCallbacks(callbacks: Dict[str, Callback]):
+    return SetMetadata(key="__openapi__callbacks", data=callbacks, as_dict=True)
+
+
+def ApiExtraModels(*models: Union[BaseModel, Type]):
+    defs: dict = {}
+    for model in models:
+        content = _get_json_of_body(model)
+        if "$defs" in content:
+            defs.update(content["$defs"])
+        title = content.get("title") if isinstance(content, dict) else None
+        if title and title not in defs:
+            schema = {k: v for k, v in content.items() if k != "$defs"}
+            defs[title] = schema
+    return SetMetadata(key="__openapi__schemas", data=defs, as_dict=True)
+
+
 # SECURITY
 
 
@@ -209,4 +283,120 @@ def ApiSecurity(security: SecurityRequirement):
     return SetMetadata(key="__openapi__security", data=[security], as_list=True)
 
 
+def ApiExcludeEndpoint():
+    return ApiExclude()
+
+
 # TODO : Add more openapi decorator
+def ApiParam(name: str, description: Optional[str] = None):
+    return ApiPath(name=name, description=description)
+
+
+def ApiCookie(name: str, description: Optional[str] = None, required: bool = False):
+    return ApiParameter(
+        Parameter(
+            name=name,
+            description=description,
+            in_=ParameterLocation.COOKIE,
+            required=required,
+        )
+    )
+
+def ApiBadRequestResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=400, description=description, response=schema, example=example
+    )
+
+
+def ApiUnauthorizedResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=401, description=description, response=schema, example=example
+    )
+
+
+def ApiForbiddenResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=403, description=description, response=schema, example=example
+    )
+
+
+def ApiConflictResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=409, description=description, response=schema, example=example
+    )
+
+
+def ApiUnprocessableEntityResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=422, description=description, response=schema, example=example
+    )
+
+
+def ApiTooManyRequestsResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=429, description=description, response=schema, example=example
+    )
+
+
+def ApiInternalServerErrorResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=500, description=description, response=schema, example=example
+    )
+
+
+def ApiServiceUnavailableResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=503, description=description, response=schema, example=example
+    )
+
+
+def ApiNoContentResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=204, description=description, response=schema, example=example
+    )
+
+
+def ApiAcceptedResponse(
+    schema: Optional[Union[BaseModel, Type]] = None,
+    description: Optional[str] = None,
+    example: Any = None,
+):
+    return ApiResponse(
+        status=202, description=description, response=schema, example=example
+    )

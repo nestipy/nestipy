@@ -60,3 +60,19 @@ SwaggerModule.setup('api', app, document)
 ```
 
 Now, we can access **[localhost:8000/api](http://localhost:8000/api)** to show swagger documentation.
+
+## Available decorators
+
+Common OpenAPI decorators:
+
+- `ApiOperation`, `ApiSummary`, `ApiDescription`, `ApiDeprecated`
+- `ApiTags`, `ApiId`
+- `ApiBody`, `ApiParameter`, `ApiHeader`, `ApiQuery`, `ApiParam`, `ApiCookie`
+- `ApiOkResponse`, `ApiCreatedResponse`, `ApiBadRequestResponse`, `ApiUnauthorizedResponse`,
+  `ApiForbiddenResponse`, `ApiNotFoundResponse`, `ApiConflictResponse`,
+  `ApiUnprocessableEntityResponse`, `ApiTooManyRequestsResponse`,
+  `ApiInternalServerErrorResponse`, `ApiServiceUnavailableResponse`,
+  `ApiNoContentResponse`, `ApiAcceptedResponse`
+- `ApiBearerAuth`, `ApiBasicAuth`, `ApiSecurity`
+- `ApiExternalDocs`, `ApiServer`, `ApiServers`, `ApiCallbacks`, `ApiExtraModels`
+- `ApiExclude` / `ApiExcludeEndpoint`
