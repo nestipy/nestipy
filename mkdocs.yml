@@ -96,6 +96,7 @@ nav:
       - Background Tasks: technique/background_task.md
       - Events: technique/event.md
       - Inertia: technique/inertia.md
+      - Benchmark: technique/benchmark.md
   #  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md
