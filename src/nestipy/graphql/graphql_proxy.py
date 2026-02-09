@@ -139,6 +139,19 @@ class GraphqlProxy:
 
         # create graphql handler but using handle of graphql_adapter
         async def graphql_handler(_req: Request, res: Response, _next_fn: NextFn):
+            context_container = RequestContextContainer.get_instance()
+            previous_context = context_container.execution_context
+            execution_context = ExecutionContext(
+                self._adapter,
+                None,
+                None,
+                graphql_handler,
+                _req,
+                res,
+                None,
+                None,
+            )
+            context_container.set_execution_context(execution_context)
             scope = _req.scope
             queue: asyncio.Queue[bytes] = asyncio.Queue()
             completed = asyncio.Event()
@@ -166,17 +179,45 @@ class GraphqlProxy:
                     chunk = await queue.get()
                     yield chunk
 
-            await asyncio.get_running_loop().create_task(
-                gql_asgi.handle(scope, _req.receive, send)
-            )
-            # Return streaming response
-            return await res.stream(stream_chunk_generator)
+            try:
+                await asyncio.get_running_loop().create_task(
+                    gql_asgi.handle(scope, _req.receive, send)
+                )
+                # Return streaming response
+                return await res.stream(stream_chunk_generator)
+            finally:
+                if previous_context is not None:
+                    context_container.set_execution_context(previous_context)
+                else:
+                    context_container.destroy()
 
         async def graphql_ws_handler(_ws: Websocket):
+            context_container = RequestContextContainer.get_instance()
+            previous_context = context_container.execution_context
+            execution_context = ExecutionContext(
+                self._adapter,
+                None,
+                None,
+                graphql_ws_handler,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            context_container.set_execution_context(execution_context)
             scope = _ws.scope
             receive = _ws.receive
             send = _ws.send
-            await gql_asgi.handle(scope, receive, send)
+            try:
+                await gql_asgi.handle(scope, receive, send)
+            finally:
+                if previous_context is not None:
+                    context_container.set_execution_context(previous_context)
+                else:
+                    context_container.destroy()
 
         self._adapter.all(graphql_path, graphql_handler, {})
         self._adapter.ws(graphql_path, graphql_ws_handler, {})

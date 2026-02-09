@@ -104,3 +104,23 @@ Nestipy includes these built-in pipes:
 - `ParseJsonPipe`
 - `DefaultValuePipe`
 - `ValidationPipe`
+
+### ValidationPipe options
+
+```python
+from nestipy.common.pipes import ValidationPipe
+
+ValidationPipe(
+    transform=True,
+    whitelist=False,
+    forbid_non_whitelisted=False,
+)
+```
+
+- `transform`: convert inputs to the target type when possible.
+- `whitelist`: strip unknown properties from dict inputs.
+- `forbid_non_whitelisted`: raise an error if unknown properties are present.
+
+## Error behavior
+
+Pipe failures are converted to HTTP 400 responses with details about the pipe and error.

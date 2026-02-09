@@ -489,16 +489,33 @@ class NestipyContainer:
                     )
                 else:
                     instance = pipe()
-            if hasattr(instance, "transform"):
+            if not hasattr(instance, "transform"):
+                raise ValueError(
+                    f"Pipe {pipe} does not implement transform(value, metadata)"
+                )
+            try:
                 transform = getattr(instance, "transform")
                 if inspect.iscoroutinefunction(transform):
                     current = await transform(current, metadata)
                 else:
                     current = transform(current, metadata)
-            else:
-                raise ValueError(
-                    f"Pipe {pipe} does not implement transform(value, metadata)"
+            except Exception as exc:
+                from nestipy.common.exception.http import HttpException
+                from nestipy.common.exception.status import HttpStatus
+                from nestipy.common.exception.message import HttpStatusMessages
+
+                if isinstance(exc, HttpException):
+                    raise
+                pipe_name = (
+                    pipe.__name__
+                    if inspect.isclass(pipe)
+                    else instance.__class__.__name__
                 )
+                raise HttpException(
+                    HttpStatus.BAD_REQUEST,
+                    HttpStatusMessages.BAD_REQUEST,
+                    details={"pipe": pipe_name, "error": str(exc)},
+                ) from exc
         return current
 
     @classmethod

@@ -70,6 +70,7 @@ class MicroserviceProxy:
     ):
         async def event_handler(server: MicroServiceServer, request: RpcRequest):
             context_container = RequestContextContainer.get_instance()
+            previous_context = context_container.execution_context
             container = NestipyContainer.get_instance()
             execution_context = ExecutionContext(
                 None,
@@ -112,5 +113,10 @@ class MicroserviceProxy:
                     ExceptionFilterHandler
                 )
                 return await exception_handler.catch(e, execution_context, False)
+            finally:
+                if previous_context is not None:
+                    context_container.set_execution_context(previous_context)
+                else:
+                    context_container.destroy()
 
         return event_handler

@@ -1,6 +1,6 @@
 import json
 import uuid
-from dataclasses import is_dataclass
+from dataclasses import is_dataclass, fields
 from typing import Any, Optional, Type
 
 from pydantic import BaseModel
@@ -87,8 +87,17 @@ class DefaultValuePipe(PipeTransform):
 
 
 class ValidationPipe(PipeTransform):
-    def __init__(self, metatype: Optional[Type] = None):
+    def __init__(
+        self,
+        metatype: Optional[Type] = None,
+        transform: bool = True,
+        whitelist: bool = False,
+        forbid_non_whitelisted: bool = False,
+    ):
         self.metatype = metatype
+        self.transform = transform
+        self.whitelist = whitelist
+        self.forbid_non_whitelisted = forbid_non_whitelisted
 
     async def transform(self, value: Any, metadata: PipeArgumentMetadata) -> Any:
         if value is None:
@@ -98,6 +107,19 @@ class ValidationPipe(PipeTransform):
             return value
         if not isinstance(metatype, type):
             return value
+        if self.whitelist and isinstance(value, dict):
+            allowed = self._get_allowed_fields(metatype)
+            if allowed is not None:
+                extra = [k for k in value.keys() if k not in allowed]
+                if extra and self.forbid_non_whitelisted:
+                    raise ValueError(
+                        f"Non-whitelisted properties: {', '.join(extra)}"
+                    )
+                value = {k: v for k, v in value.items() if k in allowed}
+
+        if not self.transform:
+            return value
+
         if isinstance(value, metatype):
             return value
         if is_dataclass(metatype):
@@ -114,3 +136,13 @@ class ValidationPipe(PipeTransform):
             return metatype(value)
         except Exception:
             return value
+
+    @staticmethod
+    def _get_allowed_fields(metatype: Type) -> Optional[set[str]]:
+        if is_dataclass(metatype):
+            return {f.name for f in fields(metatype)}
+        if issubclass(metatype, BaseModel):
+            return set(metatype.model_fields.keys())
+        if hasattr(metatype, "__annotations__"):
+            return set(getattr(metatype, "__annotations__", {}).keys())
+        return None

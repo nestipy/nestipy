@@ -223,6 +223,11 @@ flowchart TD
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/router/router_proxy.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/context/execution_context.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/ioc/context_container.py`
+- GraphQL, WebSocket, and Microservice handlers now also set and restore/destroy request context for request-scoped providers.
+  Files:
+  `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/graphql/graphql_proxy.py`
+  `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/websocket/proxy.py`
+  `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/microservice/proxy.py`
 - Order of processing: middleware -> guards -> pipes -> interceptors -> handler -> template rendering -> response -> exception filters.
   Files:
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/middleware/executor.py`
