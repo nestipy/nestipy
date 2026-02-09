@@ -371,6 +371,7 @@ class NestipyContainer:
         key: Union[Type, str, object],
         origin: Optional[set] = None,
         disable_scope: bool = False,
+        instance: Optional[object] = None,
     ):
         """
         Resolves dependencies for the properties of a service.
@@ -383,6 +384,7 @@ class NestipyContainer:
         search_scope = self.get_dependency_metadata(service)
         origin.add(service)
         annotations: dict = getattr(service, "__annotations__", {})
+        target = instance or service
         for name, param_annotation in annotations.items():
             annotation, dep_key = ContainerHelper.get_type_from_annotation(
                 param_annotation
@@ -391,7 +393,7 @@ class NestipyContainer:
                 dependency = await self._resolve_contextual_service(
                     name, dep_key, annotation
                 )
-                setattr(service, name, dependency)
+                setattr(target, name, dependency)
             else:
                 # check token
                 if (
@@ -408,7 +410,7 @@ class NestipyContainer:
                     dependency = await self.get(
                         key, origin=origin, disable_scope=disable_scope
                     )
-                    setattr(service, name, dependency)
+                    setattr(target, name, dependency)
                 else:
                     _name: str = (
                         annotation.__name__
@@ -678,12 +680,17 @@ class NestipyContainer:
             if method == _INIT:
                 return in_singleton
         else:
-            await self._resolve_property(
-                key, origin=origin, disable_scope=disable_scope
-            )
+            if method == _INIT and key in self._singleton_classes:
+                await self._resolve_property(
+                    key, origin=origin, disable_scope=disable_scope
+                )
         result = await self._resolve_method(
             key, method=method, origin=origin, disable_scope=disable_scope
         )
+        if method == _INIT and key not in self._singleton_classes:
+            await self._resolve_property(
+                key, origin=origin, disable_scope=disable_scope, instance=result
+            )
         if method == _INIT and key in self._request_scoped_classes:
             context_container = RequestContextContainer.get_instance()
             cache = context_container.get_request_cache()

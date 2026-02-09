@@ -112,13 +112,11 @@ class RouterProxy:
                             route["openapi"]["responses"] = {200: ApiResponse()}
                         json_schemas = {**json_schemas, **route["schemas"]}
                         if "hidden" not in route["openapi"].keys():
-                            summary = route["openapi"].get(
+                            openapi_payload = dict(route["openapi"])
+                            openapi_payload.setdefault(
                                 "summary", snakecase_to_camelcase(method_name)
                             )
-                            route_path[method.lower()] = Operation(
-                                **route["openapi"],
-                                summary=summary,
-                            )
+                            route_path[method.lower()] = Operation(**openapi_payload)
                             json_paths[path] = route_path
         paths = {}
         for path, op in json_paths.items():

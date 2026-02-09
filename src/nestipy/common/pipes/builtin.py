@@ -95,7 +95,7 @@ class ValidationPipe(PipeTransform):
         forbid_non_whitelisted: bool = False,
     ):
         self.metatype = metatype
-        self.transform = transform
+        self._transform = transform
         self.whitelist = whitelist
         self.forbid_non_whitelisted = forbid_non_whitelisted
 
@@ -117,7 +117,7 @@ class ValidationPipe(PipeTransform):
                     )
                 value = {k: v for k, v in value.items() if k in allowed}
 
-        if not self.transform:
+        if not self._transform:
             return value
 
         if isinstance(value, metatype):
