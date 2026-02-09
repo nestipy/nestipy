@@ -7,8 +7,12 @@ from .context.execution_context import ExecutionContext, ArgumentHost, HttpArgum
 from .middleware import MiddlewareConsumer
 from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_factory import NestipyFactory
+from .on_application_bootstrap import OnApplicationBootstrap
+from .on_application_shutdown import OnApplicationShutdown
 from .on_destroy import OnDestroy
 from .on_init import OnInit
+from .on_module_destroy import OnModuleDestroy
+from .on_module_init import OnModuleInit
 from .platform import FastApiApplication, BlackSheepApplication
 from .template import MinimalJinjaTemplateEngine
 
@@ -35,6 +39,10 @@ __all__ = [
     "AsyncLocalStorage",
     "OnInit",
     "OnDestroy",
+    "OnModuleInit",
+    "OnModuleDestroy",
+    "OnApplicationBootstrap",
+    "OnApplicationShutdown",
     "NestipyMicroservice",
     "NestipyConnectMicroservice",
     "BackgroundTask",

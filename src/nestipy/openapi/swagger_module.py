@@ -1,6 +1,6 @@
 import dataclasses
 import os.path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, Optional
 
 import aiofiles
 import ujson
@@ -59,10 +59,18 @@ class SwaggerModule:
     @classmethod
     def setup(cls, path: str, app: "NestipyApplication", config: OpenAPI):
         def register_open_api():
-            document: _Document = cls._create_document(app, config)
+            document_cache: Optional[_Document] = None
+
+            def get_document() -> _Document:
+                nonlocal document_cache
+                if document_cache is None:
+                    document_cache = cls._create_document(app, config)
+                return document_cache
+
             api_path = f"/{path.strip('/')}"
 
             async def openapi_json_handler(_req: Request, res: Response, _next_fn):
+                document = get_document()
                 return (
                     await res.status(200)
                     .header("Content-Type", "application/json")
@@ -70,6 +78,7 @@ class SwaggerModule:
                 )
 
             async def openapi_yml_handler(_req: Request, res: Response, _next_fn):
+                document = get_document()
                 return (
                     await res.status(200)
                     .header("Content-Type", "text/yml")

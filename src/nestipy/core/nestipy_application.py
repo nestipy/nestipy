@@ -1,5 +1,6 @@
 import dataclasses
 import os.path
+import time
 import traceback
 import typing
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
@@ -50,6 +51,7 @@ class NestipyConfig:
     adapter: Optional[HttpAdapter] = None
     cors: Optional[bool] = None
     debug: bool = True
+    profile: bool = False
 
 
 class NestipyApplication:
@@ -66,6 +68,7 @@ class NestipyApplication:
     _debug: bool = True
     _ready: bool = False
     _background_tasks: BackgroundTasks
+    _profile: bool = False
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -83,6 +86,8 @@ class NestipyApplication:
         self.instance_loader = InstanceLoader()
         self._background_tasks: BackgroundTasks = BackgroundTasks()
         self.process_config(config)
+        self._profile = config.profile
+        self.instance_loader.enable_profile(self._profile)
         self.on_startup(self._startup)
         self.on_shutdown(self._destroy)
 
@@ -157,17 +162,27 @@ class NestipyApplication:
     async def setup(self):
         if self._ready:
             return
+        setup_start = time.perf_counter() if self._profile else None
         try:
             modules = self._get_modules(typing.cast(Type, self._root_module))
+            if self._profile:
+                self.instance_loader.reset_profile()
+                di_start = time.perf_counter()
             graphql_module_instance = await self.instance_loader.create_instances(
                 modules
             )
+            if self._profile:
+                di_elapsed = (time.perf_counter() - di_start) * 1000
             # create and register route to platform adapter
+            if self._profile:
+                routes_start = time.perf_counter()
             self._openapi_paths, self._openapi_schemas, self._list_routes = (
                 self._router_proxy.apply_routes(
                     typing.cast(list[Union[Type, object]], modules), self._prefix or ""
                 )
             )
+            if self._profile:
+                routes_elapsed = (time.perf_counter() - routes_start) * 1000
             # check if graphql is enabled
             if graphql_module_instance is not None:
                 await GraphqlProxy(
@@ -180,6 +195,7 @@ class NestipyApplication:
                 IoSocketProxy(self._http_adapter).apply_routes(
                     typing.cast(list[Union[Type, object]], modules)
                 )
+            await self.instance_loader.call_on_application_bootstrap()
             # Register open api catch asynchronously
             from nestipy.openapi.constant import OPENAPI_HANDLER_METADATA
 
@@ -188,6 +204,32 @@ class NestipyApplication:
             )
             if openapi_register is not None:
                 openapi_register()
+
+            if self._profile:
+                profile = self.instance_loader.get_profile_summary()
+                logger.info(
+                    "[BOOTSTRAP] Providers=%s Controllers=%s Modules=%s",
+                    profile["providers"],
+                    profile["controllers"],
+                    profile["modules"],
+                )
+                logger.info(
+                    "[BOOTSTRAP] DI=%.2fms Routes=%.2fms RouteCount=%s",
+                    di_elapsed,
+                    routes_elapsed,
+                    len(self._list_routes),
+                )
+                for m in profile["module_breakdown"]:
+                    logger.info(
+                        "[MODULE] %s init=%.2fms providers=%s controllers=%s",
+                        m["module"],
+                        m["ms"],
+                        m["providers"],
+                        m["controllers"],
+                    )
+                if setup_start is not None:
+                    total_elapsed = (time.perf_counter() - setup_start) * 1000
+                    logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
             await self._http_adapter.start()
             self._ready = True
