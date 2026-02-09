@@ -30,6 +30,7 @@ class MiddlewareExecutor:
     Class responsible for executing the middleware chain for a given request.
     Handles matching routes, excluding paths, and recursive execution of middleware functions.
     """
+
     def __init__(self, req: Request, res: Response, next_fn: Callable):
         """
         Initialize the MiddlewareExecutor.

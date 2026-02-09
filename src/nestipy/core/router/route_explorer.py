@@ -14,6 +14,7 @@ class RouteExplorer:
     """
     Utility class for exploring modules and controllers to find route definitions.
     """
+
     _middleware_container: MiddlewareContainer
     _openapi_scanner = OpenApiExplorer()
 

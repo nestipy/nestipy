@@ -2,6 +2,7 @@ class CtxDepKey:
     """
     Constant keys used for identifying different types of injectable context dependencies.
     """
+
     Service: str = "service"
     Request: str = "request"
     Response: str = "response"

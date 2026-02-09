@@ -11,6 +11,7 @@ class FrameworkTrack:
     """
     Metadata about the environment when an exception occurred.
     """
+
     python: str
     nestipy: str
 
@@ -20,6 +21,7 @@ class RequestTrack:
     """
     Metadata about the request that triggered the exception.
     """
+
     method: str
     host: str
 
@@ -29,6 +31,7 @@ class Traceback:
     """
     Detailed information about a single frame in a traceback.
     """
+
     filename: str
     lineno: int
     name: str
@@ -42,6 +45,7 @@ class ExceptionDetail:
     """
     Comprehensive details about an exception, including request info and traceback.
     """
+
     exception: str
     type: str
     message: str
@@ -62,6 +66,7 @@ class HttpException(Exception):
     Base exception class for all HTTP-related errors in Nestipy.
     Includes status code, message, and detailed traceback information.
     """
+
     def __init__(
         self,
         status_code: int,

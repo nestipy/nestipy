@@ -33,6 +33,7 @@ class Request:
     HTTP Request wrapper.
     Provides access to request components like headers, body, query parameters, and more.
     """
+
     def __init__(self, scope: dict, receive: Callable, send: Callable) -> None:
         """
         Initialize the Request object.

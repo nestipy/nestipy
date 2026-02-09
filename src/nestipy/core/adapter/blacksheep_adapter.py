@@ -122,7 +122,9 @@ class BlackSheepAdapter(HttpAdapter):
     def ws(
         self, route: str, callback: WebsocketHandler, metadata: Optional[dict] = None
     ) -> None:
-        self.instance.router.ws(route)(self._create_blacksheep_websocket_handler(callback, metadata))
+        self.instance.router.ws(route)(
+            self._create_blacksheep_websocket_handler(callback, metadata)
+        )
 
     def mount(self, route: str, callback: MountHandler) -> None:
         self.instance.mount(route, callback)

@@ -11,7 +11,9 @@ def args_callback(
     _type_ref: Type,
     _request_context: RequestContextContainer,
 ):
-    args: dict = cast(Any, _request_context.execution_context).switch_to_graphql().get_args()
+    args: dict = (
+        cast(Any, _request_context.execution_context).switch_to_graphql().get_args()
+    )
     return args.get(_token or _name)
 
 

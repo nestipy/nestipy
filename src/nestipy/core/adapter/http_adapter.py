@@ -29,6 +29,7 @@ class HttpAdapter(ABC):
     Base class for HTTP adapters.
     Provides a common interface for different HTTP frameworks (e.g., FastAPI, BlackSheep).
     """
+
     STATE_KEY: str = "__state__"
 
     _global_interceptors: list = []
@@ -60,7 +61,11 @@ class HttpAdapter(ABC):
 
     @abstractmethod
     def static(
-        self, route: str, directory: str, name: typing.Optional[str] = None, option: typing.Optional[dict] = None
+        self,
+        route: str,
+        directory: str,
+        name: typing.Optional[str] = None,
+        option: typing.Optional[dict] = None,
     ) -> None:
         pass
 

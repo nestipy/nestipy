@@ -10,6 +10,7 @@ class Scope(enum.Enum):
     """
     Enum representing the lifecycle scope of a provider.
     """
+
     Request = "Request"
     Transient = "Transient"
     Singleton = "Singleton"
@@ -19,6 +20,7 @@ class Injectable:
     """
     Decorator that marks a class as a provider that can be injected as a dependency.
     """
+
     scope: Optional[Scope] = None
 
     def __init__(self, scope: Scope = Scope.Singleton):
@@ -50,6 +52,7 @@ class Controller:
     Decorator that marks a class as a controller.
     Controllers are responsible for handling incoming requests and returning responses to the client.
     """
+
     def __init__(self, path: str = "/", **kwargs):
         """
         Initialize the Controller decorator.
@@ -78,6 +81,7 @@ class Module:
     Decorator that marks a class as a module.
     Modules are used to organize the application structure and manage dependencies.
     """
+
     providers: list[Union[Type, ModuleProviderDict]] = []
     controllers: list[Type] = []
     imports: list[Union[Type, Callable, ModuleProviderDict, DynamicModule]] = []

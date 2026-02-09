@@ -181,7 +181,9 @@ if __name__ == "__main__":
     s1.add_argument("--workers", type=int, default=5)
     s1.add_argument("--is-bs", type=bool, default=False)
     s2 = sub.add_parser("bench")
-    s2.add_argument("--url", type=str,  help="Target URL", default="http://127.0.0.1:8000")
+    s2.add_argument(
+        "--url", type=str, help="Target URL", default="http://127.0.0.1:8000"
+    )
     s2.add_argument("-c", "--concurrency", type=int, default=100)
     s2.add_argument("-d", "--duration", type=int, default=15)
     s2.add_argument("--out", type=str, default="bench_out")

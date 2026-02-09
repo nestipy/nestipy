@@ -29,10 +29,14 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
         handler = context.get_handler()
 
         global_interceptors = (
-            (typing.cast(Any, context.get_adapter()).get_global_interceptors() if is_http else [])
+            typing.cast(Any, context.get_adapter()).get_global_interceptors()
+            if is_http
+            else []
         )
         module_interceptors = self.extract_special_providers(
-            typing.cast(typing.Type, handler_module_class), NestipyInterceptor, APP_INTERCEPTOR
+            typing.cast(typing.Type, handler_module_class),
+            NestipyInterceptor,
+            APP_INTERCEPTOR,
         )
         class_interceptors = Reflect.get_metadata(
             handler_class, InterceptorKey.Meta, []

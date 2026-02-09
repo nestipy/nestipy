@@ -12,6 +12,7 @@ class TypeAnnotated:
     """
     Wrapper for ParamAnnotation that supports being called as a decorator or used with Annotated.
     """
+
     def __init__(self, metadata: ParamAnnotation):
         """
         Initialize TypeAnnotated.
@@ -202,7 +203,9 @@ def graphql_context_callback(
     _request_context: RequestContextContainer,
 ):
     """Callback for GraphQL context."""
-    return cast(Any, _request_context.execution_context).switch_to_graphql().get_context()
+    return (
+        cast(Any, _request_context.execution_context).switch_to_graphql().get_context()
+    )
 
 
 def websocket_server_callback(
@@ -212,7 +215,9 @@ def websocket_server_callback(
     _request_context: RequestContextContainer,
 ):
     """Callback for WebSocket server instance."""
-    return cast(Any, _request_context.execution_context).switch_to_websocket().get_server()
+    return (
+        cast(Any, _request_context.execution_context).switch_to_websocket().get_server()
+    )
 
 
 def websocket_client_callback(
@@ -222,7 +227,9 @@ def websocket_client_callback(
     _request_context: RequestContextContainer,
 ):
     """Callback for WebSocket client instance."""
-    return cast(Any, _request_context.execution_context).switch_to_websocket().get_client()
+    return (
+        cast(Any, _request_context.execution_context).switch_to_websocket().get_client()
+    )
 
 
 def websocket_data_callback(
@@ -232,7 +239,9 @@ def websocket_data_callback(
     _request_context: RequestContextContainer,
 ):
     """Callback for WebSocket message data."""
-    return cast(Any, _request_context.execution_context).switch_to_websocket().get_data()
+    return (
+        cast(Any, _request_context.execution_context).switch_to_websocket().get_data()
+    )
 
 
 # Predefined injection tokens

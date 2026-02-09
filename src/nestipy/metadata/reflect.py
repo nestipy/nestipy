@@ -6,6 +6,7 @@ class Reflect:
     Utility class for storing and retrieving metadata on objects (classes, methods, functions).
     Uses a special attribute `__reflect__metadata__` to store metadata as a dictionary.
     """
+
     metadata: str = "__reflect__metadata__"
 
     @classmethod

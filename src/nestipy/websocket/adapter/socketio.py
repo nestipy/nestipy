@@ -18,7 +18,9 @@ class SocketIoAdapter(IoAdapter):
 
         return decorator
 
-    def on(self, event: str, namespace: Optional[str] = None) -> Callable[[Callable], Any]:
+    def on(
+        self, event: str, namespace: Optional[str] = None
+    ) -> Callable[[Callable], Any]:
         def decorator(handler: Callable):
             async def wrapper(sid: str, data: Any):
                 environ = self._io.get_environ(sid, namespace)

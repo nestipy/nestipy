@@ -20,6 +20,7 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
     """
     Factory class for creating Nestipy application and microservice instances.
     """
+
     @classmethod
     def create(
         cls, module: Type, config: typing.Optional[NestipyConfig] = None

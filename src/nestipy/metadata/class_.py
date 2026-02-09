@@ -8,6 +8,7 @@ class ClassMetadata:
     """
     Holds metadata about a class's relationship with its parent module and global providers.
     """
+
     Metadata = "__dependency_metadata__"
     _global_providers: list = []
     _module = None

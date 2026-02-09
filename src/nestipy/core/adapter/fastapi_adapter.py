@@ -16,6 +16,7 @@ class FastApiAdapter(HttpAdapter):
     """
     HTTP adapter for FastAPI.
     """
+
     def __init__(self):
         self.instance = FastAPI(
             lifespan=self.lifespan,
@@ -151,7 +152,9 @@ class FastApiAdapter(HttpAdapter):
                 )
             return FResponse(
                 content=result.content(),
-                headers={k: v for k, v in typing.cast(set[tuple[str, str]], result.headers())},
+                headers={
+                    k: v for k, v in typing.cast(set[tuple[str, str]], result.headers())
+                },
                 media_type=result.content_type(),
                 status_code=result.status_code() or 200,
             )

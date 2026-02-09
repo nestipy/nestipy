@@ -11,6 +11,7 @@ class Route:
     """
     Decorator that marks a method of a controller as a request handler.
     """
+
     def __init__(
         self, path: str = "", method: Union[list[HTTPMethod], None] = None, **kwargs
     ):

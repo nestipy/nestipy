@@ -12,6 +12,7 @@ class ParamAnnotation:
     Metadata class for defining custom parameter annotations.
     Used for extracting values from the execution context (e.g., @Body, @Param).
     """
+
     def __init__(
         self,
         callback: TypeAnnotatedCallable,

@@ -23,7 +23,9 @@ class WebsocketAdapter(IoAdapter):
         self._on_disconnect_handler: list[Callable] = []
         self._on_message_handler: list[Callable] = []
 
-    def on(self, event: str, namespace: Optional[str] = None) -> Callable[[Callable], Any]:
+    def on(
+        self, event: str, namespace: Optional[str] = None
+    ) -> Callable[[Callable], Any]:
         """Register a handler for a specific path (event name)"""
 
         def decorator(handler: Callable):

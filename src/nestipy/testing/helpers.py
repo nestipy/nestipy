@@ -95,7 +95,9 @@ def get_example_scope(
                     b"cookie",
                     quote(key if isinstance(key, str) else key.decode()).encode()
                     + b"="
-                    + quote(value if isinstance(value, str) else value.decode()).encode(),
+                    + quote(
+                        value if isinstance(value, str) else value.decode()
+                    ).encode(),
                 )
                 for key, value in cookies
             ]

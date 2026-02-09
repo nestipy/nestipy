@@ -7,6 +7,7 @@ class DocumentBuilder:
     Utility class for building OpenAPI documentation.
     Uses a singleton pattern to maintain the documentation state.
     """
+
     _info: dict = {"title": "Nestipy", "description": "", "version": "1.0"}
     _security_schemes: dict = {}
     _schemas: dict = {}

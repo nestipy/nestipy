@@ -39,6 +39,7 @@ class RouterProxy:
     Proxy class that handles the registration of routes from modules and controllers.
     It acts as a bridge between Nestipy modules and the underlying HTTP adapter.
     """
+
     def __init__(
         self,
         router: "HttpAdapter",
@@ -122,7 +123,9 @@ class RouterProxy:
         ] = None,
         container: typing.Optional[NestipyIContainer] = None,
     ) -> CallableHandler:
-        controller_method_handler = custom_callback or getattr(controller, typing.cast(str, method_name))
+        controller_method_handler = custom_callback or getattr(
+            controller, typing.cast(str, method_name)
+        )
         _template_processor = TemplateRendererProcessor(http_adapter)
         context_container = RequestContextContainer.get_instance()
         container = container or NestipyContainer.get_instance()
@@ -153,12 +156,17 @@ class RouterProxy:
                             return await callback_res
                         else:
                             return callback_res
-                    return await container.get(typing.cast(typing.Union[typing.Type, str], controller), typing.cast(str, method_name))
+                    return await container.get(
+                        typing.cast(typing.Union[typing.Type, str], controller),
+                        typing.cast(str, method_name),
+                    )
 
                 async def next_fn_middleware(ex: typing.Any = None):
                     if ex is not None:
                         raise ex
-                    g_processor: GuardProcessor = typing.cast(GuardProcessor, await container.get(GuardProcessor))
+                    g_processor: GuardProcessor = typing.cast(
+                        GuardProcessor, await container.get(GuardProcessor)
+                    )
                     passed = await g_processor.process(execution_context)
                     if not passed[0]:
                         raise HttpException(
@@ -167,9 +175,9 @@ class RouterProxy:
                             details=f"Not authorized from guard {passed[1]}",
                         )
 
-                    interceptor: RequestInterceptor = typing.cast(RequestInterceptor, await container.get(
-                        RequestInterceptor
-                    ))
+                    interceptor: RequestInterceptor = typing.cast(
+                        RequestInterceptor, await container.get(RequestInterceptor)
+                    )
                     resp = await interceptor.intercept(
                         execution_context, next_fn_interceptor
                     )
@@ -276,17 +284,17 @@ class RouterProxy:
         )
         ex.track_back = track_b
         container = container or NestipyContainer.get_instance()
-        exception_handler = typing.cast(ExceptionFilterHandler, await container.get(ExceptionFilterHandler))
-        result = await typing.cast(typing.Any, exception_handler).catch(ex, execution_context)
-        response = typing.cast(Response,  execution_context.get_response())
+        exception_handler = typing.cast(
+            ExceptionFilterHandler, await container.get(ExceptionFilterHandler)
+        )
+        result = await typing.cast(typing.Any, exception_handler).catch(
+            ex, execution_context
+        )
+        response = typing.cast(Response, execution_context.get_response())
         if result:
-            handler_response = await cls._ensure_response(
-               response, result
-            )
+            handler_response = await cls._ensure_response(response, result)
         else:
-            handler_response = await cls._ensure_response(
-                response, await next_fn(ex)
-            )
+            handler_response = await cls._ensure_response(response, await next_fn(ex))
         return handler_response
 
     @classmethod

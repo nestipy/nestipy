@@ -1,6 +1,7 @@
 """
 Logging and console utilities for Nestipy using Python's logging and Rich.
 """
+
 import logging
 
 from rich.console import Console

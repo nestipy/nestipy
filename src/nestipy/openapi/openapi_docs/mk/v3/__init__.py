@@ -19,7 +19,11 @@ from nestipy.openapi.openapi_docs.mk.common import (
     is_object_schema,
     is_reference,
 )
-from nestipy.openapi.openapi_docs.mk.contents import ContentWriter, FormContentWriter, JSONContentWriter
+from nestipy.openapi.openapi_docs.mk.contents import (
+    ContentWriter,
+    FormContentWriter,
+    JSONContentWriter,
+)
 from nestipy.openapi.openapi_docs.mk.jinja import Jinja2DocumentsWriter, OutputStyle
 from nestipy.openapi.openapi_docs.mk.texts import EnglishTexts, Texts
 from nestipy.openapi.openapi_docs.mk.v3.examples import get_example_from_schema

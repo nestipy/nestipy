@@ -31,7 +31,9 @@ class InstanceLoader:
     graphql_instance: typing.Optional[GraphqlModule] = None
     discover: DiscoverService = DiscoverService()
 
-    async def create_instances(self, modules: list[Type]) -> typing.Optional[GraphqlModule]:
+    async def create_instances(
+        self, modules: list[Type]
+    ) -> typing.Optional[GraphqlModule]:
         from nestipy.common import (
             NestipyInterceptor,
             CanActivate,

@@ -20,6 +20,7 @@ class MiddlewareProxy:
     Proxy class for configuring middleware.
     Allows specifying routes, methods, and excluded paths for a set of middleware functions or classes.
     """
+
     def __init__(self, *middleware: Union[Type, Callable]):
         """
         Initialize the MiddlewareProxy with one or more middleware.
@@ -71,6 +72,7 @@ class MiddlewareContainer:
     """
     Singleton container for managing registered middleware configurations and instances.
     """
+
     _instance: Optional["MiddlewareContainer"] = None
     _middlewares: list = []
     _middleware_instances: dict = {}
