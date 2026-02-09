@@ -179,6 +179,10 @@ flowchart TB
 - Scope:
   - Request scope currently maps to transient (`add_transient`) and is not a distinct cache.
     File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/common/decorator/class_.py`
+  - Updated: Request scope now uses `contextvars` with a per-request cache in `RequestContextContainer`.
+    Files:
+    `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/ioc/context_container.py`
+    `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/ioc/container.py`
 
 **Startup/Shutdown Hooks**
 - `OnInit.on_startup` and `OnDestroy.on_shutdown` are called for providers/controllers as appropriate.
@@ -219,10 +223,11 @@ flowchart TD
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/router/router_proxy.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/context/execution_context.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/ioc/context_container.py`
-- Order of processing: middleware -> guards -> interceptors -> handler -> template rendering -> response -> exception filters.
+- Order of processing: middleware -> guards -> pipes -> interceptors -> handler -> template rendering -> response -> exception filters.
   Files:
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/middleware/executor.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/guards/processor.py`
+  `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/pipes/processor.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/interceptor/processor.py`
   `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/exception/processor.py`
 

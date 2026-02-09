@@ -4,6 +4,7 @@ from .decorator import (
     Module,
     Controller,
     Injectable,
+    Scope,
     Route,
     Get,
     Post,
@@ -24,7 +25,18 @@ from .exception import (
 from .guards import CanActivate, UseGuards
 from .http_ import Request, Response, Websocket, UploadFile
 from .interceptor import NestipyInterceptor, UseInterceptors
-from .pipes import PipeTransform, PipeArgumentMetadata, UsePipes
+from .pipes import (
+    PipeTransform,
+    PipeArgumentMetadata,
+    UsePipes,
+    ParseIntPipe,
+    ParseFloatPipe,
+    ParseBoolPipe,
+    ParseUUIDPipe,
+    ParseJsonPipe,
+    DefaultValuePipe,
+    ValidationPipe,
+)
 from .logger import logger, console
 from .constant import NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON, SCOPE_TRANSIENT, SCOPE_REQUEST
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
@@ -37,6 +49,7 @@ __all__ = [
     "Module",
     "Controller",
     "Injectable",
+    "Scope",
     "Route",
     "Get",
     "Post",
@@ -61,6 +74,13 @@ __all__ = [
     "PipeTransform",
     "PipeArgumentMetadata",
     "UsePipes",
+    "ParseIntPipe",
+    "ParseFloatPipe",
+    "ParseBoolPipe",
+    "ParseUUIDPipe",
+    "ParseJsonPipe",
+    "DefaultValuePipe",
+    "ValidationPipe",
     "cors",
     "helmet",
     "NestipyMiddleware",

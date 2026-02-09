@@ -1,6 +1,6 @@
 from typing import Callable, Type, Union, Any
 
-from .class_ import Module, Controller, Injectable
+from .class_ import Module, Controller, Injectable, Scope
 from .method import Route, Get, Post, Patch, Put, Delete
 
 
@@ -17,6 +17,7 @@ __all__ = [
     "Module",
     "Controller",
     "Injectable",
+    "Scope",
     "Route",
     "Get",
     "Post",

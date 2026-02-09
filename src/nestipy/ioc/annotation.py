@@ -18,13 +18,16 @@ class ParamAnnotation:
         callback: TypeAnnotatedCallable,
         key: Union[str, None],
         token: Union[str | Any, None] = None,
+        pipes: Union[list, None] = None,
     ):
         """
         Initialize ParamAnnotation.
         :param callback: The function to call for resolving the dependency value.
         :param key: The CtxDepKey identifier for the dependency type.
         :param token: Optional token for specific items (e.g., parameter name).
+        :param pipes: Optional list of pipes to apply for this parameter.
         """
         self.key: Union[str, None] = key
         self.token: Union[str | Any, None] = token
         self.callback = callback
+        self.pipes: list = pipes or []

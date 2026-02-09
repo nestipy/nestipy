@@ -78,6 +78,28 @@ class CatsController:
 
 ```
 
+## Pipes example
+You can apply pipes at the controller, method, or parameter level to validate or transform inputs.
+
+```python
+from typing import Annotated
+from nestipy.common import Controller, Get, UsePipes
+from nestipy.ioc import Query
+from nestipy.common.pipes import ParseIntPipe
+
+
+@Controller('cats')
+class CatsController:
+    @Get()
+    @UsePipes(ParseIntPipe)
+    async def find_all(self, limit: Annotated[int, Query('limit')]):
+        return {"limit": limit}
+
+    @Get('/paged')
+    async def find_paged(self, page: Annotated[int, Query('page', ParseIntPipe)]):
+        return {"page": page}
+```
+
 ### **Breakdown**:
 
 * Body: The `@Body()` decorator binds request body data to the method parameter data.

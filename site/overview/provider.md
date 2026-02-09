@@ -92,6 +92,28 @@ class CatsModule:
     pass
 ```
 
+## Provider scopes
+
+Nestipy supports three provider scopes:
+
+- `Singleton` (default): one instance for the whole app.
+- `Transient`: new instance every time the provider is requested.
+- `Request`: one instance per request (uses `contextvars` under the hood).
+
+```python
+from nestipy.common import Injectable, Scope
+
+
+@Injectable(scope=Scope.Transient)
+class TransientService:
+    pass
+
+
+@Injectable(scope=Scope.Request)
+class RequestService:
+    pass
+```
+
 ## Dependency injection
 
 With Nestipy, dependency work in 2 ways: <br/>
@@ -109,4 +131,3 @@ class CatsController:
 It work like other dependency method.
 
 Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-providers)** for an  example.
-

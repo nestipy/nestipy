@@ -1,3 +1,4 @@
+import inspect
 from dataclasses import is_dataclass
 from typing import Any, Type, Optional, cast
 
@@ -20,15 +21,35 @@ class TypeAnnotated:
         """
         self.metadata = metadata
 
-    def __call__(self, token: Any = None) -> "TypeAnnotated":
+    def __call__(
+        self, token: Any = None, *extra_pipes: Any, pipes: Optional[list] = None
+    ) -> "TypeAnnotated":
         """
         Allow the annotation to be called with a token (e.g., Query("id")).
         :param token: The token to associate with the annotation.
+        :param extra_pipes: Positional pipes for this parameter.
+        :param pipes: Optional list of pipes for this parameter.
         :return: A new TypeAnnotated instance with the token.
         """
+        pipe_list: list = []
+        if pipes:
+            pipe_list = list(pipes)
+        if extra_pipes:
+            pipe_list = pipe_list + list(extra_pipes)
+        # Allow Query(Pipe) shorthand when no token is needed
+        actual_token = token
+        if token is not None and self._looks_like_pipe(token):
+            pipe_list = [token] + pipe_list
+            actual_token = None
         return TypeAnnotated(
-            ParamAnnotation(self.metadata.callback, self.metadata.key, token)
+            ParamAnnotation(self.metadata.callback, self.metadata.key, actual_token, pipe_list)
         )
+
+    @staticmethod
+    def _looks_like_pipe(obj: Any) -> bool:
+        if inspect.isclass(obj):
+            return hasattr(obj, "transform")
+        return hasattr(obj, "transform")
 
 
 def create_type_annotated(callback: TypeAnnotatedCallable, key: str) -> TypeAnnotated:

@@ -393,6 +393,10 @@ class NestipyContainer:
                         name, dep_key, annotation
                     )
                     if self._can_apply_pipes(dep_key.metadata.key):
+                        param_pipes = (
+                            list(getattr(dep_key.metadata, "pipes", [])) or []
+                        )
+                        pipes_to_apply = [*pipes, *param_pipes]
                         metadata = PipeArgumentMetadata(
                             type=self._pipe_type_from_key(dep_key.metadata.key),
                             metatype=annotation if isinstance(annotation, type) else None,
@@ -400,7 +404,7 @@ class NestipyContainer:
                         )
                         dependency = await self._apply_pipes(
                             dependency,
-                            pipes,
+                            pipes_to_apply,
                             metadata,
                             origin=origin,
                             disable_scope=disable_scope,

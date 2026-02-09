@@ -80,6 +80,7 @@ nav:
       - Exceptions filters: overview/exception-filter.md
       - Guards: overview/guard.md
       - Interceptors: overview/interceptor.md
+      - Pipes: overview/pipes.md
       - Custom decorators: overview/custom-decorator.md
   - Fundamentals:
       - Custom providers: fundamental/custom-provider.md
