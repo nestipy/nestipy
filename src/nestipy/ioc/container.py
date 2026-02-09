@@ -37,6 +37,22 @@ if TYPE_CHECKING:
 _INIT = "__init__"
 
 
+class RequestScopedProxy:
+    def __init__(self, key: Union[Type, str, object]):
+        self._key = key
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        cache = RequestContextContainer.get_instance().get_request_cache()
+        if cache is None or self._key not in cache:
+            raise RuntimeError(
+                "Request-scoped dependency accessed outside of request context. "
+                "Ensure request context is initialized."
+            )
+        return cache[self._key]
+
+
 class NestipyContainer:
     """
     Singleton container class responsible for managing service instances and their dependencies.
@@ -51,6 +67,7 @@ class NestipyContainer:
     _singleton_instances: dict = {}
     _singleton_classes: set = set()
     _request_scoped_classes: set = set()
+    _request_scoped_property_map: dict = {}
     _method_dependency_cache: dict = {}
     _dependency_metadata_cache: dict = {}
 
@@ -81,6 +98,7 @@ class NestipyContainer:
         cls._singleton_instances = {}
         cls._singleton_classes = set()
         cls._request_scoped_classes = set()
+        cls._request_scoped_property_map = {}
         cls._method_dependency_cache = {}
         cls._dependency_metadata_cache = {}
 
@@ -118,6 +136,29 @@ class NestipyContainer:
         :return: List of service types.
         """
         return list(self._services.keys())
+
+    def _register_request_scoped_property(
+        self, owner: Type, name: str, dep_key: Union[Type, str, object]
+    ) -> None:
+        props = self._request_scoped_property_map.setdefault(owner, {})
+        props[name] = dep_key
+
+    async def preload_request_scoped_properties(self) -> None:
+        if not self._request_scoped_property_map:
+            return
+        cache = RequestContextContainer.get_instance().get_request_cache()
+        if cache is None:
+            return
+        deps: set = set()
+        for props in self._request_scoped_property_map.values():
+            deps.update(props.values())
+        for dep in deps:
+            if dep in cache:
+                continue
+            try:
+                await self.get(dep)
+            except Exception:
+                continue
 
     def add_singleton_instance(
         self, service: Union[Type, str], service_instance: object
@@ -385,6 +426,7 @@ class NestipyContainer:
         origin.add(service)
         annotations: dict = getattr(service, "__annotations__", {})
         target = instance or service
+        is_singleton = service in self._singleton_classes and instance is None
         for name, param_annotation in annotations.items():
             annotation, dep_key = ContainerHelper.get_type_from_annotation(
                 param_annotation
@@ -401,14 +443,35 @@ class NestipyContainer:
                     or annotation in search_scope
                     or disable_scope
                 ):
-                    key = dep_key.metadata.token or annotation
+                    dep_key_value = dep_key.metadata.token or annotation
                     # A modifier
-                    if isinstance(key, ForwardRef):
+                    if isinstance(dep_key_value, ForwardRef):
                         module = sys.modules.get(service.__module__)
                         global_ns = vars(module) if module else globals()
-                        key = eval(key.__forward_arg__, global_ns, locals())
+                        dep_key_value = eval(
+                            dep_key_value.__forward_arg__, global_ns, locals()
+                        )
+                    if (
+                        not disable_scope
+                        and is_singleton
+                        and (
+                            dep_key_value in self._request_scoped_classes
+                            or (
+                                inspect.isclass(dep_key_value)
+                                and getattr(
+                                    dep_key_value, NESTIPY_SCOPE_ATTR, None
+                                )
+                                == SCOPE_REQUEST
+                            )
+                        )
+                    ):
+                        self._register_request_scoped_property(
+                            service, name, dep_key_value
+                        )
+                        setattr(service, name, RequestScopedProxy(dep_key_value))
+                        continue
                     dependency = await self.get(
-                        key, origin=origin, disable_scope=disable_scope
+                        dep_key_value, origin=origin, disable_scope=disable_scope
                     )
                     setattr(target, name, dependency)
                 else:

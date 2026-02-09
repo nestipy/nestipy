@@ -46,6 +46,9 @@ class RequestContextContainer:
     def set_request_cache(self, cache: Optional[dict]) -> None:
         self._request_cache.set(cache)
 
+    def reset_request_cache(self) -> None:
+        self._request_cache.set({})
+
     def destroy(self):
         self._execution_context.set(None)
         self._request_cache.set(None)

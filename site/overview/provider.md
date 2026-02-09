@@ -114,6 +114,43 @@ class RequestService:
     pass
 ```
 
+## Request-scoped in singletons (lazy)
+
+If a singleton provider or controller needs a request-scoped dependency, use **property injection**
+with `Annotated[...]`. Nestipy will resolve it lazily per request using the request context.
+
+```python
+from typing import Annotated
+
+from nestipy.common import Injectable, Scope, Controller, Get
+from nestipy.ioc import Inject
+
+
+@Injectable(scope=Scope.Request)
+class RequestId:
+    _counter = 0
+
+    def __init__(self):
+        type(self)._counter += 1
+        self.value = type(self)._counter
+
+
+@Injectable()
+class CatsService:
+    request_id: Annotated[RequestId, Inject()]
+
+
+@Controller("cats")
+class CatsController:
+    service: Annotated[CatsService, Inject()]
+
+    @Get("/id")
+    async def get_id(self):
+        return {"id": self.service.request_id.value}
+```
+
+Note: constructor injection of request-scoped providers into singletons is not supported. Use property injection instead.
+
 ## Dependency injection
 
 With Nestipy, dependency work in 2 ways: <br/>

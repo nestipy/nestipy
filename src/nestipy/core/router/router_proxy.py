@@ -153,7 +153,9 @@ class RouterProxy:
                 res,
             )
             # setup container for query params, route params, request, response, session, etc..
+            context_container.reset_request_cache()
             context_container.set_execution_context(execution_context)
+            await container.preload_request_scoped_properties()
             handler_response: Response
             try:
 

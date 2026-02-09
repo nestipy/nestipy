@@ -91,6 +91,7 @@ class GraphqlProxy:
                 None,
             )
             context_container.set_execution_context(execution_context)
+            await self.container.preload_request_scoped_properties()
             try:
                 # TODO: Refactor with routerProxy
                 # create execution context
@@ -151,7 +152,9 @@ class GraphqlProxy:
                 None,
                 None,
             )
+            context_container.reset_request_cache()
             context_container.set_execution_context(execution_context)
+            await self.container.preload_request_scoped_properties()
             scope = _req.scope
             queue: asyncio.Queue[bytes] = asyncio.Queue()
             completed = asyncio.Event()
@@ -207,7 +210,9 @@ class GraphqlProxy:
                 None,
                 None,
             )
+            context_container.reset_request_cache()
             context_container.set_execution_context(execution_context)
+            await self.container.preload_request_scoped_properties()
             scope = _ws.scope
             receive = _ws.receive
             send = _ws.send

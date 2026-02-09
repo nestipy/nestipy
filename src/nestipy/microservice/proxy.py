@@ -85,7 +85,9 @@ class MicroserviceProxy:
                 None,
                 request.data,
             )
+            context_container.reset_request_cache()
             context_container.set_execution_context(execution_context)
+            await container.preload_request_scoped_properties()
             try:
                 guard_processor: GuardProcessor = await container.get(GuardProcessor)
                 can_activate = await guard_processor.process(execution_context, False)
