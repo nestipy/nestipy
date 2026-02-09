@@ -28,7 +28,7 @@ class RouteExplorer:
         return path.strip("/")
 
     @classmethod
-    def explore(cls, module_ref: Union[Type, object]):
+    def explore(cls, module_ref: Union[Type, object], include_openapi: bool = True):
         """
         Explore a module for controllers and their routes.
         :param module_ref: The module class or instance to explore.
@@ -38,17 +38,22 @@ class RouteExplorer:
         routes = []
         ins = cls()
         for controller in controllers:
-            controller_routes = ins.explore_controller(controller)
+            controller_routes = ins.explore_controller(
+                controller, include_openapi=include_openapi
+            )
             routes = routes + controller_routes
         return routes
 
-    def explore_controller(self, controller: Type) -> List[dict]:
+    def explore_controller(self, controller: Type, include_openapi: bool = True) -> List[dict]:
         """
         Explore a controller class for route methods decorated with @Route, @Get, etc.
         :param controller: The controller class to explore.
         :return: A list of route definitions.
         """
-        docs, schemas = self._openapi_scanner.explore(controller)
+        if include_openapi:
+            docs, schemas = self._openapi_scanner.explore(controller)
+        else:
+            docs, schemas = {}, {}
         routes = []
         # need to extract middleware, guards, exception_handler,
         controller_path = self._normalize_path(
@@ -65,26 +70,30 @@ class RouteExplorer:
                 request_method = Reflect.get_metadata(method, RouteKey.method)
 
                 # openapi docs
-                params = RouteParamsExtractor.extract_params(path)
-                parameters = [
-                    Parameter(
-                        name=name,
-                        in_=ParameterLocation.PATH,
-                        required=True,
-                        description="Route path",
-                        allow_empty_value=False,
+                if include_openapi:
+                    params = RouteParamsExtractor.extract_params(path)
+                    parameters = [
+                        Parameter(
+                            name=name,
+                            in_=ParameterLocation.PATH,
+                            required=True,
+                            description="Route path",
+                            allow_empty_value=False,
+                        )
+                        for name in params.keys()
+                    ]
+                    method_deps, method_schemas = self._openapi_scanner.explore(method)
+                    method_docs = deep_merge(method_deps, {"parameters": parameters})
+                    merged_docs = deep_merge(docs, method_docs)
+                    merged_schemas = deep_merge(schemas, method_schemas)
+                    path_docs = deep_merge(
+                        {"tags": [controller.__name__.replace("Controller", "")]},
+                        merged_docs,
                     )
-                    for name in params.keys()
-                ]
-                method_deps, method_schemas = self._openapi_scanner.explore(method)
-                method_docs = deep_merge(method_deps, {"parameters": parameters})
-                merged_docs = deep_merge(docs, method_docs)
-                merged_schemas = deep_merge(schemas, method_schemas)
-                path_docs = deep_merge(
-                    {"tags": [controller.__name__.replace("Controller", "")]},
-                    merged_docs,
-                )
-                path_docs["tags"] = [path_docs["tags"][0]]
+                    path_docs["tags"] = [path_docs["tags"][0]]
+                else:
+                    merged_schemas = {}
+                    path_docs = {}
 
                 # end open api
 

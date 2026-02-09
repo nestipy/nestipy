@@ -51,6 +51,7 @@ class NestipyContainer:
     _singleton_instances: dict = {}
     _singleton_classes: set = set()
     _request_scoped_classes: set = set()
+    _method_dependency_cache: dict = {}
 
     def __new__(cls, *args, **kwargs):
         """
@@ -79,6 +80,7 @@ class NestipyContainer:
         cls._singleton_instances = {}
         cls._singleton_classes = set()
         cls._request_scoped_classes = set()
+        cls._method_dependency_cache = {}
 
     def add_transient(self, service: Type):
         """
@@ -378,58 +380,64 @@ class NestipyContainer:
         :param disable_scope: Whether to disable scope-based resolution.
         :return: A dictionary of resolved dependencies for the method.
         """
-        params = inspect.signature(method_to_resolve).parameters
+        cached = self._method_dependency_cache.get(method_to_resolve)
+        if cached is None:
+            params = inspect.signature(method_to_resolve).parameters
+            descriptors = []
+            for name, param in params.items():
+                if name == "self" or param.annotation is inspect.Parameter.empty:
+                    continue
+                annotation, dep_key = ContainerHelper.get_type_from_annotation(
+                    param.annotation
+                )
+                descriptors.append((name, annotation, dep_key))
+            self._method_dependency_cache[method_to_resolve] = descriptors
+        else:
+            descriptors = cached
+
         args = {}
         context_container = RequestContextContainer.get_instance()
         execution_context = context_container.execution_context
         pipes = execution_context.get_pipes() if execution_context else []
-        for name, param in params.items():
-            if name != "self" and param.annotation is not inspect.Parameter.empty:
-                annotation, dep_key = ContainerHelper.get_type_from_annotation(
-                    param.annotation
+        for name, annotation, dep_key in descriptors:
+            if dep_key.metadata.key is not CtxDepKey.Service:
+                dependency = await self._resolve_contextual_service(
+                    name, dep_key, annotation
                 )
-                if dep_key.metadata.key is not CtxDepKey.Service:
-                    dependency = await self._resolve_contextual_service(
-                        name, dep_key, annotation
+                if self._can_apply_pipes(dep_key.metadata.key):
+                    param_pipes = list(getattr(dep_key.metadata, "pipes", [])) or []
+                    pipes_to_apply = [*pipes, *param_pipes]
+                    metadata = PipeArgumentMetadata(
+                        type=self._pipe_type_from_key(dep_key.metadata.key),
+                        metatype=annotation if isinstance(annotation, type) else None,
+                        data=dep_key.metadata.token or name,
                     )
-                    if self._can_apply_pipes(dep_key.metadata.key):
-                        param_pipes = (
-                            list(getattr(dep_key.metadata, "pipes", [])) or []
-                        )
-                        pipes_to_apply = [*pipes, *param_pipes]
-                        metadata = PipeArgumentMetadata(
-                            type=self._pipe_type_from_key(dep_key.metadata.key),
-                            metatype=annotation if isinstance(annotation, type) else None,
-                            data=dep_key.metadata.token or name,
-                        )
-                        dependency = await self._apply_pipes(
-                            dependency,
-                            pipes_to_apply,
-                            metadata,
-                            origin=origin,
-                            disable_scope=disable_scope,
-                        )
-                    args[name] = dependency
-                elif (
-                    dep_key.metadata.token in search_scope
-                    or annotation in search_scope
-                    or disable_scope
-                ):
-                    dependency = await self.get(
-                        dep_key.metadata.token or annotation,
+                    dependency = await self._apply_pipes(
+                        dependency,
+                        pipes_to_apply,
+                        metadata,
                         origin=origin,
                         disable_scope=disable_scope,
                     )
-                    args[name] = dependency
-                else:
-                    _name: str = (
-                        annotation.__name__
-                        if not isinstance(annotation, str)
-                        else annotation
-                    )
-                    raise ValueError(
-                        f"Service {_name} not found in scope {search_scope}"
-                    )
+                args[name] = dependency
+            elif (
+                dep_key.metadata.token in search_scope
+                or annotation in search_scope
+                or disable_scope
+            ):
+                dependency = await self.get(
+                    dep_key.metadata.token or annotation,
+                    origin=origin,
+                    disable_scope=disable_scope,
+                )
+                args[name] = dependency
+            else:
+                _name: str = (
+                    annotation.__name__ if not isinstance(annotation, str) else annotation
+                )
+                raise ValueError(
+                    f"Service {_name} not found in scope {search_scope}"
+                )
         return args
 
     @staticmethod

@@ -74,6 +74,8 @@ class NestipyApplication:
     _debug: bool = True
     _ready: bool = False
     _background_tasks: BackgroundTasks
+    _openapi_built: bool = False
+    _modules_cache: Optional[list[Type]] = None
     _profile: bool = False
 
     def __init__(self, config: Optional[NestipyConfig] = None):
@@ -171,6 +173,7 @@ class NestipyApplication:
         setup_start = time.perf_counter() if self._profile else None
         try:
             modules = self._get_modules(typing.cast(Type, self._root_module))
+            self._modules_cache = modules
             if self._profile:
                 self.instance_loader.reset_profile()
                 di_start = time.perf_counter()
@@ -184,9 +187,13 @@ class NestipyApplication:
                 routes_start = time.perf_counter()
             self._openapi_paths, self._openapi_schemas, self._list_routes = (
                 self._router_proxy.apply_routes(
-                    typing.cast(list[Union[Type, object]], modules), self._prefix or ""
+                    typing.cast(list[Union[Type, object]], modules),
+                    self._prefix or "",
+                    build_openapi=False,
+                    register_routes=True,
                 )
             )
+            self._openapi_built = False
             if self._profile:
                 routes_elapsed = (time.perf_counter() - routes_start) * 1000
             # check if graphql is enabled
@@ -272,6 +279,20 @@ class NestipyApplication:
                 {},
             )
 
+    def build_openapi(self):
+        if self._openapi_built:
+            return
+        modules = self._modules_cache or self._get_modules(
+            typing.cast(Type, self._root_module)
+        )
+        self._openapi_paths, self._openapi_schemas, _ = self._router_proxy.apply_routes(
+            typing.cast(list[Union[Type, object]], modules),
+            self._prefix or "",
+            build_openapi=True,
+            register_routes=False,
+        )
+        self._openapi_built = True
+
     async def ready(self) -> bool:
         if not self._ready:
             await self.setup()
@@ -291,9 +312,11 @@ class NestipyApplication:
         return self._graphql_adapter
 
     def get_openapi_paths(self) -> dict[Any, PathItem]:
+        self.build_openapi()
         return self._openapi_paths
 
     def get_open_api_schemas(self) -> Optional[Dict[str, Union[Schema, Reference]]]:
+        self.build_openapi()
         return self._openapi_schemas
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable):

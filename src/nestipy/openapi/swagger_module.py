@@ -38,6 +38,7 @@ class SwaggerModule:
 
     @classmethod
     def _create_document(cls, app: "NestipyApplication", config: OpenAPI) -> _Document:
+        app.build_openapi()
         paths = app.get_openapi_paths()
         config.paths = paths
         schemas_data = app.get_open_api_schemas()

@@ -54,7 +54,13 @@ class RouterProxy:
         self.router = router
         self.container = container or NestipyContainer.get_instance()
 
-    def apply_routes(self, modules: list[Union[Type, object]], prefix: str = ""):
+    def apply_routes(
+        self,
+        modules: list[Union[Type, object]],
+        prefix: str = "",
+        build_openapi: bool = True,
+        register_routes: bool = True,
+    ):
         """
         Explore the provided modules for controllers and register their routes with the HTTP adapter.
         :param modules: List of modules to explore.
@@ -70,7 +76,7 @@ class RouterProxy:
         json_schemas = {}
         list_routes = []
         for module_ref in modules:
-            routes = RouteExplorer.explore(module_ref)
+            routes = RouteExplorer.explore(module_ref, include_openapi=build_openapi)
             list_routes = [
                 *list_routes,
                 *[omit(u, {"controller", "openapi", "schemas"}) for u in routes],
@@ -84,32 +90,36 @@ class RouterProxy:
                 methods = route["request_method"]
                 method_name = route["method_name"]
                 controller = route["controller"]
-                handler = self.create_request_handler(
-                    self.router,
-                    typing.cast(Type, module_ref),
-                    controller,
-                    method_name,
-                    container=self.container,
-                )
+                handler = None
+                if register_routes:
+                    handler = self.create_request_handler(
+                        self.router,
+                        typing.cast(Type, module_ref),
+                        controller,
+                        method_name,
+                        container=self.container,
+                    )
                 for method in methods:
-                    getattr(self.router, method.lower())(path, handler, route)
+                    if register_routes and handler is not None:
+                        getattr(self.router, method.lower())(path, handler, route)
                     # OPEN API REGISTER
-                    if path in json_paths:
-                        route_path = json_paths[path]
-                    else:
-                        route_path = {}
-                    if "responses" not in route["openapi"].keys():
-                        route["openapi"]["responses"] = {200: ApiResponse()}
-                    json_schemas = {**json_schemas, **route["schemas"]}
-                    if "hidden" not in route["openapi"].keys():
-                        summary = route["openapi"].get(
-                            "summary", snakecase_to_camelcase(method_name)
-                        )
-                        route_path[method.lower()] = Operation(
-                            **route["openapi"],
-                            summary=summary,
-                        )
-                        json_paths[path] = route_path
+                    if build_openapi:
+                        if path in json_paths:
+                            route_path = json_paths[path]
+                        else:
+                            route_path = {}
+                        if "responses" not in route["openapi"].keys():
+                            route["openapi"]["responses"] = {200: ApiResponse()}
+                        json_schemas = {**json_schemas, **route["schemas"]}
+                        if "hidden" not in route["openapi"].keys():
+                            summary = route["openapi"].get(
+                                "summary", snakecase_to_camelcase(method_name)
+                            )
+                            route_path[method.lower()] = Operation(
+                                **route["openapi"],
+                                summary=summary,
+                            )
+                            json_paths[path] = route_path
         paths = {}
         for path, op in json_paths.items():
             paths[path] = PathItem(**op)
