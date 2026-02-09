@@ -41,7 +41,7 @@ class Injectable:
             case Scope.Transient:
                 self.container.add_transient(cls)
             case Scope.Request:
-                self.container.add_transient(cls)
+                self.container.add_request_scoped(cls)
             case _:
                 self.container.add_singleton(cls)
         return cls

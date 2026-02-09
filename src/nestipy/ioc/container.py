@@ -43,6 +43,7 @@ class NestipyContainer:
     _global_service_instances: dict = {}
     _singleton_instances: dict = {}
     _singleton_classes: set = set()
+    _request_scoped_classes: set = set()
 
     def __new__(cls, *args, **kwargs):
         """
@@ -70,6 +71,7 @@ class NestipyContainer:
         cls._global_service_instances = {}
         cls._singleton_instances = {}
         cls._singleton_classes = set()
+        cls._request_scoped_classes = set()
 
     def add_transient(self, service: Type):
         """
@@ -79,6 +81,14 @@ class NestipyContainer:
         :param service: The service class to be registered.
         """
         self._services[service] = service
+
+    def add_request_scoped(self, service: Type):
+        """
+        Registers a request-scoped service in the container.
+        Request-scoped services are cached per-request using RequestContextContainer.
+        """
+        self._services[service] = service
+        self._request_scoped_classes.add(service)
 
     def add_singleton(self, service: Type):
         """
@@ -468,6 +478,12 @@ class NestipyContainer:
         :param disable_scope: Disabling scope of search for dependencies.
         :return: The service instance.
         """
+        if method == _INIT and key in self._request_scoped_classes:
+            context_container = RequestContextContainer.get_instance()
+            cache = context_container.get_request_cache()
+            if cache is not None and key in cache:
+                return cache[key]
+
         in_singleton = await self._check_exist_singleton(key=key)
         if in_singleton:
             if method == _INIT:
@@ -476,6 +492,12 @@ class NestipyContainer:
             await self._resolve_property(
                 key, origin=origin, disable_scope=disable_scope
             )
-        return await self._resolve_method(
+        result = await self._resolve_method(
             key, method=method, origin=origin, disable_scope=disable_scope
         )
+        if method == _INIT and key in self._request_scoped_classes:
+            context_container = RequestContextContainer.get_instance()
+            cache = context_container.get_request_cache()
+            if cache is not None:
+                cache[key] = result
+        return result
