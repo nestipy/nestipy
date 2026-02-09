@@ -58,6 +58,8 @@ class NestipyConfig:
     cors: Optional[bool] = None
     debug: bool = True
     profile: bool = False
+    dependency_graph_debug: bool = False
+    dependency_graph_limit: int = 200
 
 
 class NestipyApplication:
@@ -77,6 +79,8 @@ class NestipyApplication:
     _openapi_built: bool = False
     _modules_cache: Optional[list[Type]] = None
     _profile: bool = False
+    _dependency_graph_debug: bool = False
+    _dependency_graph_limit: int = 200
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -95,6 +99,8 @@ class NestipyApplication:
         self._background_tasks: BackgroundTasks = BackgroundTasks()
         self.process_config(config)
         self._profile = config.profile
+        self._dependency_graph_debug = config.dependency_graph_debug
+        self._dependency_graph_limit = config.dependency_graph_limit
         self.instance_loader.enable_profile(self._profile)
         self.on_startup(self._startup)
         self.on_shutdown(self._destroy)
@@ -180,6 +186,24 @@ class NestipyApplication:
             graphql_module_instance = await self.instance_loader.create_instances(
                 modules
             )
+            NestipyContainer.get_instance().precompute_dependency_graph(modules)
+            if self._dependency_graph_debug:
+                graph = NestipyContainer.get_instance().get_dependency_graph()
+                total = len(graph)
+                limit = max(self._dependency_graph_limit, 0)
+                logger.info(
+                    "[DEPENDENCY GRAPH] services=%s (showing up to %s)",
+                    total,
+                    limit,
+                )
+                for i, (svc, deps) in enumerate(graph.items()):
+                    if limit and i >= limit:
+                        logger.info(
+                            "[DEPENDENCY GRAPH] ... truncated (total=%s)",
+                            total,
+                        )
+                        break
+                    logger.info("[DEPENDENCY GRAPH] %s -> %s", svc, deps)
             if self._profile:
                 di_elapsed = (time.perf_counter() - di_start) * 1000
             # create and register route to platform adapter

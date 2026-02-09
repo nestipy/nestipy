@@ -52,6 +52,7 @@ class NestipyContainer:
     _singleton_classes: set = set()
     _request_scoped_classes: set = set()
     _method_dependency_cache: dict = {}
+    _dependency_metadata_cache: dict = {}
 
     def __new__(cls, *args, **kwargs):
         """
@@ -81,6 +82,7 @@ class NestipyContainer:
         cls._singleton_classes = set()
         cls._request_scoped_classes = set()
         cls._method_dependency_cache = {}
+        cls._dependency_metadata_cache = {}
 
     def add_transient(self, service: Type):
         """
@@ -174,6 +176,9 @@ class NestipyContainer:
         """
         from .provider import ModuleProviderDict
 
+        if service in cls._dependency_metadata_cache:
+            return cls._dependency_metadata_cache[service]
+
         # extract global data from _service, not from module because all provider is already saved in _services of
         # container
         metadata: Union[ClassMetadata | None] = Reflect.get_metadata(
@@ -195,9 +200,63 @@ class NestipyContainer:
                     uniq_providers.append(m.token)
                 else:
                     uniq_providers.append(m)
-            return uniq(uniq_providers)
+            deps = uniq(uniq_providers)
+            cls._dependency_metadata_cache[service] = deps
+            return deps
         # raise ValueError(f"Dependency Metadata not found  for {service.__name__} service ")
-        return []
+        deps = []
+        cls._dependency_metadata_cache[service] = deps
+        return deps
+
+    @classmethod
+    def precompute_dependency_graph(cls, modules: list[Type]) -> None:
+        cls._dependency_metadata_cache = {}
+        candidates: set = set(cls._services.keys())
+        from .provider import ModuleProviderDict
+
+        for module in modules:
+            # Avoid importing DynamicModule at top-level to prevent cycles
+            if hasattr(module, "module") and hasattr(module, "providers"):
+                module = module.module
+            providers = Reflect.get_metadata(module, ModuleMetadata.Providers, [])
+            controllers = Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
+            for p in providers:
+                if isinstance(p, ModuleProviderDict):
+                    if p.use_class is not None:
+                        candidates.add(p.use_class)
+                    elif p.existing is not None:
+                        candidates.add(p.existing)
+                    elif p.token is not None and not isinstance(p.token, str):
+                        candidates.add(p.token)
+                else:
+                    candidates.add(p)
+            for c in controllers:
+                candidates.add(c)
+            candidates.add(module)
+
+        for service in list(candidates):
+            try:
+                cls.get_dependency_metadata(service)
+            except Exception:
+                continue
+
+    @classmethod
+    def get_dependency_graph(cls) -> dict[str, list[str]]:
+        def _format_key(k: Union[Type, str, object]) -> str:
+            from nestipy.metadata.provider_token import ProviderToken
+
+            if isinstance(k, ProviderToken):
+                return f"Token({k.key})"
+            if isinstance(k, str):
+                return k
+            if inspect.isclass(k):
+                return k.__name__
+            return str(k)
+
+        graph: dict[str, list[str]] = {}
+        for key, deps in cls._dependency_metadata_cache.items():
+            graph[_format_key(key)] = [_format_key(d) for d in deps]
+        return graph
 
     @classmethod
     async def _resolve_contextual_service(
