@@ -1,10 +1,13 @@
 import dataclasses
+import mimetypes
 import os.path
+import secrets
 import time
 import traceback
 import typing
 from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
 
+import aiofiles
 from rich.traceback import install
 
 from nestipy.common.logger import logger, console
@@ -28,6 +31,7 @@ from nestipy.common.constant import (
     SCOPE_REQUEST,
     SCOPE_SINGLETON,
     SCOPE_TRANSIENT,
+    DEVTOOLS_STATIC_PATH_KEY,
 )
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
@@ -62,6 +66,7 @@ class NestipyConfig:
     dependency_graph_limit: int = 200
     dependency_graph_json_path: Optional[str] = None
     graphql_adapter: Optional[GraphqlAdapter] = None
+    devtools_static_path: Optional[str] = None
 
 
 class NestipyApplication:
@@ -100,6 +105,10 @@ class NestipyApplication:
         self._middleware_container = MiddlewareContainer.get_instance()
         self.instance_loader = InstanceLoader()
         self._background_tasks: BackgroundTasks = BackgroundTasks()
+        self._devtools_static_path = self._resolve_devtools_static_path(
+            config.devtools_static_path
+        )
+        self._http_adapter.set(DEVTOOLS_STATIC_PATH_KEY, self._devtools_static_path)
         self.process_config(config)
         self._profile = config.profile
         self._dependency_graph_debug = config.dependency_graph_debug
@@ -136,6 +145,60 @@ class NestipyApplication:
             self._http_adapter.enable_cors()
         self._debug = config.debug
         self._http_adapter.debug = config.debug
+
+    def get_devtools_static_path(self) -> str:
+        return self._devtools_static_path
+
+    @staticmethod
+    def _resolve_devtools_static_path(config_path: Optional[str]) -> str:
+        if config_path:
+            return "/" + config_path.strip("/")
+        token = secrets.token_hex(16)
+        return f"/_devtools/{token}/static"
+
+    def _register_devtools_static(self) -> None:
+        static_dir = os.path.realpath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "devtools",
+                "frontend",
+                "static",
+            )
+        )
+        static_path = self._devtools_static_path
+        self._http_adapter.set(DEVTOOLS_STATIC_PATH_KEY, static_path)
+
+        async def devtools_static_handler(req: "Request", res: "Response", _next_fn):
+            rel_path = req.path_params.get("path", "").lstrip("/")
+            if not rel_path and req.path.startswith(static_path):
+                rel_path = req.path[len(static_path) :].lstrip("/")
+            if not rel_path:
+                return await res.status(404).send("Not found")
+            file_path = os.path.realpath(os.path.join(static_dir, rel_path))
+            if not file_path.startswith(static_dir) or not os.path.isfile(file_path):
+                return await res.status(404).send("Not found")
+            mime_type, _ = mimetypes.guess_type(file_path)
+            mime_type = mime_type or "application/octet-stream"
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in {".js", ".css", ".html"}:
+                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                content = content.replace("/_devtools/static", static_path)
+                return await res.header("Content-Type", mime_type).send(content)
+            async with aiofiles.open(file_path, "rb") as f:
+                payload = await f.read()
+            res.header("Content-Type", mime_type)
+            await res._write(payload)
+            return res
+
+        static_route = self._http_adapter.create_wichard(
+            static_path.strip("/"), name="path"
+        )
+        if not static_route.startswith("/"):
+            static_route = "/" + static_route
+        self._http_adapter.get(static_route, devtools_static_handler, {})
+        self._http_adapter.head(static_route, devtools_static_handler, {})
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -288,18 +351,7 @@ class NestipyApplication:
             raise e
         finally:
             # Register devtools static path
-            self.use_static_assets(
-                os.path.realpath(
-                    os.path.join(
-                        os.path.dirname(__file__),
-                        "..",
-                        "devtools",
-                        "frontend",
-                        "static",
-                    )
-                ),
-                "/_devtools/static",
-            )
+            self._register_devtools_static()
             # Not found
             not_found_path = self._http_adapter.create_wichard()
             if not not_found_path.startswith("/"):

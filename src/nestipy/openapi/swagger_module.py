@@ -90,7 +90,10 @@ class SwaggerModule:
                 file = await aiofiles.open(
                     os.path.join(os.path.dirname(__file__), "swagger.html"), "r"
                 )
-                response = await res.status(200).html(await file.read())
+                html = await file.read()
+                devtools_static = app.get_devtools_static_path()
+                html = html.replace("/_devtools/static", devtools_static)
+                response = await res.status(200).html(html)
                 await file.close()
                 return response
 

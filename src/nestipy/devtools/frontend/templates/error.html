@@ -4,13 +4,13 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Nestipy - {{status_code}} - {{ status_message}}</title>
-    <link rel="shortcut icon" type="image/ico" href="/_devtools/static/favicon.ico"/>
-    <link rel="icon" type="image/png" sizes="16x16" href="/_devtools/static/favicon-16x16.png"/>
-    <link rel="icon" type="image/png" sizes="32x32" href="/_devtools/static/favicon-32x32,png"/>
-    <link rel="apple-touch-icon" type="image/png" href="/_devtools/static/apple-touch-icon.png"/>
-    <link rel="manifest" href="/_devtools/static/site.webmanifest"/>
-    <script defer crossorigin src="/_devtools/static/assets/index-Cffqzmeu.js"></script>
-    <link rel="stylesheet" crossorigin href="/_devtools/static/assets/index-uiYMhCHJ.css">
+    <link rel="shortcut icon" type="image/ico" href="{{ devtools_static }}/favicon.ico"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ devtools_static }}/favicon-16x16.png"/>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ devtools_static }}/favicon-32x32,png"/>
+    <link rel="apple-touch-icon" type="image/png" href="{{ devtools_static }}/apple-touch-icon.png"/>
+    <link rel="manifest" href="{{ devtools_static }}/site.webmanifest"/>
+    <script defer crossorigin src="{{ devtools_static }}/assets/index-Cffqzmeu.js"></script>
+    <link rel="stylesheet" crossorigin href="{{ devtools_static }}/assets/index-uiYMhCHJ.css">
 </head>
 <body>
 <div id="error-data" data-json="{{json_data}}"></div>

@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from nestipy.common import Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
+from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
 from nestipy.common.template import TemplateKey
 from nestipy.common.template.interface import TemplateEngine
 from nestipy.core.router.router_proxy import RouterProxy
@@ -51,7 +52,7 @@ class HttpAdapter(ABC):
         pass
 
     @abstractmethod
-    def create_wichard(self, prefix: str = "/") -> str:
+    def create_wichard(self, prefix: str = "/",name: str = "path") -> str:
         pass
 
     @abstractmethod
@@ -314,12 +315,17 @@ class HttpAdapter(ABC):
                         )
                         dict_value = asdict(error.track_back)
                         json_data = json.dumps(dict_value)
+                        devtools_static = (
+                            self.get_state(DEVTOOLS_STATIC_PATH_KEY)
+                            or "/_devtools/static"
+                        )
                         content = jinja.render(
                             "error.html",
                             {
                                 "json_data": json_data,
                                 "status_code": error.status_code,
                                 "status_message": error.message,
+                                "devtools_static": devtools_static,
                             },
                         )
                         return await (

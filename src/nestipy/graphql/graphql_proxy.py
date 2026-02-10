@@ -24,6 +24,7 @@ from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 from ..types_ import NextFn
+from ..common.constant import DEVTOOLS_STATIC_PATH_KEY
 
 
 class GraphqlProxy:
@@ -144,6 +145,9 @@ class GraphqlProxy:
         gql_asgi = self._graphql_server.create_graphql_asgi_app(
             option=option,
             schema=self._graphql_server.create_schema(**schema_option),
+        )
+        gql_asgi.set_devtools_static_path(
+            self._adapter.get_state(DEVTOOLS_STATIC_PATH_KEY) or "/_devtools/static"
         )
         if option.auto_schema_file:
             schema_sdl = gql_asgi.print_schema()

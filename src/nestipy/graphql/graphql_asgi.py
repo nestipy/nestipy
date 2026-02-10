@@ -12,6 +12,7 @@ from nestipy.graphql.graphql_module import GraphqlOption
 
 class GraphqlASGI:
     option: Optional[GraphqlOption] = GraphqlOption()
+    devtools_static_path: Optional[str] = None
 
     @abstractmethod
     def print_schema(self) -> str:
@@ -19,6 +20,9 @@ class GraphqlASGI:
 
     def set_graphql_option(self, option: GraphqlOption):
         self.option = option
+
+    def set_devtools_static_path(self, path: Optional[str]):
+        self.devtools_static_path = path
 
     async def get_graphql_ide(self) -> str:
         playground_path = os.path.join(
@@ -29,6 +33,8 @@ class GraphqlASGI:
         file = await aiofiles.open(playground_path, "r")
         content = await file.read()
         await file.close()
+        if self.devtools_static_path:
+            content = content.replace("/_devtools/static", self.devtools_static_path)
         return content
 
     @abstractmethod
