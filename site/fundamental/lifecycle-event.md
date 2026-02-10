@@ -11,8 +11,6 @@ Nestipy provides lifecycle hooks similar to NestJS. These hooks let you run logi
 
 ## Order of Execution
 
-The high-level order is:
-
 ```mermaid
 flowchart TB
   A["Create provider and controller instances"] --> B["OnInit and NestipyModule.on_startup"]
@@ -30,6 +28,37 @@ Notes:
 - `OnModuleInit` runs after a module and its imports are resolved and instances are created.
 - `OnApplicationBootstrap` runs once for all providers, controllers, and modules.
 - Shutdown hooks run in the order shown above.
+
+## Request Lifecycle (HTTP)
+
+This shows the runtime request pipeline for HTTP routes.
+
+```mermaid
+flowchart TB
+  A["HTTP adapter receives request"] --> B["RouterProxy builds ExecutionContext"]
+  B --> C["Reset request context cache"]
+  C --> D["Middleware execution"]
+  D --> E["Guards"]
+  E --> F["Pipes"]
+  F --> G["Interceptors before handler"]
+  G --> H["Handler execution"]
+  H --> I["Interceptors after handler"]
+  I --> J["Template rendering (optional)"]
+  J --> K["Response normalization"]
+  K --> L["Send response"]
+
+  D -.-> X["Exception filter handler"]
+  E -.-> X
+  F -.-> X
+  G -.-> X
+  H -.-> X
+  X --> K
+```
+
+Notes:
+
+- Request-scoped dependencies are cached using `contextvars` and cleared at the end of each request.
+- Exception filters can transform errors into structured HTTP responses.
 
 ## Example
 

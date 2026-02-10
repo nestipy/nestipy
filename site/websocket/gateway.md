@@ -1,57 +1,60 @@
-By default, Nestipy use socketio as a Gateway. However, we can create our own adapter.
+Gateways provide a NestJS-style API for WebSocket events. They can use the built-in Socket.IO adapter or a custom ASGI adapter.
 
-Firstly, we need to create a gateway class
+## Basic Gateway
 
 ```python
-
 from typing import Annotated
-from nestipy.ioc import WebSocketServer, WebSocketClient, SocketData
 
-from nestipy.websocket import IoAdapter, Gateway, SubscribeMessage, Websocket
+from nestipy.ioc import WebSocketServer, WebSocketClient, SocketData
+from nestipy.websocket import Gateway, SubscribeMessage, Websocket, OnConnect, OnDisConnect
 
 
 @Gateway()
 class AppGateway:
-    server: Annotated[IoAdapter, WebSocketServer()]
+    server: Annotated[Websocket, WebSocketServer()]
 
-    @SubscribeMessage('user')
-    async def on_user(self, client: Annotated[Websocket, WebSocketClient()], data: Annotated[str, SocketData()]):
-        print(client.sid, data)
-        await self.server.emit('user', data, client.sid)
+    @OnConnect()
+    async def on_connect(self, client: Annotated[Websocket, WebSocketClient()]):
+        await self.server.emit("connected", {"id": client.sid})
+
+    @OnDisConnect()
+    async def on_disconnect(self, client: Annotated[Websocket, WebSocketClient()]):
+        await self.server.emit("disconnected", {"id": client.sid})
+
+    @SubscribeMessage("user")
+    async def on_user(
+        self,
+        client: Annotated[Websocket, WebSocketClient()],
+        data: Annotated[str, SocketData()],
+    ):
+        await self.server.emit("user", data, client.sid)
 ```
 
-Now, use gateway as module provider.
+## Registering the Gateway
 
 ```python
-
-from nestipy.common.decorator import Module
+from nestipy.common import Module
 
 
 @Module(
-    providers=[
-        AppGateway
-    ]
+    providers=[AppGateway],
 )
 class AppModule:
     pass
 ```
 
-After all, we need to tell Nestipy to use socketio as io adapater.
+## Using Socket.IO
 
 ```python
-
 import socketio
 
 from nestipy.core.nestipy_factory import NestipyFactory
 from nestipy.websocket import SocketIoAdapter
 
 app = NestipyFactory.create(AppModule)
-sio = socketio.AsyncServer(async_mode='asgi')
-app.use_io_adapter(SocketIoAdapter(sio))
 
+sio = socketio.AsyncServer(async_mode="asgi")
+app.use_io_adapter(SocketIoAdapter(sio))
 ```
 
-Gateway is marked as Injectable, it means you can inject it into controllers or other services within the same module.
-You can also inject it everywhere if it's defined as a provider in the root module.
-
-A working example can be found **[here](https://github.com/nestipy/sample/tree/main/sample-app-socket-io)**.
+Gateways are `@Injectable()` classes, so you can inject them into other providers or controllers.

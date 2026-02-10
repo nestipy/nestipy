@@ -1,9 +1,10 @@
-This is an example of how to create a WebSocket adapter.
+Adapters connect Nestipy to a WebSocket transport. Nestipy ships with a Socket.IO adapter and a minimal ASGI adapter example. You can create custom adapters by extending `IoAdapter`.
 
-Your adapter must extend the `IoAdapter` class from `nestipy.websocket` and implement all of its abstract methods.
+## IoAdapter Interface
 
-Below is the `IoAdapter` abstract class:
-```python 
+Your adapter must extend `IoAdapter` and implement its abstract methods:
+
+```python
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Optional
 
@@ -13,22 +14,20 @@ class IoAdapter(ABC):
         self._path = f"/{path.strip('/')}"
 
     @abstractmethod
-    def on(
-            self, event: str, namespace: Optional[str] = None
-    ) -> Callable[[Callable], Any]:
+    def on(self, event: str, namespace: Optional[str] = None) -> Callable[[Callable], Any]:
         pass
 
     @abstractmethod
     def emit(
-            self,
-            event: Any,
-            data: Optional[Any] = None,
-            to: Optional[Any] = None,
-            room: Optional[Any] = None,
-            skip_sid: Optional[Any] = None,
-            namespace: Optional[Any] = None,
-            callback: Optional[Any] = None,
-            ignore_queue: bool = False,
+        self,
+        event: Any,
+        data: Optional[Any] = None,
+        to: Optional[Any] = None,
+        room: Optional[Any] = None,
+        skip_sid: Optional[Any] = None,
+        namespace: Optional[Any] = None,
+        callback: Optional[Any] = None,
+        ignore_queue: bool = False,
     ):
         pass
 
@@ -53,11 +52,10 @@ class IoAdapter(ABC):
         pass
 ```
 
-So , let's create Websocket Adapter for ASGI Websocket
+## Minimal ASGI Adapter Example
 
 ```python
 from typing import Any, Callable, Optional
-
 from orjson import orjson
 
 from nestipy.websocket.adapter import IoAdapter
@@ -66,10 +64,10 @@ from nestipy.websocket.socket_request import Websocket
 
 class WebsocketAdapter(IoAdapter):
     def __init__(
-            self,
-            path: str = "/ws",
-            preprocess_payload: Callable[[str, Any], tuple[str, Any]] = None,
-            post_process_payload: Callable[[str, Any], Any] = None,
+        self,
+        path: str = "/ws",
+        preprocess_payload: Callable[[str, Any], tuple[str, Any]] | None = None,
+        post_process_payload: Callable[[str, Any], Any] | None = None,
     ):
         super().__init__(path=path)
         self._connected: list[str] = []
@@ -82,8 +80,6 @@ class WebsocketAdapter(IoAdapter):
         self._on_message_handler: list[Optional[Callable]] = []
 
     def on(self, event: str, namespace: str = None) -> Callable[[Callable], Any]:
-        """Register a handler for a specific path (event name)"""
-
         def decorator(handler: Callable):
             async def wrapper(sid: str, data: Any):
                 client = self._client_info[sid]
@@ -95,21 +91,19 @@ class WebsocketAdapter(IoAdapter):
         return decorator
 
     async def emit(
-            self,
-            event: Any,
-            data: Any = None,
-            to: Any = None,
-            room: Any = None,
-            skip_sid: Any = None,
-            namespace: Any = None,
-            callback: Any = None,
-            ignore_queue: bool = False,
+        self,
+        event: Any,
+        data: Any = None,
+        to: Any = None,
+        room: Any = None,
+        skip_sid: Any = None,
+        namespace: Any = None,
+        callback: Any = None,
+        ignore_queue: bool = False,
     ):
-        """Send a message to one or all clients"""
         if self._post_process_payload:
             data = self._post_process_payload(event, data)
         payload = data if isinstance(data, str) else orjson.dumps(data)
-
         if to:
             await self._send_to(to, payload)
         else:
@@ -124,8 +118,6 @@ class WebsocketAdapter(IoAdapter):
             await client.send({"type": "websocket.send", "text": payload})
 
     def on_connect(self) -> Callable[[Callable], Any]:
-        """Register connection handler"""
-
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
                 self._connected.append(sid)
@@ -137,8 +129,6 @@ class WebsocketAdapter(IoAdapter):
         return decorator
 
     def on_message(self) -> Callable[[Callable], Any]:
-        """Register connection handler"""
-
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
                 return await handler(sid, *args, **kwargs)
@@ -149,8 +139,6 @@ class WebsocketAdapter(IoAdapter):
         return decorator
 
     def on_disconnect(self) -> Callable[[Callable], Any]:
-        """Register disconnection handler"""
-
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
                 if sid in self._connected:
@@ -163,11 +151,9 @@ class WebsocketAdapter(IoAdapter):
         return decorator
 
     def broadcast(self, event: str, data: Any):
-        """Send to all connected clients"""
         return self.emit(event, data)
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable) -> bool:
-        """ASGI entry point for WebSocket"""
         if scope["type"] != "websocket" or not scope["path"].startswith(self._path):
             return False
 
@@ -178,10 +164,8 @@ class WebsocketAdapter(IoAdapter):
         )
         self._client_info[sid] = client
 
-        # Accept connection
         await send({"type": "websocket.accept"})
 
-        # Call on_connect
         if self._on_connect_handler:
             for handler in self._on_connect_handler:
                 await handler("connect", client, None)
@@ -192,15 +176,14 @@ class WebsocketAdapter(IoAdapter):
                 if message["type"] == "websocket.receive":
                     payload = message.get("text") or message.get("bytes")
                     ev = path_event
-                    p_client = self._client_info[sid]
                     if self._preprocess_payload:
                         ev, payload = self._preprocess_payload(payload, message)
                     for msg_handler in self._on_message_handler:
-                        await msg_handler(ev, p_client, payload)
+                        await msg_handler(ev, client, payload)
                     handler = self._event_handlers.get(ev)
                     if handler:
-                        p_client.data = payload
-                        await handler(ev, p_client, payload)
+                        client.data = payload
+                        await handler(ev, client, payload)
 
                 elif message["type"] == "websocket.disconnect":
                     break
@@ -212,12 +195,18 @@ class WebsocketAdapter(IoAdapter):
             self._client_info.pop(sid, None)
 
         return True
-
 ```
 
-And now, in you `main.py`
+## Register the Adapter
+
 ```python
-...
+from nestipy.core.nestipy_factory import NestipyFactory
+
+app = NestipyFactory.create(AppModule)
 app.use_io_adapter(WebsocketAdapter())
-...
 ```
+
+## Tips
+
+- Use Socket.IO for richer features if you need rooms, acknowledgements, or fallback transports.
+- Use a custom adapter when you want full control of the WebSocket protocol.

@@ -122,6 +122,24 @@ class CatsController:
 
 Constructor injection of request-scoped providers into singletons is not supported. Use property injection instead.
 
+## DI Resolution Flow
+
+```mermaid
+flowchart TB
+  A["Resolve token"] --> B["Check module providers"]
+  B --> C["Check imported module exports"]
+  C --> D["Check global module exports"]
+  D --> E{"Provider scope?"}
+  E -->|"Singleton"| F["Return cached or create"]
+  E -->|"Request"| G["Return request cache or create"]
+  E -->|"Transient"| H["Always create"]
+  F --> I["Resolve constructor dependencies"]
+  G --> I
+  H --> I
+  I --> J["Property injection"]
+  J --> K["Return instance"]
+```
+
 ## Resolution Rules
 
 Nestipy resolves dependencies using these rules:

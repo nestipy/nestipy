@@ -67,7 +67,11 @@ markdown_extensions:
       auto_title: true
   - pymdownx.inlinehilite
   #  - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 nav:
   - Introduction: index.md
@@ -86,8 +90,10 @@ nav:
   - Fundamentals:
       - Custom providers: fundamental/custom-provider.md
       - Dynamic modules: fundamental/dynamic-module.md
-      #      - Execution context: fundamental/execution-context.md
-      #      - Lifecycle events: fundamental/lifecycle-event.md
+      - Execution context: fundamental/execution-context.md
+      - Lifecycle events: fundamental/lifecycle-event.md
+      - DI and Request Scope: fundamental/di-request-scope.md
+      - Build a module: fundamental/build-module.md
       - Testing: fundamental/testing.md
   - Techniques:
       - Configuration: technique/configuration.md
@@ -100,9 +106,9 @@ nav:
   #  - Security: plugin.md
   - Graphql:
       - Quick start: graphql/quick-start.md
-  #      - Resolvers: graphql/resolver.md
-  #      - Mutations: graphql/mutation.md
-  #      - Subscription: graphql/subscription.md
+      - Resolvers: graphql/resolver.md
+      - Mutations: graphql/mutation.md
+      - Subscription: graphql/subscription.md
 
   - Websockets:
       - Gateways: websocket/gateway.md
@@ -119,5 +125,6 @@ nav:
       - REPL: recipes/repl.md
       - Router module : recipes/router.md
       - Commander: recipes/commander.md
+      - Auth + Guards + Pipes + OpenAPI: recipes/auth-guards-pipes-openapi.md
   - Cli: cli.md
   - Utils: util.md

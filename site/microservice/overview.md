@@ -29,6 +29,26 @@ if __name__ == "__main__":
     granian.serve()
 ```
 
+## Lifecycle Overview
+
+This diagram shows how a microservice instance starts, listens, and shuts down.
+
+```mermaid
+flowchart TB
+  A["NestipyFactory.create_microservice"] --> B["Create ClientProxy"]
+  B --> C["MicroServiceServer.listen"]
+  C --> D["Subscribe to channel"]
+  D --> E["Listen for incoming messages"]
+  E --> F{"Event or Request?"}
+  F -->|Event| G["Handle event callback"]
+  F -->|Request| H["Handle request callback"]
+  H --> I["Serialize response and publish"]
+  G --> J["Continue listening"]
+  I --> J
+  J --> K["Shutdown"]
+  K --> L["Before close and disconnect"]
+```
+
 ## Message and Event Patterns
 
 Nestipy supports two patterns:
