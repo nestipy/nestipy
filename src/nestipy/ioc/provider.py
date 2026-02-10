@@ -1,6 +1,9 @@
 from typing import Union, Awaitable, Any, Callable, Type, Optional
 
-from .container import NestipyContainer
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .container import NestipyContainer
 
 
 class ModuleProviderDict:
@@ -29,4 +32,6 @@ class ModuleProviderDict:
         self.use_class = use_class
         self.inject = inject or []
         self.imports = imports or []
+        from .container import NestipyContainer
+
         NestipyContainer.get_instance().add_singleton_instance(token, self)

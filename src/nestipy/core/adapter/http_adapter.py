@@ -43,6 +43,7 @@ class HttpAdapter(ABC):
 
     _io_adapter: typing.Optional[IoAdapter] = None
     debug: bool = True
+    _http_logging_enabled: bool = False
 
     @abstractmethod
     def get_instance(self) -> Any:
@@ -50,6 +51,9 @@ class HttpAdapter(ABC):
 
     async def start(self):
         pass
+
+    def enable_http_logging(self) -> None:
+        self._http_logging_enabled = True
 
     @abstractmethod
     def create_wichard(self, prefix: str = "/",name: str = "path") -> str:

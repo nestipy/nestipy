@@ -6,7 +6,6 @@ Create a microservice using `NestipyFactory.create_microservice()`:
 
 ```python
 import random
-from granian import Granian
 from granian.constants import Interfaces
 
 from app_module import AppModule
@@ -19,14 +18,13 @@ app = NestipyFactory.create_microservice(
 )
 
 if __name__ == "__main__":
-    granian = Granian(
-        target="main:app",
+    app.listen(
+        "main:app",
         address="0.0.0.0",
         port=random.randint(5000, 7000),
         interface=Interfaces.ASGI,
         reload=True,
     )
-    granian.serve()
 ```
 
 ## Lifecycle Overview
@@ -224,7 +222,6 @@ class MyRpcExceptionFilter(RpcExceptionFilter):
 To run HTTP and microservices together, connect microservices to an HTTP app:
 
 ```python
-from granian import Granian
 from granian.constants import Interfaces
 
 from app_module import AppModule
@@ -239,14 +236,13 @@ app = NestipyFactory.connect_microservice(
 app.start_all_microservices()
 
 if __name__ == "__main__":
-    granian = Granian(
-        target="main:app",
+    app.listen(
+        "main:app",
         address="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,
     )
-    granian.serve()
 ```
 
 Call `app.start_all_microservices()` to start microservice servers after HTTP boot.

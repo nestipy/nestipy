@@ -1,10 +1,9 @@
 import logging
-import logging
 import typing
 from importlib import import_module
 from typing import Type
 
-from nestipy.common.logger import logger
+from nestipy.common.logger import logger, configure_logger, DEFAULT_LOG_FORMAT
 from nestipy.microservice.client.base import MicroserviceOption
 from .nestipy_application import NestipyApplication, NestipyConfig
 from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
@@ -31,7 +30,7 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         :param config: Optional configuration for the application.
         :return: A NestipyApplication instance.
         """
-        cls._setup_log()
+        cls._setup_log(config)
         if getattr(cls, "__generic_type__", None) == "BlackSheepApplication":
             if not config:
                 config = NestipyConfig(adapter=cls._load_adapter())
@@ -49,6 +48,7 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         :param option: List of microservice options (transport, host, port, etc).
         :return: A NestipyMicroservice instance.
         """
+        cls._setup_log(None)
         return NestipyMicroservice(module, option)
 
     @classmethod
@@ -65,15 +65,33 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         :param config: Optional configuration.
         :return: A NestipyConnectMicroservice instance.
         """
+        cls._setup_log(config)
         return NestipyConnectMicroservice(module, config or NestipyConfig(), option)
 
     @classmethod
-    def _setup_log(cls):
-        logging.addLevelName(logging.INFO, "[NESTIPY] INFO")
-        logging.addLevelName(logging.ERROR, "[NESTIPY] ERROR")
-        logging.addLevelName(logging.WARNING, "[NESTIPY] WARNING")
-        logging.addLevelName(logging.WARN, "[NESTIPY] WARN")
-        logging.addLevelName(logging.CRITICAL, "[NESTIPY] CRITICAL")
+    def _setup_log(cls, config: typing.Optional[NestipyConfig]):
+        if config is None:
+            configure_logger(level=logging.INFO)
+            return
+        def _resolve_level(value: typing.Optional[typing.Union[int, str]], default: int) -> int:
+            if value is None:
+                return default
+            if isinstance(value, int):
+                return value
+            return logging._nameToLevel.get(value.upper(), default)
+
+        level = _resolve_level(config.log_level, logging.INFO)
+        file_level = _resolve_level(config.log_file_level, level)
+        configure_logger(
+            level=level,
+            fmt=config.log_format or DEFAULT_LOG_FORMAT,
+            datefmt=config.log_datefmt,
+            use_color=config.log_color,
+            file=config.log_file,
+            file_level=file_level,
+            attach_granian=True,
+            force=True,
+        )
 
     @classmethod
     def _load_adapter(cls):

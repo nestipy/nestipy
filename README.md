@@ -40,10 +40,9 @@
     
        
 ```
-The main.py file contains an instance of application and bootstrapping it with granian.
+The main.py file contains an instance of the application and bootstraps it with `app.listen()` (Granian under the hood).
 
 ```python
-from granian import Granian
 from granian.constants import Interfaces
 
 from nestipy.core import NestipyFactory
@@ -53,14 +52,20 @@ from app_module import AppModule
 app = NestipyFactory.create(AppModule)
 
 if __name__ == '__main__':
-    granian = Granian(
-        target="main:app",
+    app.listen(
+        "main:app",
         address="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,
     )
-    granian.serve()
+```
+
+Embed mode (no import string, fewer options like `reload/workers`):
+
+```python
+if __name__ == '__main__':
+    app.listen(address="0.0.0.0", port=8000)
 ```
 Inside module, we got,
 

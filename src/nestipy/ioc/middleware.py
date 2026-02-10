@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Union, Type, Callable, Literal, Optional, cast
+from typing import Union, Type, Callable, Literal, Optional, cast, TYPE_CHECKING
 
 from nestipy.metadata import Reflect, RouteKey, ClassMetadata
-from .container import NestipyContainer
+
+if TYPE_CHECKING:
+    from .container import NestipyContainer
 
 HTTPMethod = Literal[
     "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "ALL", "ANY"
@@ -114,6 +116,8 @@ class MiddlewareContainer:
             if proxy in self._middleware_instances:
                 return self._middleware_instances[proxy.middleware]
             else:
+                from .container import NestipyContainer
+
                 instance = await NestipyContainer().get_instance().get(proxy.middleware)
                 self._middleware_instances[proxy.middleware] = instance
                 return instance

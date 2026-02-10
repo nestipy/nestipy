@@ -1,6 +1,5 @@
 import random
 
-from granian import Granian
 from granian.constants import Interfaces
 
 from app_module import AppModule
@@ -21,11 +20,10 @@ app = NestipyFactory.connect_microservice(
 # app.use(session())
 app.start_all_microservices()
 if __name__ == "__main__":
-    granian = Granian(
+    app.listen(
         target="main:app",
         address="0.0.0.0",
         port=random.randint(5000, 7000),
         interface=Interfaces.ASGI,
         reload=True,
     )
-    granian.serve()

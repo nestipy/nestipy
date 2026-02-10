@@ -2,7 +2,6 @@ import os.path
 from typing import Any
 
 import socketio
-from granian import Granian
 from granian.constants import Interfaces
 from app_module import AppModule
 from nestipy.common import HttpException, ExceptionFilter, Catch, logger
@@ -69,15 +68,8 @@ app.use(session())
 
 @app.on_startup
 async def startup():
-    logger.info("Starting up ...")
+    logger.info("Starting up ...") 
 
 
 if __name__ == "__main__":
-    granian = Granian(
-        target="main:app",
-        address="0.0.0.0",
-        port=8001,
-        interface=Interfaces.ASGI,
-        reload=True,
-    )
-    granian.serve()
+    app.listen("main:app", address="0.0.0.0", port=8001, interface=Interfaces.ASGI, reload=True)

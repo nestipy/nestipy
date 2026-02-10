@@ -1,5 +1,3 @@
-from nestipy.ioc import ModuleProviderDict
-from .config import ConfigModule, ConfigService
 from .decorator import (
     Module,
     Controller,
@@ -43,6 +41,18 @@ from .openapi_error import OpenApiErrorResponse, OpenApiErrorDetail
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
 from .middleware import cookie_session, SessionCookieOption, SessionStore
 from .template import Render, TemplateEngine
+
+
+def __getattr__(name: str):
+    if name in {"ConfigModule", "ConfigService"}:
+        from .config import ConfigModule, ConfigService
+
+        return ConfigModule if name == "ConfigModule" else ConfigService
+    if name == "ModuleProviderDict":
+        from nestipy.ioc.provider import ModuleProviderDict
+
+        return ModuleProviderDict
+    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 __all__ = [
     "ConfigModule",

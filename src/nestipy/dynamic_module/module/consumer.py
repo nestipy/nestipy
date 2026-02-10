@@ -1,6 +1,6 @@
 from typing import Union, Type, Callable
 
-from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
+from nestipy.ioc.middleware import MiddlewareContainer, MiddlewareProxy
 
 
 class MiddlewareConsumer:

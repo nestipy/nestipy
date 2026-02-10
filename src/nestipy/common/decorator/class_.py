@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import enum
-from typing import Type, Callable, Union, Optional
+from typing import Type, Callable, Union, Optional, TYPE_CHECKING
 
 from nestipy.dynamic_module import DynamicModule
-from nestipy.ioc import NestipyContainer, ModuleProviderDict
 from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from nestipy.common.constant import NESTIPY_SCOPE_ATTR
+
+if TYPE_CHECKING:
+    from nestipy.ioc.provider import ModuleProviderDict
 
 
 class Scope(enum.Enum):
@@ -30,6 +34,8 @@ class Injectable:
         :param scope: The lifecycle scope of the provider (Singleton, Transient, or Request).
         """
         self.scope = scope
+        from nestipy.ioc.container import NestipyContainer
+
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls: Union[Type, Callable]) -> Type:
@@ -63,6 +69,8 @@ class Controller:
         """
         self.path = path
         self.kwargs = kwargs
+        from nestipy.ioc.container import NestipyContainer
+
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls, **kwargs):
@@ -113,6 +121,8 @@ class Module:
         self.imports = imports or []
         self.exports = exports or []
         self.is_global = is_global
+        from nestipy.ioc.container import NestipyContainer
+
         self.container = NestipyContainer.get_instance()
 
     def __call__(self, cls: Type):

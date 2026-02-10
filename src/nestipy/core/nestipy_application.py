@@ -1,11 +1,25 @@
 import dataclasses
+import logging
 import mimetypes
 import os.path
 import secrets
 import time
 import traceback
 import typing
-from typing import Type, Callable, Literal, Union, Any, TYPE_CHECKING, Optional, Dict
+from pathlib import Path
+from typing import (
+    Type,
+    Callable,
+    Literal,
+    Union,
+    Any,
+    TYPE_CHECKING,
+    Optional,
+    Dict,
+    Sequence,
+    TypedDict,
+    Unpack,
+)
 
 import aiofiles
 from rich.traceback import install
@@ -51,6 +65,83 @@ if TYPE_CHECKING:
     from nestipy.common.exception.interface import ExceptionFilter
     from nestipy.common.interceptor import NestipyInterceptor
     from nestipy.common.guards.can_activate import CanActivate
+    from granian.constants import (
+        Interfaces,
+        RuntimeModes,
+        Loops,
+        TaskImpl,
+        HTTPModes,
+        LogLevels,
+        SSLProtocols,
+    )
+    from granian.http import HTTP1Settings, HTTP2Settings
+    from watchfiles import BaseFilter
+else:
+    Interfaces = RuntimeModes = Loops = TaskImpl = HTTPModes = LogLevels = SSLProtocols = Any
+    HTTP1Settings = HTTP2Settings = BaseFilter = Any
+
+
+class GranianOptions(TypedDict, total=False):
+    address: str
+    port: int
+    uds: Optional[Path]
+    uds_permissions: Optional[int]
+    interface: "Interfaces"
+    workers: int
+    blocking_threads: Optional[int]
+    blocking_threads_idle_timeout: int
+    runtime_threads: int
+    runtime_blocking_threads: Optional[int]
+    runtime_mode: "RuntimeModes"
+    loop: "Loops"
+    task_impl: "TaskImpl"
+    http: "HTTPModes"
+    websockets: bool
+    backlog: int
+    backpressure: Optional[int]
+    http1_settings: Optional["HTTP1Settings"]
+    http2_settings: Optional["HTTP2Settings"]
+    log_enabled: bool
+    log_level: "LogLevels"
+    log_dictconfig: Optional[dict[str, Any]]
+    log_access: bool
+    log_access_format: Optional[str]
+    ssl_cert: Optional[Path]
+    ssl_key: Optional[Path]
+    ssl_key_password: Optional[str]
+    ssl_protocol_min: "SSLProtocols"
+    ssl_ca: Optional[Path]
+    ssl_crl: Optional[list[Path]]
+    ssl_client_verify: bool
+    url_path_prefix: Optional[str]
+    respawn_failed_workers: bool
+    respawn_interval: float
+    rss_sample_interval: int
+    rss_samples: int
+    workers_lifetime: Optional[int]
+    workers_max_rss: Optional[int]
+    workers_kill_timeout: Optional[int]
+    factory: bool
+    working_dir: Optional[Path]
+    env_files: Optional[Sequence[Path]]
+    static_path_route: Optional[Sequence[str]]
+    static_path_mount: Optional[Sequence[Path]]
+    static_path_dir_to_file: Optional[str]
+    static_path_expires: int
+    metrics_enabled: bool
+    metrics_scrape_interval: int
+    metrics_address: str
+    metrics_port: int
+    reload: bool
+    reload_paths: Optional[Sequence[Path]]
+    reload_ignore_dirs: Optional[Sequence[str]]
+    reload_ignore_patterns: Optional[Sequence[str]]
+    reload_ignore_paths: Optional[Sequence[Path]]
+    reload_filter: Optional[type["BaseFilter"]]
+    reload_tick: int
+    reload_ignore_worker_failure: bool
+    process_name: Optional[str]
+    pid_file: Optional[Path]
 
 # install rich track_back
 install(console=console, width=200)
@@ -67,6 +158,17 @@ class NestipyConfig:
     dependency_graph_json_path: Optional[str] = None
     graphql_adapter: Optional[GraphqlAdapter] = None
     devtools_static_path: Optional[str] = None
+    log_level: Optional[Union[int, str]] = None
+    log_file: Optional[str] = None
+    log_file_level: Optional[Union[int, str]] = None
+    log_format: Optional[str] = None
+    log_datefmt: Optional[str] = None
+    log_color: bool = True
+    log_http: bool = False
+    log_bootstrap: bool = True
+    granian_log_dictconfig: Optional[dict] = None
+    granian_log_access: Optional[bool] = None
+    granian_log_access_format: Optional[str] = None
 
 
 class NestipyApplication:
@@ -109,12 +211,20 @@ class NestipyApplication:
             config.devtools_static_path
         )
         self._http_adapter.set(DEVTOOLS_STATIC_PATH_KEY, self._devtools_static_path)
+        self._log_level = self._resolve_log_level(config.log_level, logging.INFO)
+        self._log_format = config.log_format
+        self._log_datefmt = config.log_datefmt
+        self._log_color = config.log_color
+        self._granian_log_dictconfig = config.granian_log_dictconfig
+        self._granian_log_access = config.granian_log_access
+        self._granian_log_access_format = config.granian_log_access_format
+        self._log_bootstrap = config.log_bootstrap
         self.process_config(config)
         self._profile = config.profile
         self._dependency_graph_debug = config.dependency_graph_debug
         self._dependency_graph_limit = config.dependency_graph_limit
         self._dependency_graph_json_path = config.dependency_graph_json_path
-        self.instance_loader.enable_profile(self._profile)
+        self.instance_loader.enable_profile(self._profile or self._log_bootstrap)
         self.on_startup(self._startup)
         self.on_shutdown(self._destroy)
 
@@ -145,6 +255,16 @@ class NestipyApplication:
             self._http_adapter.enable_cors()
         self._debug = config.debug
         self._http_adapter.debug = config.debug
+        if config.log_http:
+            self.enable_http_logging()
+
+    @staticmethod
+    def _resolve_log_level(value: Optional[Union[int, str]], default: int) -> int:
+        if value is None:
+            return default
+        if isinstance(value, int):
+            return value
+        return logging._nameToLevel.get(value.upper(), default)
 
     def get_devtools_static_path(self) -> str:
         return self._devtools_static_path
@@ -155,6 +275,92 @@ class NestipyApplication:
             return "/" + config_path.strip("/")
         token = secrets.token_hex(16)
         return f"/_devtools/{token}/static"
+
+    def listen(self, target: Optional[str] = None, **options: Unpack[GranianOptions]):
+        """
+        Run the app with Granian.
+
+        If target is provided, Granian is started using an import string
+        (e.g. "main:app") which enables options like reload/workers.
+        If target is not provided, an embedded Granian server is used with
+        the app instance directly.
+        """
+        if "interface" not in options:
+            try:
+                from granian.constants import Interfaces as GranianInterfaces
+
+                options["interface"] = GranianInterfaces.ASGI
+            except Exception:
+                pass
+        if "log_dictconfig" not in options:
+            from nestipy.common.logger import build_granian_log_dictconfig, DEFAULT_LOG_FORMAT
+
+            options["log_dictconfig"] = self._granian_log_dictconfig or build_granian_log_dictconfig(
+                level=self._log_level,
+                fmt=self._log_format or DEFAULT_LOG_FORMAT,
+                datefmt=self._log_datefmt,
+                use_color=True,
+            )
+        if "log_access" not in options and self._granian_log_access is not None:
+            options["log_access"] = self._granian_log_access
+        if (
+            "log_access_format" not in options
+            and self._granian_log_access_format is not None
+        ):
+            options["log_access_format"] = self._granian_log_access_format
+
+        if target is None:
+            unsupported = set(options.keys()) - {
+                "address",
+                "port",
+                "uds",
+                "interface",
+                "blocking_threads",
+                "blocking_threads_idle_timeout",
+                "runtime_threads",
+                "runtime_blocking_threads",
+                "task_impl",
+                "http",
+                "websockets",
+                "backlog",
+                "backpressure",
+                "http1_settings",
+                "http2_settings",
+                "log_enabled",
+                "log_level",
+                "log_dictconfig",
+                "log_access",
+                "log_access_format",
+                "ssl_cert",
+                "ssl_key",
+                "ssl_key_password",
+                "ssl_protocol_min",
+                "ssl_ca",
+                "ssl_crl",
+                "ssl_client_verify",
+                "url_path_prefix",
+                "factory",
+                "static_path_route",
+                "static_path_mount",
+                "static_path_dir_to_file",
+                "static_path_expires",
+            }
+            if unsupported:
+                raise ValueError(
+                    "Granian embed mode doesn't support options: "
+                    + ", ".join(sorted(unsupported))
+                    + ". Provide target='main:app' to use full Granian options."
+                )
+            from granian.server.embed import Server as GranianServer
+
+            server = GranianServer(target=self, **options)
+            server.serve()
+            return
+
+        from granian import Granian
+
+        server = Granian(target=target, **options)
+        server.serve()
 
     def _register_devtools_static(self) -> None:
         static_dir = os.path.realpath(
@@ -253,6 +459,16 @@ class NestipyApplication:
             graphql_module_instance = await self.instance_loader.create_instances(
                 modules
             )
+            if self._log_bootstrap:
+                profile = self.instance_loader.get_profile_summary()
+                for m in profile["module_breakdown"]:
+                    logger.info(
+                        "[InstanceLoader] %s dependencies initialized +%.2fms (%s providers, %s controllers)",
+                        m["module"],
+                        m["ms"],
+                        m["providers"],
+                        m["controllers"],
+                    )
             NestipyContainer.get_instance().precompute_dependency_graph(modules)
             if self._dependency_graph_debug:
                 graph = NestipyContainer.get_instance().get_dependency_graph()
@@ -421,6 +637,9 @@ class NestipyApplication:
 
     def enable_cors(self):
         self._http_adapter.enable_cors()
+
+    def enable_http_logging(self):
+        self._http_adapter.enable_http_logging()
 
     def use_static_assets(
         self, assets_path: str, url: str = "/static", *args, **kwargs

@@ -1,6 +1,8 @@
+import time
 import typing
 
 from fastapi import Response as FResponse, FastAPI, WebSocket as FastAPIWebSocket
+from fastapi import Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
 from starlette.middleware import _MiddlewareFactory
@@ -10,6 +12,7 @@ from starlette.types import ASGIApp
 from nestipy.common.http_ import Response, Websocket
 from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from .http_adapter import HttpAdapter
+from nestipy.common.logger import logger
 
 
 class FastApiAdapter(HttpAdapter):
@@ -138,6 +141,37 @@ class FastApiAdapter(HttpAdapter):
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    def enable_http_logging(self) -> None:
+        if self._http_logging_enabled:
+            return
+        self._http_logging_enabled = True
+
+        @self.instance.middleware("http")
+        async def _nestipy_http_logger(
+            request: FastAPIRequest, call_next
+        ) -> FResponse:
+            start = time.perf_counter()
+            try:
+                response = await call_next(request)
+            except Exception:
+                duration_ms = (time.perf_counter() - start) * 1000
+                logger.exception(
+                    "[HTTP] %s %s -> 500 (%.2fms)",
+                    request.method,
+                    request.url.path,
+                    duration_ms,
+                )
+                raise
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "[HTTP] %s %s -> %s (%.2fms)",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
+            return response
 
     def _create_fastapi_handler(
         self, callback: CallableHandler, _metadata: typing.Optional[dict] = None

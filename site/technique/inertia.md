@@ -10,7 +10,6 @@ pip install nestipy_inertia
 ```python
 import os
 
-from granian import Granian
 from granian.constants import Interfaces
 
 from nestipy.common import session
@@ -26,14 +25,13 @@ app.set_base_view_dir(os.path.join(os.path.dirname(__file__), "views"))
 app.use(session())
 
 if __name__ == '__main__':
-    granian = Granian(
-        target="main:app",
+    app.listen(
+        "main:app",
         address="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,
     )
-    granian.serve()
 
 
 ```
