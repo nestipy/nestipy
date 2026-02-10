@@ -192,6 +192,24 @@ async def handle(
     return {"ok": True}
 ```
 
+## Custom Response (Headers/Status)
+
+If you need to set response headers or return a pre-built response, return `RpcResponse` directly.
+
+```python
+from nestipy.microservice import RpcResponse
+
+
+@MessagePattern("sum-headers")
+async def sum_headers(self, payload: Annotated[dict, Payload()]):
+    return RpcResponse(
+        pattern="ignored",
+        data={"sum": payload["a"] + payload["b"]},
+        status="success",
+        headers={"x-result": "ok"},
+    )
+```
+
 ## Options and Defaults
 
 `MicroserviceOption` supports these key fields:
@@ -215,6 +233,68 @@ from nestipy.microservice import RpcException, RpcExceptionFilter
 class MyRpcExceptionFilter(RpcExceptionFilter):
     async def catch(self, exception: "RpcException", host: "ArgumentHost"):
         return exception.message
+```
+
+## Testing Microservices
+
+You can test microservice handlers without a real broker by using an in-memory client proxy. This gives you fast, deterministic integration tests.
+
+```python
+from dataclasses import asdict
+
+from nestipy.microservice import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
+from nestipy.microservice import Transport
+from nestipy.microservice.client.base import ClientProxy, MicroserviceOption
+
+
+class InMemoryClientProxy(ClientProxy):
+    def __init__(self, option: MicroserviceOption):
+        super().__init__(option)
+        self.published = []
+        self.listen_payloads = []
+
+    async def slave(self):
+        return self
+
+    async def _connect(self):
+        self._mark_connected()
+
+    async def _publish(self, topic, data):
+        self.published.append((topic, data))
+
+    async def subscribe(self, *_args, **_kwargs):
+        pass
+
+    async def unsubscribe(self, *_args):
+        pass
+
+    async def send_response(self, topic, data):
+        self.published.append((topic, data))
+
+    async def listen(self):
+        for payload in list(self.listen_payloads):
+            yield payload
+
+    async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
+        response = RpcResponse(pattern=from_topic, data={"ok": True}, status="success")
+        return await self.option.serializer.serialize(asdict(response))
+
+    async def _close(self):
+        self._mark_disconnected()
+
+
+# Example usage in a test:
+option = MicroserviceOption(transport=Transport.CUSTOM)
+client = InMemoryClientProxy(option)
+option.proxy = client
+await microservice.ms_setup()
+server = microservice.servers[0]
+
+request = RpcRequest(data={"a": 1, "b": 2}, pattern="sum", response_topic="resp-1")
+await server.handle_request(request)
+
+topic, payload = client.published[0]
+assert topic == f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}"
 ```
 
 ## Hybrid Application

@@ -61,7 +61,13 @@ class MicroServiceServer(ABC):
                     # resolve dependencies
                     try:
                         response = await callback(self, request)
-                        if isinstance(response, RpcException):
+                        if isinstance(response, RpcResponse):
+                            if request.response_topic:
+                                response.pattern = request.response_topic
+                            if response.exception and response.status != "error":
+                                response.status = "error"
+                            rpc_response = response
+                        elif isinstance(response, RpcException):
                             rpc_response = RpcResponse(
                                 pattern=request.response_topic,
                                 data=None,

@@ -22,22 +22,24 @@ class MicroserviceProxy:
 
     def apply_routes(self, controllers: list[object | Type]):
         for ctrl in controllers:
+            inspect_target = ctrl if inspect.isclass(ctrl) else ctrl.__class__
             elements = inspect.getmembers(
-                ctrl, lambda a: inspect.isfunction(a) or inspect.iscoroutinefunction(a)
+                inspect_target,
+                lambda a: inspect.isfunction(a) or inspect.iscoroutinefunction(a),
             )
             methods = [
                 method
                 for (method, _) in elements
                 if not method.startswith("__")
-                and self._is_listener(getattr(ctrl, method))
+                and self._is_listener(getattr(inspect_target, method))
             ]
             for m in methods:
                 metadata: ClassMetadata = Reflect.get_metadata(
-                    ctrl, ClassMetadata.Metadata, None
+                    inspect_target, ClassMetadata.Metadata, None
                 )
                 if metadata is not None:
                     data: MicroserviceData = Reflect.get_metadata(
-                        getattr(ctrl, m), MICROSERVICE_LISTENER, None
+                        getattr(inspect_target, m), MICROSERVICE_LISTENER, None
                     )
                     if (
                         not data.transport
@@ -118,7 +120,7 @@ class MicroserviceProxy:
                 if isinstance(result, RpcException):
                     raise result
                 if result is not None:
-                    raise RpcException(e.status_code, str(result))
+                    return result
                 raise e
             finally:
                 if previous_context is not None:

@@ -3,7 +3,7 @@ from typing import Annotated
 
 import pytest
 
-from nestipy.common import Controller, Injectable, Module
+from nestipy.common import Controller, Injectable, Module, Scope, Catch, UseFilters
 from nestipy.ioc import Inject, NestipyContainer
 from nestipy.ioc.context_container import RequestContextContainer
 from nestipy.microservice.client.base import ClientProxy, MicroserviceOption
@@ -11,7 +11,12 @@ from nestipy.microservice.client.option import Transport
 from nestipy.microservice.context import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
 from nestipy.microservice.decorator import MessagePattern, EventPattern
 from nestipy.microservice.dependency import Payload, Headers, Pattern, Ctx
-from nestipy.microservice.exception import RpcException, RPCErrorCode, RPCErrorMessage
+from nestipy.microservice.exception import (
+    RpcException,
+    RPCErrorCode,
+    RPCErrorMessage,
+    RpcExceptionFilter,
+)
 from nestipy.core import NestipyMicroservice
 
 
@@ -89,6 +94,16 @@ async def test_microservice_integration_message_and_event_flow():
                 "trace": headers.get("x-trace"),
             }
 
+        @MessagePattern("sum-headers")
+        async def sum_headers(self, payload: Annotated[dict, Payload()]):
+            result = {"sum": self.service.add(payload["a"], payload["b"])}
+            return RpcResponse(
+                pattern="ignored",
+                data=result,
+                status="success",
+                headers={"x-result": "ok"},
+            )
+
         @EventPattern("touch")
         async def touch(self, ctx: Annotated[object, Ctx()]):
             type(self).last_event_pattern = ctx.get_pattern()
@@ -128,12 +143,91 @@ async def test_microservice_integration_message_and_event_flow():
             "trace": "abc",
         }
 
+        request_headers = RpcRequest(
+            data={"a": 1, "b": 4},
+            pattern="sum-headers",
+            response_topic="resp-headers",
+        )
+        await server.handle_request(request_headers)
+
+        slave_headers = client.slave_instance
+        assert slave_headers is not None
+        _, payload_headers = slave_headers.published[0]
+        response_headers = await option.serializer.deserialize(payload_headers)
+        assert response_headers["status"] == "success"
+        assert response_headers["data"] == {"sum": 5}
+        assert response_headers["headers"] == {"x-result": "ok"}
+
         event_request = RpcRequest(data={"ping": True}, pattern="touch")
         client.listen_payloads = [
             await option.serializer.serialize(asdict(event_request))
         ]
         await server.listen()
         assert MathController.last_event_pattern == "touch"
+    finally:
+        await microservice.stop()
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_microservice_integration_request_scoped_provider():
+    NestipyContainer.clear()
+    RequestContextContainer.get_instance().destroy()
+
+    @Injectable(scope=Scope.Request)
+    class RequestId:
+        _counter = 0
+
+        def __init__(self):
+            type(self)._counter += 1
+            self.value = type(self)._counter
+
+    @Controller()
+    class ScopeController:
+        request_id: Annotated[RequestId, Inject()]
+
+        @MessagePattern("req-id")
+        async def get_id(self):
+            return {"id": self.request_id.value}
+
+    @Module(controllers=[ScopeController], providers=[RequestId])
+    class AppModule:
+        pass
+
+    option = MicroserviceOption(transport=Transport.CUSTOM)
+    client = InMemoryClientProxy(option)
+    option.proxy = client
+
+    microservice = NestipyMicroservice(AppModule, [option])
+
+    try:
+        await microservice.ms_setup()
+        server = microservice.servers[0]
+
+        request_one = RpcRequest(
+            data=None, pattern="req-id", response_topic="resp-1"
+        )
+        await server.handle_request(request_one)
+
+        slave_one = client.slave_instance
+        assert slave_one is not None
+        _, payload_one = slave_one.published[0]
+        response_one = await option.serializer.deserialize(payload_one)
+        id_one = response_one["data"]["id"]
+
+        request_two = RpcRequest(
+            data=None, pattern="req-id", response_topic="resp-2"
+        )
+        await server.handle_request(request_two)
+
+        slave_two = client.slave_instance
+        assert slave_two is not None
+        _, payload_two = slave_two.published[0]
+        response_two = await option.serializer.deserialize(payload_two)
+        id_two = response_two["data"]["id"]
+
+        assert id_one != id_two
     finally:
         await microservice.stop()
         NestipyContainer.clear()
@@ -210,6 +304,58 @@ async def test_microservice_integration_error_and_context_injection():
         assert response_generic["status"] == "error"
         assert response_generic["exception"]["status_code"] == RPCErrorCode.INTERNAL
         assert RPCErrorMessage.INTERNAL in response_generic["exception"]["message"]
+    finally:
+        await microservice.stop()
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_microservice_integration_exception_filter_returns_message():
+    NestipyContainer.clear()
+    RequestContextContainer.get_instance().destroy()
+
+    @Catch(RpcException)
+    class MyRpcExceptionFilter(RpcExceptionFilter):
+        async def catch(self, exception: "RpcException", host):
+            return exception.message
+
+    @Controller()
+    class FilterController:
+        @UseFilters(MyRpcExceptionFilter)
+        @MessagePattern("filter-test")
+        async def filter_test(self):
+            raise RpcException(
+                status_code=RPCErrorCode.DATA_LOSS,
+                message=RPCErrorMessage.DATA_LOSS,
+            )
+
+    @Module(controllers=[FilterController])
+    class AppModule:
+        pass
+
+    option = MicroserviceOption(transport=Transport.CUSTOM)
+    client = InMemoryClientProxy(option)
+    option.proxy = client
+
+    microservice = NestipyMicroservice(AppModule, [option])
+
+    try:
+        await microservice.ms_setup()
+        server = microservice.servers[0]
+
+        request = RpcRequest(
+            data=None, pattern="filter-test", response_topic="resp-filter"
+        )
+        await server.handle_request(request)
+
+        slave = client.slave_instance
+        assert slave is not None
+        _, payload = slave.published[0]
+        response = await option.serializer.deserialize(payload)
+        assert response["status"] == "success"
+        assert response["data"] == RPCErrorMessage.DATA_LOSS
+        assert response["exception"] is None
     finally:
         await microservice.stop()
         NestipyContainer.clear()
