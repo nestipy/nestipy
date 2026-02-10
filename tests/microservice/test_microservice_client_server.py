@@ -31,8 +31,9 @@ class FakeClientProxy(ClientProxy):
         self.slave_instance = FakeClientProxy(self.option)
         return self.slave_instance
 
-    async def connect(self):
+    async def _connect(self):
         self.connected = True
+        self._mark_connected()
 
     async def _publish(self, topic, data):
         self.published.append((topic, data))
@@ -54,8 +55,9 @@ class FakeClientProxy(ClientProxy):
         response = RpcResponse(pattern=from_topic, data={"ok": True}, status="success")
         return await self.option.serializer.serialize(asdict(response))
 
-    async def close(self):
+    async def _close(self):
         self.closed = True
+        self._mark_disconnected()
 
 
 class TimeoutClientProxy(FakeClientProxy):
@@ -103,7 +105,7 @@ def test_clients_module_register_builds_providers():
 
 @pytest.mark.asyncio
 async def test_client_proxy_send_and_emit():
-    option = MicroserviceOption(transport=Transport.CUSTOM)
+    option = MicroserviceOption(transport=Transport.CUSTOM, keep_alive=False)
     client = FakeClientProxy(option)
 
     response = await client.send("ping", {"hello": "world"})
@@ -129,7 +131,7 @@ async def test_client_proxy_send_and_emit():
 
 @pytest.mark.asyncio
 async def test_client_proxy_send_timeout():
-    option = MicroserviceOption(transport=Transport.CUSTOM)
+    option = MicroserviceOption(transport=Transport.CUSTOM, keep_alive=False)
     client = TimeoutClientProxy(option)
 
     with pytest.raises(RpcException) as exc:

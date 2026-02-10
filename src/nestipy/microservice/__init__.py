@@ -25,7 +25,7 @@ from .client.option import (
 from .client.option import Transport
 from .context import RpcResponse, RpcRequest
 from .decorator import MessagePattern, EventPattern
-from .dependency import Payload, Ctx, Client, Context
+from .dependency import Payload, Ctx, Headers, Pattern, Client, Context
 from .exception import RpcException, RpcExceptionFilter, RPCErrorMessage, RPCErrorCode
 from .serializer import JSONSerializer
 from .server import MicroServiceServer
@@ -58,6 +58,8 @@ __all__ = [
     "MicroServiceServer",
     "Payload",
     "Ctx",
+    "Headers",
+    "Pattern",
     "Context",
     "Client",
     "RPCErrorMessage",

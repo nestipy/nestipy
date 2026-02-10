@@ -9,7 +9,9 @@ from nestipy.microservice.decorator import (
     MICROSERVICE_LISTENER,
     MicroserviceMetadata,
 )
-from nestipy.microservice.dependency import Client, Payload, Ctx, Context
+from nestipy.microservice.dependency import Client, Payload, Ctx, Context, Headers, Pattern
+from nestipy.ioc.context_container import RequestContextContainer
+from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.microservice.serializer import JSONSerializer
 from nestipy.microservice.client.option import Transport, TCPClientOption
 
@@ -55,7 +57,69 @@ def test_microservice_dependency_aliases():
     assert isinstance(dep, TypeAnnotated)
     assert Payload is not None
     assert Ctx is not None
-    assert Context is RpcRequest
+    assert Context is not None
+
+
+@pytest.mark.asyncio
+async def test_microservice_dependency_resolution():
+    req = RpcRequest(
+        data={"foo": "bar"},
+        pattern="ping",
+        response_topic="resp",
+        headers={"x-token": "abc"},
+    )
+    ctx = ExecutionContext(
+        None,
+        object(),
+        object(),
+        lambda: None,
+        req,
+        None,
+        None,
+        None,
+        None,
+        None,
+        req.data,
+    )
+    container = RequestContextContainer.get_instance()
+    container.set_execution_context(ctx)
+    try:
+        payload = Payload().metadata.callback(
+            "data", None, dict, container
+        )
+        assert payload == {"foo": "bar"}
+
+        payload_field = Payload("foo").metadata.callback(
+            "data", "foo", str, container
+        )
+        assert payload_field == "bar"
+
+        headers = Headers().metadata.callback(
+            "headers", None, dict, container
+        )
+        assert headers == {"x-token": "abc"}
+
+        header_one = Headers("x-token").metadata.callback(
+            "headers", "x-token", str, container
+        )
+        assert header_one == "abc"
+
+        pattern = Pattern().metadata.callback(
+            "pattern", None, str, container
+        )
+        assert pattern == "ping"
+
+        rpc_ctx = Ctx().metadata.callback(
+            "ctx", None, object, container
+        )
+        assert rpc_ctx.get_pattern() == "ping"
+
+        request_obj = Context().metadata.callback(
+            "request", None, object, container
+        )
+        assert request_obj is req
+    finally:
+        container.destroy()
 
 
 def test_microservice_options_defaults():
