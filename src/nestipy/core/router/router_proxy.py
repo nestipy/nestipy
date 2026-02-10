@@ -274,7 +274,7 @@ class RouterProxy:
             elements, start_line = cls.get_center_elements(lines, lineno, n)
             return "".join(elements), start_line
         except Exception as e:
-            return f"Could not read file {filename}: {str(e)}"
+            return f"Could not read file {filename}: {str(e)}", 1
 
     @classmethod
     async def render_not_found(
@@ -297,6 +297,19 @@ class RouterProxy:
         tb = traceback.format_exc()
         if not isinstance(ex, HttpException):
             ex = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(ex), str(tb))
+        else:
+            status_code = getattr(ex, "status_code", HttpStatus.INTERNAL_SERVER_ERROR)
+            if not isinstance(status_code, int) or status_code < 100 or status_code > 599:
+                details = ex.details
+                if details is None:
+                    details = {"rpc_status_code": status_code}
+                elif isinstance(details, dict):
+                    details = {**details, "rpc_status_code": status_code}
+                ex = HttpException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    ex.message or HttpStatusMessages.INTERNAL_SERVER_ERROR,
+                    details,
+                )
         track_b = cls.get_full_traceback_details(
             execution_context.get_request(),
             ex.message,

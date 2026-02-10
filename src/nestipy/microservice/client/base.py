@@ -31,6 +31,7 @@ class MicroserviceOption:
     serializer: Serializer = field(default=JSONSerializer())
     channel_key: str = field(default="nestipy")
     timeout: int = 30
+    keep_alive: bool = True
 
     def __post_init__(self):
         if (
@@ -145,7 +146,8 @@ class ClientProxy(ABC):
                 message=RPCErrorMessage.DEADLINE_EXCEEDED,
             )
         await self.unsubscribe(response_channel)
-        await self.close()
+        if not self.option.keep_alive:
+            await self.close()
         json_rep = await self.option.serializer.deserialize(rpc_response)
         response = cast(Any, RpcResponse).from_dict(json_rep)
         if response.exception:
@@ -158,6 +160,8 @@ class ClientProxy(ABC):
         await self._publish(
             f"{MICROSERVICE_CHANNEL}:{self.option.channel_key}", json_req
         )
+        if not self.option.keep_alive:
+            await self.close()
 
     @abstractmethod
     def listen(self) -> AsyncIterator[str]:

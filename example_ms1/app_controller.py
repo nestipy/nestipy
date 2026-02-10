@@ -28,6 +28,7 @@ class TestGuard(CanActivate):
 @Catch(RpcException)
 class MyRpcExceptionFilter(RpcExceptionFilter):
     async def catch(self, exception: "RpcException", host: "ArgumentHost"):
+        print("Exception caught ::", exception.message)
         return exception.message
 
 
@@ -41,11 +42,11 @@ class AppController:
         print("Event data ::", data)
         return await self.service.get()
 
-    @UseFilters(MyRpcExceptionFilter)
+    # @UseFilters(MyRpcExceptionFilter)
     @MessagePattern("test2")
     async def get2(self, data: Annotated[str, Payload()]) -> str:
         print("Event data ::", data)
-        # raise RpcException(RPCErrorCode.ABORTED, RPCErrorMessage.ABORTED)
+        raise RpcException(RPCErrorCode.DATA_LOSS, RPCErrorMessage.DATA_LOSS)
         return "Hello"
 
     @Post()

@@ -610,6 +610,16 @@ class NestipyApplication:
 
     async def _destroy(self):
         await self._background_tasks.shutdown()
+        try:
+            from nestipy.microservice.client.base import ClientProxy
+
+            container = NestipyContainer.get_instance()
+            for instance in container.get_all_singleton_instance():
+                if isinstance(instance, ClientProxy):
+                    await instance.before_close()
+                    await instance.close()
+        except Exception as e:
+            logger.error("Error while closing microservice clients: %s", e)
         await self.instance_loader.destroy()
 
     def get_adapter(self) -> HttpAdapter:

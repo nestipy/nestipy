@@ -16,7 +16,7 @@ class AppController:
         print("Sending request")
         result = await self.client.send("test2", "from client")
         print("result from microservice server :::", result)
-        return result.data
+        return "Hello"
 
     @Post()
     async def post(self, data: Annotated[dict, Body()]) -> str:

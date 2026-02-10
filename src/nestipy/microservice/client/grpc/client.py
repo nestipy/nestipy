@@ -93,3 +93,6 @@ class GrpcClientProxy(ClientProxy):
         """Close the gRPC channel."""
         if self.channel:
             await self.channel.close()
+            self.channel = None
+            self.stub = None
+            self.subscription = None

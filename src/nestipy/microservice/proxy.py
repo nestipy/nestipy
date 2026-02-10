@@ -114,7 +114,12 @@ class MicroserviceProxy:
                 exception_handler: ExceptionFilterHandler = await container.get(
                     ExceptionFilterHandler
                 )
-                return await exception_handler.catch(e, execution_context, False)
+                result = await exception_handler.catch(e, execution_context, False)
+                if isinstance(result, RpcException):
+                    raise result
+                if result is not None:
+                    raise RpcException(e.status_code, str(result))
+                raise e
             finally:
                 if previous_context is not None:
                     context_container.set_execution_context(previous_context)

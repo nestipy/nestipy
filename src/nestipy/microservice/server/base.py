@@ -55,40 +55,69 @@ class MicroServiceServer(ABC):
         # process pattern
         slave = await self._pub_sub.slave()
         await slave.connect()
-        for pattern, callback in self._request_subscriptions:
-            if pattern == request.pattern:
-                # resolve dependencies
-                response = await callback(self, request)
-                if request.response_topic:
-                    rpc_response = RpcResponse(
-                        pattern=request.response_topic, data=response, status="success"
-                    )
-                    await slave.send_response(
-                        f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
-                        await self._pub_sub.option.serializer.serialize(
-                            asdict(rpc_response)
-                        ),
-                    )
-                return
-        if request.response_topic:
-            rpc_response_data: Any = await self._pub_sub.option.serializer.serialize(
-                asdict(
-                    RpcResponse(
-                        pattern=request.pattern,
-                        data=None,
-                        status="error",
-                        exception=RpcException(
-                            status_code=RPCErrorCode.NOT_FOUND,
-                            message=RPCErrorMessage.NOT_FOUND,
-                        ),
+        try:
+            for pattern, callback in self._request_subscriptions:
+                if pattern == request.pattern:
+                    # resolve dependencies
+                    try:
+                        response = await callback(self, request)
+                        if isinstance(response, RpcException):
+                            rpc_response = RpcResponse(
+                                pattern=request.response_topic,
+                                data=None,
+                                status="error",
+                                exception=response,
+                            )
+                        else:
+                            rpc_response = RpcResponse(
+                                pattern=request.response_topic,
+                                data=response,
+                                status="success",
+                            )
+                    except Exception as exc:
+                        if isinstance(exc, RpcException):
+                            rpc_exception = exc
+                        else:
+                            rpc_exception = RpcException(
+                                status_code=RPCErrorCode.INTERNAL,
+                                message=str(exc) or RPCErrorMessage.INTERNAL,
+                            )
+                        rpc_response = RpcResponse(
+                            pattern=request.response_topic,
+                            data=None,
+                            status="error",
+                            exception=rpc_exception,
+                        )
+                    if request.response_topic:
+                        await slave.send_response(
+                            f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
+                            await self._pub_sub.option.serializer.serialize(
+                                asdict(rpc_response)
+                            ),
+                        )
+                    return
+            if request.response_topic:
+                rpc_response_data: Any = (
+                    await self._pub_sub.option.serializer.serialize(
+                        asdict(
+                            RpcResponse(
+                                pattern=request.pattern,
+                                data=None,
+                                status="error",
+                                exception=RpcException(
+                                    status_code=RPCErrorCode.NOT_FOUND,
+                                    message=RPCErrorMessage.NOT_FOUND,
+                                ),
+                            )
+                        )
                     )
                 )
-            )
-            await slave.send_response(
-                f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
-                rpc_response_data,
-            )
-        await slave.close()
+                await slave.send_response(
+                    f"{MICROSERVICE_CHANNEL}:response:{request.response_topic}",
+                    rpc_response_data,
+                )
+        finally:
+            await slave.close()
 
     async def handle_event(self, request: RpcRequest):
         # process pattern
