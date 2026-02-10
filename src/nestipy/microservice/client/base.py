@@ -86,14 +86,17 @@ class MicroserviceOption:
 class ClientProxy(ABC):
     def __init__(self, option: MicroserviceOption):
         self.option = option
+        self._connected: bool = False
 
     @abstractmethod
     async def slave(self) -> "ClientProxy":
         pass
 
-    @abstractmethod
     async def connect(self):
-        pass
+        if self._connected:
+            return
+        await self._connect()
+        self._mark_connected()
 
     @abstractmethod
     async def _publish(self, topic, data):
@@ -117,10 +120,14 @@ class ClientProxy(ABC):
     async def before_close(self):
         await asyncio.sleep(0.001)
 
+    @abstractmethod
+    async def _connect(self):
+        raise NotImplementedError("ClientProxy._connect must be implemented")
+
     async def send(
         self, topic, data: Any, headers: Optional[dict[str, str]] = None
     ) -> RpcResponse:
-        await self.connect()
+        await self.ensure_connected()
         response_topic = uuid.uuid4().hex
         request = RpcRequest(
             pattern=topic,
@@ -171,6 +178,27 @@ class ClientProxy(ABC):
     async def listen_response(self, from_topic: str, timeout: int = 30) -> str:
         pass
 
-    @abstractmethod
     async def close(self):
-        pass
+        if not self._connected:
+            return
+        await self._close()
+        self._mark_disconnected()
+
+    async def _close(self):
+        raise NotImplementedError("ClientProxy._close must be implemented")
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def _mark_connected(self) -> None:
+        self._connected = True
+
+    def _mark_disconnected(self) -> None:
+        self._connected = False
+
+    async def ensure_connected(self) -> None:
+        if self._connected:
+            return
+        await self.connect()
+        if not self._connected:
+            self._mark_connected()

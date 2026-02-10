@@ -16,7 +16,7 @@ class RedisClientProxy(ClientProxy):
     def __init__(self, option: MicroserviceOption):
         super().__init__(option)
 
-    async def connect(self):
+    async def _connect(self):
         option = typing.cast(
             RedisClientOption, self.option.option or RedisClientOption()
         )
@@ -48,7 +48,7 @@ class RedisClientProxy(ClientProxy):
                     return response
         return ""
 
-    async def close(self):
+    async def _close(self):
         await self.pub_sub.aclose()
         await self.broker.close()
 

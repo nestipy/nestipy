@@ -16,7 +16,7 @@ class MicroServiceServer(ABC):
 
     async def listen(self):
         await self._pub_sub.before_start()
-        await self._pub_sub.connect()
+        await self._pub_sub.ensure_connected()
         await self._pub_sub.subscribe(
             f"{MICROSERVICE_CHANNEL}:{self._pub_sub.option.channel_key}"
         )
@@ -54,7 +54,7 @@ class MicroServiceServer(ABC):
     async def handle_request(self, request: RpcRequest) -> Any:
         # process pattern
         slave = await self._pub_sub.slave()
-        await slave.connect()
+        await slave.ensure_connected()
         try:
             for pattern, callback in self._request_subscriptions:
                 if pattern == request.pattern:

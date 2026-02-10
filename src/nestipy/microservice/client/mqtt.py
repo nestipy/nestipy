@@ -26,7 +26,7 @@ class MqttClientProxy(ClientProxy):
             option=self.option,
         )
 
-    async def connect(self):
+    async def _connect(self):
         await self.client.__aenter__()
 
     async def _publish(self, topic, data):
@@ -51,5 +51,5 @@ class MqttClientProxy(ClientProxy):
             return message.payload.decode("utf-8")
         await asyncio.sleep(0.01)
 
-    async def close(self):
+    async def _close(self):
         await self.client.__aexit__(None, None, None)

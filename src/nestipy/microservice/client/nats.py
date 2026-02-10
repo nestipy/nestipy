@@ -24,7 +24,7 @@ class NatsClientProxy(ClientProxy):
             self.option,
         )
 
-    async def connect(self):
+    async def _connect(self):
         _option = typing.cast(
             NatsClientOption, self.option.option or NatsClientOption()
         )
@@ -54,5 +54,5 @@ class NatsClientProxy(ClientProxy):
                 return msg.data.decode("utf-8")
             await asyncio.sleep(0.01)
 
-    async def close(self):
+    async def _close(self):
         await self.client.close()

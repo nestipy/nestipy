@@ -122,7 +122,7 @@ class TCPClientProxy(ClientProxy):
         if self.server_task:
             self.server_task.cancel()
 
-    async def connect(self):
+    async def _connect(self):
         """Establish a TCP connection."""
         if not self.writer:
             self.reader, self.writer = await asyncio.open_connection(
@@ -135,7 +135,7 @@ class TCPClientProxy(ClientProxy):
 
     async def _publish(self, topic: str, data: str):
         """Publish a message to the specified topic."""
-        await self.connect()
+        await self.ensure_connected()
         if self.writer:
             self.writer.write(
                 f"PUBLISH{__SPLIT__}{topic}{__SPLIT__}{data}\n".encode("utf-8")
@@ -144,7 +144,7 @@ class TCPClientProxy(ClientProxy):
 
     async def subscribe(self, topic: str):
         """Subscribe to a topic."""
-        await self.connect()
+        await self.ensure_connected()
         if self.writer:
             self.writer.write(f"SUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
             await self.writer.drain()
@@ -152,7 +152,7 @@ class TCPClientProxy(ClientProxy):
     async def unsubscribe(self, *args):
         """Unsubscribe from a topic."""
         topic = args[0] if args else ""
-        await self.connect()
+        await self.ensure_connected()
         if self.writer:
             self.writer.write(f"UNSUBSCRIBE{__SPLIT__}{topic}\n".encode("utf-8"))
             await self.writer.drain()
@@ -187,7 +187,7 @@ class TCPClientProxy(ClientProxy):
         finally:
             await self.unsubscribe(from_topic)
 
-    async def close(self):
+    async def _close(self):
         """Close the connection."""
         if self.writer:
             self.writer.close()

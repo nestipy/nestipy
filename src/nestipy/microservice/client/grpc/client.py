@@ -38,7 +38,7 @@ class GrpcClientProxy(ClientProxy):
         if self.server_task:
             self.server_task.cancel()
 
-    async def connect(self):
+    async def _connect(self):
         """Establish a connection to the gRPC server."""
         if not self.channel:
             self.channel = grpc.aio.insecure_channel(  # type: ignore
@@ -89,7 +89,7 @@ class GrpcClientProxy(ClientProxy):
         if self.stub:
             await self.stub.Unsubscribe(unsub_request)
 
-    async def close(self):
+    async def _close(self):
         """Close the gRPC channel."""
         if self.channel:
             await self.channel.close()

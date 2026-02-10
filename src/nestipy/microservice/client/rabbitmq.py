@@ -27,7 +27,7 @@ class RabbitMQClientProxy(ClientProxy):
             self.option,
         )
 
-    async def connect(self):
+    async def _connect(self):
         option = typing.cast(
             RabbitMQClientOption, self.option.option or RabbitMQClientOption()
         )
@@ -92,6 +92,6 @@ class RabbitMQClientProxy(ClientProxy):
             await response_exchange.delete()
         return res
 
-    async def close(self):
+    async def _close(self):
         await self.channel.__aexit__(None, None, None)
         await self.connection.close()
