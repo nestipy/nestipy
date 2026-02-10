@@ -1,13 +1,11 @@
-A guard is a class annotated with the `@Injectable()` decorator, which implements
-the `CanActivate` interface.
+Guards decide whether a request is allowed to proceed. They run before pipes and before the handler. A guard returns `True` to allow the request or `False` to block it.
 
-### Authorization guard
+## Basic Guard
 
 ```python
 from typing import Awaitable, Union
 
-from nestipy.common import CanActivate
-from nestipy.common import Injectable
+from nestipy.common import CanActivate, Injectable
 from nestipy.core import ExecutionContext
 
 
@@ -15,29 +13,34 @@ from nestipy.core import ExecutionContext
 class AuthGuard(CanActivate):
     def can_activate(self, context: ExecutionContext) -> Union[Awaitable[bool], bool]:
         req = context.switch_to_http().get_request()
-        return req.headers.get('Authorization') is not None
-
+        return req.headers.get("authorization") is not None
 ```
 
-### Binding guards
+If a guard returns `False`, Nestipy raises an HTTP 401 error by default.
 
-Guard can bing like with four ways, in controller, method, global and in provider.
+## Binding Guards
+
+Guards can be applied at four levels:
+
+- Controller level with `@UseGuards`
+- Method level with `@UseGuards`
+- Module level with `AppKey.APP_GUARD`
+- Global level with `app.use_global_guards`
 
 ```python
 from nestipy.common import Controller, Post, UseGuards
 
 
 @UseGuards(AuthGuard)
-@Controller('cats')
+@Controller("cats")
 class CatsController:
-
     @UseGuards(AuthGuard)
     @Post()
     async def create(self):
         pass
 ```
 
-Use guard globally by provider
+Module-level guard:
 
 ```python
 from nestipy.common import Module, ModuleProviderDict
@@ -48,7 +51,7 @@ from nestipy.core import AppKey
     providers=[
         ModuleProviderDict(
             AppKey.APP_GUARD,
-            use_class=AuthGuard
+            use_class=AuthGuard,
         )
     ]
 )
@@ -56,29 +59,26 @@ class AppModule:
     pass
 ```
 
-Or use guard globally in `main.py`
+Global guard:
 
 ```python
 from nestipy.core import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 app.use_global_guards(AuthGuard)
-
 ```
 
-### Full example for roles guard
+## Role-based Guard Example
 
 ```python
 import typing
 from typing import Union, Awaitable
 
 from nestipy.metadata import SetMetadata, Reflect
-
-from nestipy.common import CanActivate, UseGuards
-from nestipy.common import Controller, Post, Injectable
+from nestipy.common import CanActivate, UseGuards, Controller, Post, Injectable
 from nestipy.core import ExecutionContext
 
-ROLES = 'ROLES'
+ROLES = "ROLES"
 
 
 def Roles(roles: list[str]):
@@ -89,21 +89,29 @@ def Roles(roles: list[str]):
 class RolesGuard(CanActivate):
     async def can_activate(self, context: ExecutionContext) -> Union[Awaitable[bool], bool]:
         handler = context.get_handler()
-        class_handler = context.get_class()
+        controller = context.get_class()
         req = context.switch_to_http().get_request()
-        roles = list(set(Reflect.get_metadata(class_handler, ROLES, []) + Reflect.get_metadata(handler, ROLES, [])))
+        roles = list(
+            set(
+                Reflect.get_metadata(controller, ROLES, [])
+                + Reflect.get_metadata(handler, ROLES, [])
+            )
+        )
         user_roles = req.user.roles if req.user is not None else []
         return len(set(typing.cast(list[str], user_roles)) & set(roles)) > 0
 
 
 @UseGuards(RolesGuard)
-@Controller('cats')
+@Controller("cats")
 class CatsController:
     @Post()
-    @Roles(['admin'])
+    @Roles(["admin"])
     async def create(self):
         pass
 ```
 
-Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-guards)** for an  example.
+## Tips
 
+- Guards should be fast and side-effect free.
+- Use metadata decorators to keep guard logic generic.
+- Combine global guards with method-level overrides for precise control.

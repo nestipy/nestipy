@@ -1,4 +1,4 @@
-This short walkthrough combines provider scopes, pipes, and lifecycle hooks in one example.
+This walkthrough combines provider scopes, pipes, and lifecycle hooks in one example. It mirrors the NestJS mental model while using Nestipy syntax.
 
 ## Example: Scopes + Pipes + Lifecycle
 
@@ -32,11 +32,9 @@ class DebugService:
 @Injectable()
 class CatsService(OnModuleInit, OnApplicationBootstrap):
     async def on_module_init(self):
-        # Called once when the module is initialized
         pass
 
     async def on_application_bootstrap(self):
-        # Called once after the app is fully bootstrapped
         pass
 
     def create(self, data: CreateCat):
@@ -71,15 +69,12 @@ class AppModule:
     pass
 ```
 
-## What this shows
+## What This Shows
 
-- **Scopes**
-  - `RequestIdService` is request-scoped: one instance per request.
-  - `DebugService` is transient: new instance each time it is injected.
-  - `CatsService` is singleton (default): one instance for the whole app.
-- **Pipes**
-  - `ValidationPipe()` validates and transforms the body.
-  - `ParseIntPipe` converts the `limit` query param to an `int`.
-- **Lifecycle**
-  - `OnModuleInit` runs when module providers/controllers are initialized.
-  - `OnApplicationBootstrap` runs once after app bootstrap.
+- `RequestIdService` is request-scoped so it changes per request.
+- `DebugService` is transient so it changes per injection.
+- `CatsService` is singleton by default.
+- `ValidationPipe` validates and transforms the request body.
+- `ParseIntPipe` converts the `limit` query param to `int`.
+- `OnModuleInit` runs after module instances are created.
+- `OnApplicationBootstrap` runs once after bootstrap.

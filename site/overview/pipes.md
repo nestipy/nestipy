@@ -1,6 +1,17 @@
-Pipes let you transform and validate input values before your handler runs.
+Pipes transform and validate input values before your handler runs. They are the primary place to enforce type conversion and validation at the edge of your application.
 
-## Basic usage
+## When Pipes Run
+
+Nestipy applies pipes in this order:
+
+- Global pipes
+- Controller pipes
+- Method pipes
+- Parameter pipes
+
+If any pipe raises an error, Nestipy returns HTTP 400 with details.
+
+## Basic Usage
 
 ```python
 from typing import Annotated
@@ -17,7 +28,7 @@ class CatsController:
         return {"limit": limit}
 ```
 
-## Global pipes
+## Global Pipes
 
 ```python
 from nestipy.core import NestipyFactory
@@ -27,7 +38,7 @@ app = NestipyFactory.create(AppModule)
 app.use_global_pipes(ValidationPipe())
 ```
 
-## Controller and method pipes
+## Controller and Method Pipes
 
 ```python
 from nestipy.common import Controller, Get, UsePipes
@@ -42,7 +53,7 @@ class FlagsController:
         return {"ok": True}
 ```
 
-## Parameter-level pipes
+## Parameter Pipes
 
 ```python
 from typing import Annotated
@@ -56,7 +67,7 @@ async def handler(
     return {"page": page}
 ```
 
-You can also pass pipes via the keyword `pipes`:
+You can also pass pipes using the `pipes` keyword:
 
 ```python
 from typing import Annotated
@@ -70,7 +81,7 @@ async def handler(
     return {"limit": limit}
 ```
 
-## Module-level pipes
+## Module-level Pipes
 
 Module-level pipes use a provider token, similar to guards and interceptors.
 
@@ -85,7 +96,7 @@ from nestipy.common.pipes import ParseIntPipe
     providers=[
         ModuleProviderDict(
             token=AppKey.APP_PIPE,
-            use_class=ParseIntPipe
+            use_class=ParseIntPipe,
         )
     ]
 )
@@ -93,7 +104,22 @@ class AppModule:
     pass
 ```
 
-## Built-in pipes
+## Custom Pipes
+
+Custom pipes implement `PipeTransform`.
+
+```python
+from nestipy.common.pipes import PipeTransform, PipeArgumentMetadata
+
+
+class TrimPipe(PipeTransform):
+    async def transform(self, value: str, metadata: PipeArgumentMetadata) -> str:
+        if value is None:
+            return value
+        return value.strip()
+```
+
+## Built-in Pipes
 
 Nestipy includes these built-in pipes:
 
@@ -105,7 +131,7 @@ Nestipy includes these built-in pipes:
 - `DefaultValuePipe`
 - `ValidationPipe`
 
-### ValidationPipe options
+### ValidationPipe Options
 
 ```python
 from nestipy.common.pipes import ValidationPipe
@@ -117,10 +143,6 @@ ValidationPipe(
 )
 ```
 
-- `transform`: convert inputs to the target type when possible.
-- `whitelist`: strip unknown properties from dict inputs.
-- `forbid_non_whitelisted`: raise an error if unknown properties are present.
-
-## Error behavior
-
-Pipe failures are converted to HTTP 400 responses with details about the pipe and error.
+- `transform` converts inputs to target types when possible.
+- `whitelist` strips unknown properties from dict inputs.
+- `forbid_non_whitelisted` raises an error when unknown properties are present.

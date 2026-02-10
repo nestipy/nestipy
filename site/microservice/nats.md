@@ -1,52 +1,65 @@
-NATS is an efficient, secure, open-source messaging system designed for cloud-native applications, IoT messaging, and microservices. Written in Go, NATS offers client libraries for many programming languages. It supports both At Most Once and At Least Once delivery and is versatile enough to run on large servers, cloud instances, edge gateways, and IoT devices.
+NATS is a lightweight, high-performance messaging system well-suited for microservices and event-driven systems.
+
 ## Installation
 
 ```bash
 pip install nats-py
 ```
 
-## Overview#
-To use the `NATS` transporter, pass the following options object to the `create_microservice`() method:
+## Server Setup
 
 ```python
-
-
 from app_module import AppModule
-
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport, NatsClientOption
 
 app = NestipyFactory.create_microservice(
-    AppModule, [
+    AppModule,
+    [
         MicroserviceOption(
             transport=Transport.NATS,
-            option=NatsClientOption()
+            option=NatsClientOption(),
         )
-    ]
+    ],
 )
 ```
 
-##Client
+## Client Setup
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, NatsClientOption, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig
+from nestipy.microservice import NatsClientOption, MicroserviceOption, Transport
 
 
 @Module(
     imports=[
-        ClientsModule.register([
-            ClientsConfig(
-                name="MATH_SERVICE",
-                option=MicroserviceOption(
-                    transport=Transport.NATS,
-                    option=NatsClientOption()
+        ClientsModule.register(
+            [
+                ClientsConfig(
+                    name="MATH_SERVICE",
+                    option=MicroserviceOption(
+                        transport=Transport.NATS,
+                        option=NatsClientOption(),
+                    ),
                 )
-            )
-        ]),
+            ]
+        )
     ]
-    ...
 )
 class AppModule:
-    ...
+    pass
 ```
+
+## Option Highlights
+
+Common NATS options:
+
+- `servers`
+- `name`
+- `user` and `password`
+- `token`
+- `allow_reconnect`
+- `max_reconnect_attempts`
+
+Use `NatsClientOption` for full configuration.

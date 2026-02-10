@@ -1,14 +1,11 @@
-As same as Nestjs, Nestipy supports both traditional monolithic applications and microservice architectures. Key
-concepts like dependency injection, decorators, exception filters, guards, and interceptors work seamlessly with
-microservices.
+Nestipy supports both monolithic and microservice architectures. The microservice layer mirrors NestJS patterns while keeping the same DI, guards, interceptors, and filters you already use for HTTP.
 
-## Getting started
+## Getting Started
 
-To instantiate a microservice, use the `create_microservice() `method of the `NestipyFactory` class:
+Create a microservice using `NestipyFactory.create_microservice()`:
 
 ```python
 import random
-
 from granian import Granian
 from granian.constants import Interfaces
 
@@ -18,14 +15,10 @@ from nestipy.microservice import MicroserviceOption, Transport
 
 app = NestipyFactory.create_microservice(
     AppModule,
-    [
-        MicroserviceOption(
-            transport=Transport.TCP,
-        )
-    ]
+    [MicroserviceOption(transport=Transport.TCP)],
 )
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     granian = Granian(
         target="main:app",
         address="0.0.0.0",
@@ -34,17 +27,21 @@ if __name__ == '__main__':
         reload=True,
     )
     granian.serve()
-
 ```
 
-## Patterns
+## Message and Event Patterns
 
-Nestipy supports **Request-response** and **Event** patterns.
-Bellow an example of `Request-response` pattern.
+Nestipy supports two patterns:
+
+- Request-response with `@MessagePattern`
+- Fire-and-forget with `@EventPattern`
+
+Request-response:
 
 ```python
 from typing import Annotated
 from nestipy.common import Controller
+from nestipy.ioc import Inject
 from nestipy.microservice import MessagePattern, Payload
 
 
@@ -57,12 +54,12 @@ class AppController:
         return await self.service.get()
 ```
 
-Bellow an example of `Event` pattern.
+Event pattern:
 
 ```python
 from typing import Annotated
-
 from nestipy.common import Controller
+from nestipy.ioc import Inject
 from nestipy.microservice import EventPattern, Payload
 
 
@@ -71,36 +68,37 @@ class AppController:
     service: Annotated[AppService, Inject()]
 
     @EventPattern("test")
-    async def get(self, data: Annotated[str, Payload()]) -> str:
-        await self.service.get()  # no need to return
+    async def get(self, data: Annotated[str, Payload()]) -> None:
+        await self.service.get()
 ```
 
-## Client
+## Client Registration
 
-First, register `ClientsModule` in `AppModule`.
+Register clients with `ClientsModule`:
 
 ```python
 from nestipy.common import Module
-from nestipy.microservice import ClientsModule, ClientsConfig, MicroserviceOption, Transport
+from nestipy.microservice import ClientsModule, ClientsConfig
+from nestipy.microservice import MicroserviceOption, Transport
 
 
 @Module(
     imports=[
-        ClientsModule.register([
-            ClientsConfig(
-                name="MATH_SERVICE",
-                option=MicroserviceOption(
-                    transport=Transport.TCP,
+        ClientsModule.register(
+            [
+                ClientsConfig(
+                    name="MATH_SERVICE",
+                    option=MicroserviceOption(transport=Transport.TCP),
                 )
-            )
-        ]),
-    ]
-    ...
+            ]
+        )
+    ],
 )
 class AppModule:
-    ...
+    pass
 ```
-Or use `ModuleProviderDict`.
+
+Or register a provider manually:
 
 ```python
 from typing import Annotated
@@ -116,9 +114,9 @@ async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
         MicroserviceOption(
             transport=Transport.TCP,
             option=TCPClientOption(
-                host=config.token.get('HOST'),  # Default localhost
-                port=config.get("PORT")  # Default 1333
-            )
+                host=config.token.get("HOST"),
+                port=config.get("PORT"),
+            ),
         )
     )
 
@@ -127,71 +125,68 @@ async def factory(config: Annotated[ConfigService, Inject()]) -> ClientProxy:
     providers=[
         ModuleProviderDict(
             token="MATH_SERVICE",
-            factory=MicroserviceOption,
-            inject=[
-                ConfigModule.for_root()
-            ]
-            # value=ClientModuleFactory.create(
-            #     MicroserviceOption(
-            #         transport=Transport.TCP
-            #     )
-            # )
+            factory=factory,
+            inject=[ConfigModule.for_root()],
         )
     ]
-    ...
 )
 class AppModule:
-    ...
+    pass
 ```
-Now, we can inject `client`.
+
+Inject the client:
 
 ```python
 from typing import Annotated
-
 from nestipy.common import Controller
 from nestipy.microservice import Client, ClientProxy
 
 
 @Controller()
 class AppController:
-    client: Annotated[ClientProxy, Client('MATH_SERVICE')]
+    client: Annotated[ClientProxy, Client("MATH_SERVICE")]
 ```
 
-## Guards
+## Sending and Emitting
 
-For Nestipy microservice, Guards works as same as HTTP
+Use `send` for request-response and `emit` for events:
 
 ```python
-@Injectable()
-class TestGuard(CanActivate):
-
-    def can_activate(self, context: "ExecutionContext") -> Union[Awaitable[bool], bool]:
-        print("RPC data :::", context.switch_to_rpc().get_data())
-        return True
+response = await client.send("sum", {"a": 1, "b": 2})
+await client.emit("audit", {"action": "sum"})
 ```
 
-Using it.
+## Context and Payload
+
+- `Payload()` injects the message payload.
+- `Ctx()` or `Context` injects the RPC context.
 
 ```python
-@Controller()
-class AppController:
-    service: Annotated[AppService, Inject()]
+from typing import Annotated
+from nestipy.microservice import Payload, Ctx, Context
 
-    @UseGuards(TestGuard)
-    @MessagePattern("test")
-    async def get(self, data: Annotated[str, Payload()]) -> str:
-        print("RPC data ::", data)
-        return await self.service.get()
+
+@MessagePattern("ping")
+async def handle(
+    data: Annotated[dict, Payload()],
+    ctx: Annotated[Context, Ctx()],
+):
+    return {"ok": True}
 ```
 
-## Interceptors
+## Options and Defaults
 
-Interceptors works exactly as same as HTTP.
+`MicroserviceOption` supports these key fields:
 
-## Exception Filters
+- `transport` selects the transport.
+- `option` is the transport-specific configuration object.
+- `serializer` controls request serialization. Default is JSON.
+- `channel_key` is the message channel prefix. Default is `nestipy`.
+- `timeout` is the client request timeout in seconds. Default is `30`.
 
-For Nestipy microservice, `Exception Filters` works as same as HTTP `Exception Filters`. The only main difference is
-about using `RpcExceptionFilter` instead of `ExceptionFilter`.
+## Guards, Interceptors, Filters
+
+Guards, interceptors, and filters work the same way as HTTP. The main difference is the RPC context and `RpcExceptionFilter`.
 
 ```python
 from nestipy.common import Catch
@@ -204,64 +199,26 @@ class MyRpcExceptionFilter(RpcExceptionFilter):
         return exception.message
 ```
 
-Follow an example.
+## Hybrid Application
+
+To run HTTP and microservices together, connect microservices to an HTTP app:
 
 ```python
-from typing import Annotated
-
-from nestipy.common import Controller, UseFilters, UseGuards
-from nestipy.ioc import Inject
-from nestipy.microservice import Payload, MessagePattern
-from nestipy.microservice import RpcException, RPCErrorMessage, RPCErrorCode
-
-
-@Controller()
-class AppController:
-    service: Annotated[AppService, Inject()]
-
-    @UseGuards(TestGuard)
-    @MessagePattern("test")
-    async def get(self, data: Annotated[str, Payload()]) -> str:
-        print("RPC data ::", data)
-        return await self.service.get()
-
-    @UseFilters(MyRpcExceptionFilter)
-    @MessagePattern("test2")
-    async def get2(self, data: Annotated[str, Payload()]) -> None:
-        print("RPC data ::", data)
-        raise RpcException(
-            RPCErrorCode.ABORTED,
-            RPCErrorMessage.ABORTED
-        )
-```
-
-## Hybrid application
-
-Nestipy support hybrid application. To achieve this, we need to use `connect_microservice` from `NestipyFactory` class.
-
-```python
-
-
 from granian import Granian
 from granian.constants import Interfaces
 
 from app_module import AppModule
-
 from nestipy.core import NestipyFactory
 from nestipy.microservice import MicroserviceOption, Transport
 
 app = NestipyFactory.connect_microservice(
     AppModule,
-    [
-        MicroserviceOption(
-            transport=Transport.TCP,
-        )
-    ]
+    [MicroserviceOption(transport=Transport.TCP)],
 )
 
 app.start_all_microservices()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     granian = Granian(
         target="main:app",
         address="0.0.0.0",
@@ -272,5 +229,4 @@ if __name__ == '__main__':
     granian.serve()
 ```
 
-We need to call `app.start_all_microservice()` to prevent HTTP server for starting all microservices servers after
-booting HTTP.
+Call `app.start_all_microservices()` to start microservice servers after HTTP boot.

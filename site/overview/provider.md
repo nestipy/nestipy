@@ -1,12 +1,9 @@
-Providers are plain python classes that are declared as providers in a Nestipy module.
+Providers are the building blocks of Nestipy. A provider is usually a plain Python class annotated with `@Injectable()` and registered in a module. The DI container creates and shares providers based on their scope, then injects them into controllers, other providers, or handlers.
 
-## Services
-
-Let's create a example of service.
+## Basic Provider
 
 ```python
 from typing import Any
-
 from nestipy.common import Injectable
 
 
@@ -21,84 +18,60 @@ class CatsService:
         return self._cats
 ```
 
-This is how we use it inside controller.
+Register it in a module so the container can instantiate it:
 
 ```python
-
-from dataclasses import dataclass
-from typing import Annotated
-from nestipy.ioc import Inject, Body
-
-from nestipy.common import Controller, Post, Get
-from .cats_service import CatsService
+from nestipy.common import Module
 
 
-@dataclass
-class CreateCat:
-    name: str
+@Module(
+    providers=[CatsService],
+)
+class CatsModule:
+    pass
+```
+
+## Injecting Providers
+
+You can inject providers using constructor injection or property injection.
+
+Constructor injection:
+
+```python
+from nestipy.common import Controller, Get
 
 
-@Controller('cats')
+@Controller("cats")
 class CatsController:
-    _service: Annotated[CatsService, Inject()]
-
-    @Post()
-    async def create(self, data: Body[CreateCat]):
-        self._service.create(data)
+    def __init__(self, service: CatsService):
+        self.service = service
 
     @Get()
     async def find_all(self):
-        return self._service.find_all()
+        return self.service.find_all()
 ```
 
-Register provider in module.
+Property injection using `Annotated` and `Inject()`:
 
 ```python
+from typing import Annotated
+from nestipy.ioc import Inject
 
-from nestipy.common import Module
 
-
-@Module(
-    providers=[
-        CatsService
-    ],
-    controllers=[
-        CatsController
-    ]
-)
-class CatsModule:
-    pass
+@Controller("cats")
+class CatsController:
+    service: Annotated[CatsService, Inject()]
 ```
 
-Provider can be exported to use by other module.
+Both approaches are supported. Property injection is also the recommended way to access request-scoped providers from singletons.
 
-```python
-
-from nestipy.common import Module
-
-
-@Module(
-    providers=[
-        CatsService
-    ],
-    controllers=[
-        CatsController
-    ],
-    exports=[
-        CatsService
-    ]
-)
-class CatsModule:
-    pass
-```
-
-## Provider scopes
+## Provider Scopes
 
 Nestipy supports three provider scopes:
 
-- `Singleton` (default): one instance for the whole app.
-- `Transient`: new instance every time the provider is requested.
-- `Request`: one instance per request (uses `contextvars` under the hood).
+- `Singleton`: One instance for the entire application. This is the default.
+- `Transient`: A new instance every time the provider is requested.
+- `Request`: One instance per request using `contextvars`.
 
 ```python
 from nestipy.common import Injectable, Scope
@@ -114,14 +87,12 @@ class RequestService:
     pass
 ```
 
-## Request-scoped in singletons (lazy)
+## Request-scoped in Singletons
 
-If a singleton provider or controller needs a request-scoped dependency, use **property injection**
-with `Annotated[...]`. Nestipy will resolve it lazily per request using the request context.
+If a singleton controller or provider needs a request-scoped dependency, use property injection. Nestipy resolves this lazily per request using the request context.
 
 ```python
 from typing import Annotated
-
 from nestipy.common import Injectable, Scope, Controller, Get
 from nestipy.ioc import Inject
 
@@ -149,22 +120,25 @@ class CatsController:
         return {"id": self.service.request_id.value}
 ```
 
-Note: constructor injection of request-scoped providers into singletons is not supported. Use property injection instead.
+Constructor injection of request-scoped providers into singletons is not supported. Use property injection instead.
 
-## Dependency injection
+## Resolution Rules
 
-With Nestipy, dependency work in 2 ways: <br/>
+Nestipy resolves dependencies using these rules:
 
-#### Inject dependency via property( for class).<br/>
+- A provider is visible inside its module.
+- Imported modules expose only their exported providers.
+- Global modules expose their exports everywhere.
+- Scope controls caching and lifecycle.
 
-```python
-@Controller('cats')
-class CatsController:
-    _service: Annotated[CatsService, Inject()]
-```
+If a provider is not found in the current module, Nestipy searches imported modules and global modules.
 
-#### Inject dependency via class method.<br/>
+## Provider Tokens
 
-It work like other dependency method.
+A provider can be a class or an explicit token string. Use tokens when you need multiple implementations or external resources. See the Custom Providers guide for value, factory, and alias patterns.
 
-Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-providers)** for an  example.
+## Tips
+
+- Keep providers small and focused. Use providers for reusable logic, not routing.
+- Use request scope only when you need request-specific state.
+- Prefer constructor injection for straightforward dependencies and property injection for request-scoped access.

@@ -1,13 +1,37 @@
-Nestipy use openapi_docs.v3 cloned from  **Blacksheep** openapidocs.
-It's available via `from nestipy.openapi.openapi_docs.v3 import Parameter`.<br/>
+Nestipy provides OpenAPI v3 documentation based on the BlackSheep OpenAPI docs. You can annotate controllers and handlers with decorators, then expose Swagger UI with `SwaggerModule`.
 
-Let's view how it works.
+## Quick Start
 
 ```python
+from nestipy.core import NestipyFactory
+from nestipy.core.platform import FastApiApplication
+from nestipy.openapi import DocumentBuilder, SwaggerModule
 
+app = NestipyFactory[FastApiApplication].create(AppModule)
+
+document = (
+    DocumentBuilder()
+    .set_title("Example API")
+    .set_description("The API description")
+    .set_version("1.0")
+    .add_bearer_auth()
+    .add_basic_auth()
+    .build()
+)
+
+SwaggerModule.setup("api", app, document)
+```
+
+Open Swagger UI at [http://localhost:8000/api](http://localhost:8000/api).
+
+OpenAPI documents are generated lazily and cached on first access to the OpenAPI endpoints.
+
+## Controller Example
+
+```python
 import dataclasses
 from typing import Annotated
-# from nestipy.openapi.openapi_docs.v3 import Parameter
+
 from nestipy.common import Controller, Post, Get, Render
 from nestipy.common import HttpException, HttpStatusMessages, HttpStatus
 from nestipy.common import Request, Response
@@ -33,62 +57,96 @@ class TestBody:
 
 
 @Controller()
-@ApiTags('App')
+@ApiTags("App")
 @ApiOkResponse()
 @ApiNotFoundResponse()
 class AppController:
-
     @ApiOperation(summary="Render index", description="Example HTML response")
-    @ApiExclude() # this will hide it in swagger ui.
-    @Render('index.html')
+    @ApiExclude()
+    @Render("index.html")
     @Get()
     async def test(self, req: Annotated[Request, Req()], res: Annotated[Response, Res()]):
-        return {'title': 'Hello'}
-        # return await res.render('index.html', {'title': 'Hello'})
+        return {"title": "Hello"}
 
     @Post()
     @ApiBody(TestBody)
     @ApiQuery("trace", required=False)
     @ApiHeader("x-trace-id", required=False)
-    # @ApiBody(TestBody, 'application/json')
-    @ApiBearerAuth()  # Enable security bearer
+    @ApiBearerAuth()
     @ApiCreatedResponse()
     @ApiBadRequestResponse()
     async def post(self, res: Annotated[Response, Res()], body: Annotated[TestBody, Body()]):
         raise HttpException(HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED)
 ```
 
-### Swagger
+## ApiSchema Helper
 
-This is how configure swagger with Nestipy.
+`ApiSchema` turns a dataclass into a Pydantic model, which helps with schema generation.
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
-from nestipy.core.platform import FastApiApplication
-from nestipy.openapi import DocumentBuilder, SwaggerModule
+from nestipy.openapi import ApiSchema
 
-app = NestipyFactory[FastApiApplication].create(AppModule)
 
-# setup swagger
-document = DocumentBuilder().set_title('Example API').set_description('The API description').set_version(
-    '1.0').add_bearer_auth().add_basic_auth().build()
-SwaggerModule.setup('api', app, document)
+@ApiSchema
+class CreateCatDto:
+    name: str
+    age: int
 ```
 
-Now, we can access **[localhost:8000/api](http://localhost:8000/api)** to show swagger documentation.
+## Available Decorators
 
-## Available decorators
+Operation metadata:
 
-Common OpenAPI decorators:
+- `ApiOperation`
+- `ApiSummary`
+- `ApiDescription`
+- `ApiDeprecated`
+- `ApiId`
+- `ApiTags`
 
-- `ApiOperation`, `ApiSummary`, `ApiDescription`, `ApiDeprecated`
-- `ApiTags`, `ApiId`
-- `ApiBody`, `ApiParameter`, `ApiHeader`, `ApiQuery`, `ApiParam`, `ApiCookie`
-- `ApiOkResponse`, `ApiCreatedResponse`, `ApiBadRequestResponse`, `ApiUnauthorizedResponse`,
-  `ApiForbiddenResponse`, `ApiNotFoundResponse`, `ApiConflictResponse`,
-  `ApiUnprocessableEntityResponse`, `ApiTooManyRequestsResponse`,
-  `ApiInternalServerErrorResponse`, `ApiServiceUnavailableResponse`,
-  `ApiNoContentResponse`, `ApiAcceptedResponse`
-- `ApiBearerAuth`, `ApiBasicAuth`, `ApiSecurity`
-- `ApiExternalDocs`, `ApiServer`, `ApiServers`, `ApiCallbacks`, `ApiExtraModels`
-- `ApiExclude` / `ApiExcludeEndpoint`
+Parameters:
+
+- `ApiBody`
+- `ApiParameter`
+- `ApiHeader`
+- `ApiPath`
+- `ApiParam`
+- `ApiQuery`
+- `ApiCookie`
+
+Responses:
+
+- `ApiResponse`
+- `ApiOkResponse`
+- `ApiCreatedResponse`
+- `ApiAcceptedResponse`
+- `ApiNoContentResponse`
+- `ApiBadRequestResponse`
+- `ApiUnauthorizedResponse`
+- `ApiForbiddenResponse`
+- `ApiNotFoundResponse`
+- `ApiConflictResponse`
+- `ApiUnprocessableEntityResponse`
+- `ApiTooManyRequestsResponse`
+- `ApiInternalServerErrorResponse`
+- `ApiServiceUnavailableResponse`
+
+Security:
+
+- `ApiBearerAuth`
+- `ApiBasicAuth`
+- `ApiSecurity`
+
+Advanced:
+
+- `ApiExternalDocs`
+- `ApiServer`
+- `ApiServers`
+- `ApiCallbacks`
+- `ApiExtraModels`
+- `ApiConsumer`
+
+Exclusion:
+
+- `ApiExclude`
+- `ApiExcludeEndpoint`
