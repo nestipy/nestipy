@@ -37,6 +37,8 @@ class AppModule:
 - `ide` for the built-in playground.
 - `auto_schema_file` to write schema output to disk.
 - `context_callback` for custom request context.
+- `schema_option` for Strawberry `Schema` kwargs.
+- `asgi_option` for Strawberry ASGI `GraphQL` kwargs.
 
 ## Basic Resolver
 
@@ -81,6 +83,29 @@ class UserResolver:
     @ResolveField()
     async def test2(self, root: Test) -> str:
         return "resolved " + root.test1
+```
+
+## Advanced Options
+
+You can pass any Strawberry options directly:
+
+```python
+from datetime import timedelta
+
+from nestipy.graphql import GraphqlOption
+
+GraphqlOption(
+    schema_option={
+        "extensions": [],
+        "directives": [],
+        "types": [],
+    },
+    asgi_option={
+        "debug": True,
+        "allow_queries_via_get": True,
+        "connection_init_wait_timeout": timedelta(minutes=1),
+    },
+)
 ```
 
 ## Lifecycle Overview

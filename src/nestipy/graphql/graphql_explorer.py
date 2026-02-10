@@ -48,10 +48,17 @@ class GraphqlExplorer:
                 return_type = Reflect.get_metadata(
                     method, NestipyGraphqlKey.return_type, None
                 )
+                kwargs: dict = Reflect.get_metadata(
+                    method, NestipyGraphqlKey.kwargs, {}
+                )
+                name: str = kwargs.get("name") or method_name
+                field_options = {k: v for k, v in kwargs.items() if k != "name"}
                 data: dict = {
                     "return_type": return_type,
                     "class": resolver,
                     "handler_name": method_name,
+                    "name": name,
+                    "field_options": field_options,
                 }
                 match graphql_handler:
                     case NestipyGraphqlKey.query:
@@ -62,12 +69,6 @@ class GraphqlExplorer:
                         subscription.append(data)
                     case NestipyGraphqlKey.field_resolver:
                         if class_to_resolve is not None:
-                            kwargs: dict = Reflect.get_metadata(
-                                method, NestipyGraphqlKey.kwargs, {}
-                            )
-                            name: str = method_name
-                            if "name" in kwargs and kwargs.get("name"):
-                                name = kwargs.get("name")
                             data["name"] = name
                             data["type"] = class_to_resolve
                             field_resolver.append(data)

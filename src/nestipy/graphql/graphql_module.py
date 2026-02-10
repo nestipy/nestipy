@@ -1,6 +1,6 @@
 import dataclasses
 from datetime import timedelta
-from typing import Literal, Annotated, Optional, Sequence, Callable
+from typing import Literal, Annotated, Optional, Sequence, Callable, Any, Union
 
 from nestipy.common.decorator import Module
 from nestipy.dynamic_module import ConfigurableModuleBuilder
@@ -22,8 +22,8 @@ class GraphqlOption:
     cors: bool = True
     auto_schema_file: Optional[str] = None
     ide: Literal["default", "graphiql", "apollo-sandbox"] = "graphiql"
-    schema_option: Optional[dict] = None
-    asgi_option: Optional[ASGIOption] = None
+    schema_option: Optional[dict[str, Any]] = None
+    asgi_option: Optional[Union[ASGIOption, dict[str, Any]]] = None
     context_callback: Optional[Callable[[...], dict]] = None
 
     def __post_init__(self):

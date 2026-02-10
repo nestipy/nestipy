@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Type, Union
+from typing import Any, Callable, Type, Union, Optional
 
 from .graphql_asgi import GraphqlASGI
 from .graphql_module import GraphqlOption
@@ -11,11 +11,15 @@ class GraphqlAdapter(ABC):
     _subscription_properties: list = []
 
     @abstractmethod
-    def create_query_field_resolver(self, resolver: Callable) -> object:
+    def create_query_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
         pass
 
     @abstractmethod
-    def create_type_field_resolver(self, prop: dict, resolve: Callable) -> object:
+    def create_type_field_resolver(
+        self, prop: dict, resolve: Callable, field_options: Optional[dict] = None
+    ) -> object:
         pass
 
     @abstractmethod
@@ -23,26 +27,51 @@ class GraphqlAdapter(ABC):
         pass
 
     @abstractmethod
-    def create_mutation_field_resolver(self, resolver: Callable) -> object:
+    def create_mutation_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
         pass
 
     @abstractmethod
-    def create_subscription_field_resolver(self, resolver: Callable) -> object:
+    def create_subscription_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
         pass
 
-    def add_query_property(self, property_name: str, resolver: Callable):
+    def add_query_property(
+        self,
+        property_name: str,
+        resolver: Callable,
+        field_options: Optional[dict] = None,
+    ):
         self._query_properties.append(
-            (property_name, self.create_query_field_resolver(resolver))
+            (property_name, self.create_query_field_resolver(resolver, field_options))
         )
 
-    def add_mutation_property(self, property_name: str, resolver: Callable):
+    def add_mutation_property(
+        self,
+        property_name: str,
+        resolver: Callable,
+        field_options: Optional[dict] = None,
+    ):
         self._mutation_properties.append(
-            (property_name, self.create_mutation_field_resolver(resolver))
+            (
+                property_name,
+                self.create_mutation_field_resolver(resolver, field_options),
+            )
         )
 
-    def add_subscription_property(self, property_name: str, resolver: Callable):
+    def add_subscription_property(
+        self,
+        property_name: str,
+        resolver: Callable,
+        field_options: Optional[dict] = None,
+    ):
         self._subscription_properties.append(
-            (property_name, self.create_subscription_field_resolver(resolver))
+            (
+                property_name,
+                self.create_subscription_field_resolver(resolver, field_options),
+            )
         )
 
     def create_query(self, name: str = "Query") -> Union[Type, None]:

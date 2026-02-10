@@ -25,24 +25,40 @@ class StrawberryAdapter(GraphqlAdapter):
 
     _schema: Optional[Schema] = None
 
-    def create_type_field_resolver(self, prop: dict, resolve: Callable) -> object:
+    def create_type_field_resolver(
+        self, prop: dict, resolve: Callable, field_options: Optional[dict] = None
+    ) -> object:
         type_to_resolve: Type = prop["type"]
         prop_name = prop["name"]
-        field = strawberry_field(resolver=resolve)
+        options = dict(field_options or {})
+        options.pop("name", None)
+        field = strawberry_field(resolver=resolve, **options)
         field.name = prop_name
         fields: list[StrawberryField] = type_to_resolve.__strawberry_definition__.fields
         new_fields = [field if f.name == prop_name else f for f in fields]
         type_to_resolve.__strawberry_definition__.fields = new_fields
         return type_to_resolve
 
-    def create_query_field_resolver(self, resolver: Callable) -> object:
-        return strawberry_field(resolver)
+    def create_query_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
+        options = dict(field_options or {})
+        options.pop("name", None)
+        return strawberry_field(resolver, **options)
 
-    def create_mutation_field_resolver(self, resolver: Callable) -> object:
-        return mutation(resolver)
+    def create_mutation_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
+        options = dict(field_options or {})
+        options.pop("name", None)
+        return mutation(resolver, **options)
 
-    def create_subscription_field_resolver(self, resolver: Callable) -> object:
-        return subscription(resolver)
+    def create_subscription_field_resolver(
+        self, resolver: Callable, field_options: Optional[dict] = None
+    ) -> object:
+        options = dict(field_options or {})
+        options.pop("name", None)
+        return subscription(resolver, **options)
 
     def modify_handler_signature(
         self,

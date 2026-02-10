@@ -61,6 +61,7 @@ class NestipyConfig:
     dependency_graph_debug: bool = False
     dependency_graph_limit: int = 200
     dependency_graph_json_path: Optional[str] = None
+    graphql_adapter: Optional[GraphqlAdapter] = None
 
 
 class NestipyApplication:
@@ -94,7 +95,7 @@ class NestipyApplication:
         self._http_adapter: HttpAdapter = (
             config.adapter if config.adapter is not None else FastApiAdapter()
         )
-        self._graphql_adapter = StrawberryAdapter()
+        self._graphql_adapter = config.graphql_adapter or StrawberryAdapter()
         self._router_proxy = RouterProxy(self._http_adapter)
         self._middleware_container = MiddlewareContainer.get_instance()
         self.instance_loader = InstanceLoader()

@@ -1,7 +1,8 @@
 import asyncio
+import dataclasses
 import os.path
 import traceback
-from typing import Union, Type, Callable
+from typing import Union, Type, Callable, Any
 
 from nestipy.core.guards import GuardProcessor
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
@@ -49,19 +50,27 @@ class GraphqlProxy:
             )
             for q in query:
                 name, resolver = self._create_graphql_query_handler(module_ref, q)
-                self._graphql_server.add_query_property(name, resolver)
+                self._graphql_server.add_query_property(
+                    name, resolver, q.get("field_options")
+                )
             for m in mutation:
                 name, resolver = self._create_graphql_query_handler(module_ref, m)
-                self._graphql_server.add_mutation_property(name, resolver)
+                self._graphql_server.add_mutation_property(
+                    name, resolver, m.get("field_options")
+                )
             for s in subscription:
                 name, resolver = self._create_graphql_query_handler(module_ref, s)
-                self._graphql_server.add_subscription_property(name, resolver)
+                self._graphql_server.add_subscription_property(
+                    name, resolver, s.get("field_options")
+                )
 
             for fr in field_resolver:
                 name, resolver = self._create_graphql_query_handler(
                     module_ref, fr, is_field=True
                 )
-                self._graphql_server.create_type_field_resolver(fr, resolver)
+                self._graphql_server.create_type_field_resolver(
+                    fr, resolver, fr.get("field_options")
+                )
 
         self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
@@ -123,15 +132,18 @@ class GraphqlProxy:
             method, graphql_handler, default_return_type
         )
         return (
-            method_name,
+            meta.get("name", method_name),
             graphql_handler,
         )
 
     def _create_graphql_request_handler(self, option: GraphqlOption):
         graphql_path = f"/{option.url.strip('/')}"
+        schema_option: Any = option.schema_option or {}
+        if dataclasses.is_dataclass(schema_option):
+            schema_option = dataclasses.asdict(schema_option)
         gql_asgi = self._graphql_server.create_graphql_asgi_app(
             option=option,
-            schema=self._graphql_server.create_schema(**(option.schema_option or {})),
+            schema=self._graphql_server.create_schema(**schema_option),
         )
         if option.auto_schema_file:
             schema_sdl = gql_asgi.print_schema()

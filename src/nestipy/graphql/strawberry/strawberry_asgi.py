@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from typing import Union, Callable, MutableMapping, Any, Awaitable, cast
 
 from strawberry.asgi import HTTPException
@@ -21,10 +21,16 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
         schema: BaseSchema,
         option: GraphqlOption,
     ):
-        asgi_option = asdict(option.asgi_option or ASGIOption())
-        asgi_option["subscription_protocols"] = asgi_option[
+        raw_asgi_option = option.asgi_option or ASGIOption()
+        if isinstance(raw_asgi_option, dict):
+            asgi_option = dict(raw_asgi_option)
+        elif is_dataclass(raw_asgi_option):
+            asgi_option = asdict(raw_asgi_option)
+        else:
+            asgi_option = {}
+        asgi_option["subscription_protocols"] = asgi_option.get(
             "subscription_protocols"
-        ] or (
+        ) or (
             GRAPHQL_TRANSPORT_WS_PROTOCOL,
             GRAPHQL_WS_PROTOCOL,
         )
