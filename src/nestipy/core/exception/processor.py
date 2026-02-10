@@ -39,8 +39,9 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         )
         class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
         handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
+        # NestJS order: method -> class -> module -> global (most specific first)
         all_filters = uniq_list(
-            global_filters + module_filters + class_filters + handler_filters
+            handler_filters + class_filters + module_filters + global_filters
         )
         # setup dependency as the same as the container
         for fit in all_filters:

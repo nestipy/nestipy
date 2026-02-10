@@ -34,7 +34,7 @@ class GuardProcessor(SpecialProviderExtractor):
         handler_class_guards = Reflect.get_metadata(handler_class, GuardKey.Meta, [])
         handler_guards = Reflect.get_metadata(handler, GuardKey.Meta, [])
 
-        for g in handler_guards + handler_class_guards + module_guards + global_guards:
+        for g in global_guards + module_guards + handler_class_guards + handler_guards:
             if inspect.isclass(g) and issubclass(g, CanActivate):
                 services = self.container.get_all_services()
                 # Put dependency

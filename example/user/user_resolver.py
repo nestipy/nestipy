@@ -28,7 +28,7 @@ class UserResolver:
         info: Annotated[Any, Info()],
         req: Annotated[Request, Req()],
     ):
-        print(test, req, info)
+        # print(test, req, info)
         return Test(test1=test, test2_named="holla")
 
     @Mutation()
@@ -40,7 +40,7 @@ class UserResolver:
         self, count: Annotated[int, Arg()] = 1000
     ) -> AsyncIterator[int]:
         for i in range(count):
-            yield i
+            yield i + 1
             await asyncio.sleep(0.5)
 
     @ResolveField(name="test2_named")
