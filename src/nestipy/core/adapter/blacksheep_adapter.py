@@ -5,6 +5,7 @@ from blacksheep import (
     Response as BlackSheepResponse,
     Request as BlackSheepRequest,
 )
+from blacksheep.server.routing import Router
 from blacksheep import (
     get,
     put,
@@ -27,9 +28,10 @@ from nestipy.common.http_ import Response, Websocket
 
 class BlackSheepAdapter(HttpAdapter):
     def __init__(self):
-        self.instance = Application()
+        self.instance = Application(router=Router())
         self.instance.on_start(self.on_startup)
         self.instance.on_stop(self.on_shutdown)
+        self._cors_enabled = False
 
     async def start(self):
         await self.instance.start()
@@ -41,6 +43,9 @@ class BlackSheepAdapter(HttpAdapter):
         pass
 
     def enable_cors(self) -> None:
+        if self._cors_enabled or getattr(self.instance, "_cors_strategy", None) is not None:
+            return
+        self._cors_enabled = True
         self.instance.use_cors(
             allow_methods="GET POST PUT DELETE OPTIONS",
             allow_origins="*",
@@ -95,6 +100,8 @@ class BlackSheepAdapter(HttpAdapter):
     def options(
         self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
     ) -> None:
+        if self._is_wildcard_route(route):
+            return
         self.instance.router.add(
             "OPTIONS", route, self._create_blacksheep_handler(callback, metadata)
         )
@@ -117,8 +124,15 @@ class BlackSheepAdapter(HttpAdapter):
         self, route: str, callback: "CallableHandler", metadata: Optional[dict] = None
     ) -> None:
         handler = self._create_blacksheep_handler(callback, metadata)
-        for method in ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]:
+        methods = ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]
+        if self._is_wildcard_route(route):
+            methods = [m for m in methods if m != "OPTIONS"]
+        for method in methods:
             self.instance.router.add(method, route, handler)
+
+    @staticmethod
+    def _is_wildcard_route(route: str) -> bool:
+        return "*" in route or "{path:" in route
 
     def ws(
         self, route: str, callback: WebsocketHandler, metadata: Optional[dict] = None

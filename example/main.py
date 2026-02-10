@@ -12,7 +12,7 @@ from nestipy.openapi import SwaggerModule, DocumentBuilder
 from nestipy.websocket import WebsocketAdapter
 
 # default use blacksheep
-app = NestipyFactory.create(AppModule)
+app = NestipyFactory[BlackSheepApplication].create(AppModule)
 # enable cors
 app.enable_cors()
 # setup swagger
