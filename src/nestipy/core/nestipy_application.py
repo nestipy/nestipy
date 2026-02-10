@@ -167,8 +167,10 @@ class NestipyConfig:
     log_http: bool = False
     log_bootstrap: bool = True
     granian_log_dictconfig: Optional[dict] = None
-    granian_log_access: Optional[bool] = None
-    granian_log_access_format: Optional[str] = None
+    granian_log_access: Optional[bool] = True
+    granian_log_access_format: Optional[str] = (
+        '[%(time)s] %(addr)s - "%(method)s %(path)s %(protocol)s" %(status)d - %(dt_ms).3f ms'
+    )
 
 
 class NestipyApplication:
@@ -191,6 +193,7 @@ class NestipyApplication:
     _dependency_graph_debug: bool = False
     _dependency_graph_limit: int = 200
     _dependency_graph_json_path: Optional[str] = None
+    _http_log_enabled: bool = False
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -299,7 +302,7 @@ class NestipyApplication:
                 level=self._log_level,
                 fmt=self._log_format or DEFAULT_LOG_FORMAT,
                 datefmt=self._log_datefmt,
-                use_color=True,
+                use_color=self._log_color,
             )
         if "log_access" not in options and self._granian_log_access is not None:
             options["log_access"] = self._granian_log_access
@@ -449,7 +452,7 @@ class NestipyApplication:
     async def setup(self):
         if self._ready:
             return
-        setup_start = time.perf_counter() if self._profile else None
+        setup_start = time.perf_counter()
         try:
             modules = self._get_modules(typing.cast(Type, self._root_module))
             self._modules_cache = modules
@@ -553,9 +556,8 @@ class NestipyApplication:
                         m["providers"],
                         m["controllers"],
                     )
-                if setup_start is not None:
-                    total_elapsed = (time.perf_counter() - setup_start) * 1000
-                    logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
+                total_elapsed = (time.perf_counter() - setup_start) * 1000
+                logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
             await self._http_adapter.start()
             self._ready = True
@@ -566,6 +568,9 @@ class NestipyApplication:
             logger.error(_tb)
             raise e
         finally:
+            if self._log_bootstrap:
+                total_elapsed = (time.perf_counter() - setup_start) * 1000
+                logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
             # Register devtools static path
             self._register_devtools_static()
             # Not found
@@ -624,7 +629,44 @@ class NestipyApplication:
     async def __call__(self, scope: dict, receive: Callable, send: Callable):
         if scope.get("type") == "lifespan":
             await self.ready()
-        await self.get_adapter()(scope, receive, send)
+            await self.get_adapter()(scope, receive, send)
+            return
+
+        if scope.get("type") != "http" or not self._http_log_enabled:
+            await self.get_adapter()(scope, receive, send)
+            return
+
+        start = time.perf_counter()
+        status_code: Optional[int] = None
+        method = scope.get("method", "-")
+        path = scope.get("path", "")
+
+        async def send_wrapper(message: dict):
+            nonlocal status_code
+            if message.get("type") == "http.response.start":
+                status_code = int(message.get("status", 0) or 0)
+                duration_ms = (time.perf_counter() - start) * 1000
+                logger.info(
+                    "[HTTP] %s %s -> %s (%.2fms)",
+                    method,
+                    path,
+                    status_code,
+                    duration_ms,
+                )
+            await send(message)
+
+        try:
+            await self.get_adapter()(scope, receive, send_wrapper)
+        except Exception:
+            if status_code is None:
+                duration_ms = (time.perf_counter() - start) * 1000
+                logger.exception(
+                    "[HTTP] %s %s -> 500 (%.2fms)",
+                    method,
+                    path,
+                    duration_ms,
+                )
+            raise
 
     def use(self, *middleware: Union[Type[NestipyMiddleware], Callable]):
         for m in middleware:
@@ -639,7 +681,7 @@ class NestipyApplication:
         self._http_adapter.enable_cors()
 
     def enable_http_logging(self):
-        self._http_adapter.enable_http_logging()
+        self._http_log_enabled = True
 
     def use_static_assets(
         self, assets_path: str, url: str = "/static", *args, **kwargs

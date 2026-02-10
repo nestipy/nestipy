@@ -1,4 +1,3 @@
-import time
 from typing import Optional, Callable
 
 from blacksheep import (
@@ -24,7 +23,6 @@ from blacksheep import (
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
 from .http_adapter import HttpAdapter
 from nestipy.common.http_ import Response, Websocket
-from nestipy.common.logger import logger
 
 
 class BlackSheepAdapter(HttpAdapter):
@@ -50,37 +48,6 @@ class BlackSheepAdapter(HttpAdapter):
             max_age=300,
         )
 
-    def enable_http_logging(self) -> None:
-        if self._http_logging_enabled:
-            return
-        self._http_logging_enabled = True
-
-        async def _nestipy_http_logger(
-            request: BlackSheepRequest, handler: Callable
-        ) -> BlackSheepResponse:
-            start = time.perf_counter()
-            try:
-                response = await handler(request)
-            except Exception:
-                duration_ms = (time.perf_counter() - start) * 1000
-                logger.exception(
-                    "[HTTP] %s %s -> 500 (%.2fms)",
-                    request.method,
-                    request.url.path,
-                    duration_ms,
-                )
-                raise
-            duration_ms = (time.perf_counter() - start) * 1000
-            logger.info(
-                "[HTTP] %s %s -> %s (%.2fms)",
-                request.method,
-                request.url.path,
-                response.status,
-                duration_ms,
-            )
-            return response
-
-        self.instance.middlewares.append(_nestipy_http_logger)
 
     def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
         prefix = prefix.strip("/")

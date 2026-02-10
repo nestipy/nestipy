@@ -106,12 +106,12 @@ def build_granian_log_dictconfig(
     """
     Build a logging.dictConfig for Granian so its logs follow Nestipy format.
     """
+    formatter = {
+        "()": "logging.Formatter",
+        "fmt": fmt,
+        "datefmt": datefmt,
+    }
     if use_color:
-        formatter = {
-            "()": "nestipy.common.logger._NestipyRichFormatter",
-            "fmt": fmt,
-            "datefmt": datefmt,
-        }
         handler = {
             "()": "rich.logging.RichHandler",
             "level": level,
@@ -123,7 +123,6 @@ def build_granian_log_dictconfig(
             "show_path": False,
         }
     else:
-        formatter = {"format": fmt, "datefmt": datefmt}
         handler = {
             "class": "logging.StreamHandler",
             "level": level,
