@@ -28,6 +28,10 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
             asgi_option = asdict(raw_asgi_option)
         else:
             asgi_option = {}
+        asgi_option = {key: value for key, value in asgi_option.items() if value is not None}
+        if "graphql_ide" not in asgi_option and "graphiql" not in asgi_option:
+            if option.ide:
+                asgi_option["graphql_ide"] = option.ide
         asgi_option["subscription_protocols"] = asgi_option.get(
             "subscription_protocols"
         ) or (
@@ -48,7 +52,12 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
 
     async def render_graphql_ide(self, request: Union[Request, WebSocket]) -> Response:
         if self.option != None and self.option.ide:
-            return HTMLResponse(await self.get_graphql_ide())
+            try:
+                return HTMLResponse(await self.get_graphql_ide())
+            except FileNotFoundError:
+                return await super().render_graphql_ide(request)
+            except Exception:
+                return await super().render_graphql_ide(request)
         else:
             raise HTTPException(404, "Not Found")
 

@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 import inspect
 import os.path
@@ -28,8 +27,8 @@ from ..common import (
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
-from ..types_ import NextFn
 from ..common.constant import DEVTOOLS_STATIC_PATH_KEY
+from ..types_ import NextFn
 
 
 class GraphqlProxy:
@@ -246,43 +245,47 @@ class GraphqlProxy:
                 res,
                 None,
                 None,
+                None,
+                None,
+                None,
             )
             context_container.reset_request_cache()
             context_container.set_execution_context(execution_context)
             await self.container.preload_request_scoped_properties()
-            scope = _req.scope
-            queue: asyncio.Queue[bytes] = asyncio.Queue()
-            completed = asyncio.Event()
-
-            # Custom send method to handle ASGI messages
-            async def send(message: dict):
-                if message["type"] == "http.response.start":
-                    headers = {
-                        key.decode(): value.decode()
-                        for key, value in message["headers"]
-                    }
-                    res.headers(headers)
-                    res.status(message["status"] or 200)
-
-                elif message["type"] == "http.response.body":
-                    body = message.get("body", b"")
-                    if body:
-                        await queue.put(body)
-
-                    if not message.get("more_body", False):
-                        completed.set()
-
-            async def stream_chunk_generator():
-                while not completed.is_set() or not queue.empty():
-                    chunk = await queue.get()
-                    yield chunk
-
             try:
-                await asyncio.get_running_loop().create_task(
-                    gql_asgi.handle(scope, _req.receive, send)
-                )
-                # Return streaming response
-                return await res.stream(stream_chunk_generator)
+                from starlette.requests import Request as StarletteRequest
+                from starlette.responses import StreamingResponse as StarletteStreamingResponse
+
+                sreq = StarletteRequest(scope=_req.scope, receive=_req.receive)
+                sresp = await gql_asgi.run(sreq)
+                if option.cors:
+                    sresp.headers.setdefault("access-control-allow-origin", "*")
+                    sresp.headers.setdefault(
+                        "access-control-allow-headers", "Content-Type"
+                    )
+                    sresp.headers.setdefault(
+                        "access-control-allow-methods",
+                        "GET, POST, PUT, DELETE, OPTIONS",
+                    )
+                res.status(sresp.status_code or 200)
+                for key, value in sresp.headers.items():
+                    res.header(key, value)
+                if isinstance(sresp, StarletteStreamingResponse):
+                    async def _stream():
+                        async for chunk in sresp.body_iterator:
+                            yield chunk
+
+                    return await res.stream(_stream)
+                body = sresp.body
+                if body is None:
+                    body = await sresp.body()
+                await res._write(body or b"")
+                return res
+            except Exception as exc:
+                tb = traceback.format_exc()
+                logger.error("GraphQL request failed: %s", exc)
+                logger.error(tb)
+                return await res.status(500).send(str(exc))
             finally:
                 if previous_context is not None:
                     context_container.set_execution_context(previous_context)
