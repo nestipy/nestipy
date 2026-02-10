@@ -11,6 +11,7 @@ from nestipy.microservice.client.option import Transport
 from nestipy.microservice.context import RpcRequest, RpcResponse, MICROSERVICE_CHANNEL
 from nestipy.microservice.decorator import MessagePattern, EventPattern
 from nestipy.microservice.dependency import Payload, Headers, Pattern, Ctx
+from nestipy.microservice.exception import RpcException, RPCErrorCode, RPCErrorMessage
 from nestipy.core import NestipyMicroservice
 
 
@@ -133,6 +134,82 @@ async def test_microservice_integration_message_and_event_flow():
         ]
         await server.listen()
         assert MathController.last_event_pattern == "touch"
+    finally:
+        await microservice.stop()
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_microservice_integration_error_and_context_injection():
+    NestipyContainer.clear()
+    RequestContextContainer.get_instance().destroy()
+
+    @Injectable()
+    class ErrorService:
+        def fail(self) -> None:
+            raise ValueError("boom")
+
+    @Controller()
+    class ErrorController:
+        service: Annotated[ErrorService, Inject()]
+
+        @MessagePattern("fail-rpc")
+        async def fail_rpc(self, ctx: Annotated[object, Ctx()]):
+            assert ctx.get_pattern() == "fail-rpc"
+            raise RpcException(
+                status_code=RPCErrorCode.INVALID_ARGUMENT,
+                message="bad input",
+            )
+
+        @MessagePattern("fail-generic")
+        async def fail_generic(self, headers: Annotated[dict, Headers()]):
+            assert headers.get("x-test") == "1"
+            self.service.fail()
+            return {"ok": True}
+
+    @Module(controllers=[ErrorController], providers=[ErrorService])
+    class AppModule:
+        pass
+
+    option = MicroserviceOption(transport=Transport.CUSTOM)
+    client = InMemoryClientProxy(option)
+    option.proxy = client
+
+    microservice = NestipyMicroservice(AppModule, [option])
+
+    try:
+        await microservice.ms_setup()
+        server = microservice.servers[0]
+
+        request_rpc = RpcRequest(
+            data={"id": 1}, pattern="fail-rpc", response_topic="resp-rpc"
+        )
+        await server.handle_request(request_rpc)
+
+        slave_rpc = client.slave_instance
+        assert slave_rpc is not None
+        _, payload_rpc = slave_rpc.published[0]
+        response_rpc = await option.serializer.deserialize(payload_rpc)
+        assert response_rpc["status"] == "error"
+        assert response_rpc["exception"]["status_code"] == RPCErrorCode.INVALID_ARGUMENT
+        assert response_rpc["exception"]["message"] == "bad input"
+
+        request_generic = RpcRequest(
+            data={"ok": True},
+            pattern="fail-generic",
+            response_topic="resp-generic",
+            headers={"x-test": "1"},
+        )
+        await server.handle_request(request_generic)
+
+        slave_generic = client.slave_instance
+        assert slave_generic is not None
+        _, payload_generic = slave_generic.published[0]
+        response_generic = await option.serializer.deserialize(payload_generic)
+        assert response_generic["status"] == "error"
+        assert response_generic["exception"]["status_code"] == RPCErrorCode.INTERNAL
+        assert RPCErrorMessage.INTERNAL in response_generic["exception"]["message"]
     finally:
         await microservice.stop()
         NestipyContainer.clear()
