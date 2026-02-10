@@ -2,6 +2,7 @@ import inspect
 from typing import Callable, Type, Any, get_type_hints, get_args, Optional, cast
 
 import strawberry
+from graphql import GraphQLError
 from strawberry import (
     type as strawberry_type,
     field as strawberry_field,
@@ -11,6 +12,8 @@ from strawberry import (
 )
 from strawberry.types.field import StrawberryField
 
+from nestipy.common.exception.http import HttpException
+from nestipy.microservice.exception import RpcException
 from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey
 from ..graphql_adapter import GraphqlAdapter
@@ -21,7 +24,16 @@ from ..strawberry.strawberry_asgi import StrawberryASGI
 
 class StrawberryAdapter(GraphqlAdapter):
     def raise_exception(self, e: Exception):
-        raise e
+        if isinstance(e, GraphQLError):
+            raise e
+        extensions: dict[str, Any] = {}
+        message = str(e)
+        if isinstance(e, (HttpException, RpcException)):
+            message = e.message
+            extensions["code"] = e.status_code
+            if getattr(e, "details", None) is not None:
+                extensions["details"] = e.details
+        raise GraphQLError(message, original_error=e, extensions=extensions or None)
 
     _schema: Optional[Schema] = None
 
@@ -86,10 +98,28 @@ class StrawberryAdapter(GraphqlAdapter):
             if any(
                 isinstance(arg, TypeAnnotated)
                 and arg.metadata.key == CtxDepKey.Args
-                and arg.metadata.token is None
+                and arg.metadata.token not in ("root", "info", "__all_args__")
                 for arg in args
             ):
-                new_parameters.append(param)
+                token = next(
+                    (
+                        arg.metadata.token
+                        for arg in args
+                        if isinstance(arg, TypeAnnotated)
+                        and arg.metadata.key == CtxDepKey.Args
+                    ),
+                    None,
+                )
+                if isinstance(token, str) and token and token != param.name:
+                    new_param = inspect.Parameter(
+                        token,
+                        param.kind,
+                        default=param.default,
+                        annotation=param.annotation,
+                    )
+                    new_parameters.append(new_param)
+                else:
+                    new_parameters.append(param)
 
         new_parameters_keys = [k.name for k in new_parameters]
         # Add root and context
@@ -123,7 +153,15 @@ class StrawberryAdapter(GraphqlAdapter):
         new_signature = inspect.Signature(
             parameters=new_parameters, return_annotation=return_annotation
         )
-        cast(Any, wrapper_handler).__annotations__ = original_annotations
+        new_annotations: dict[str, Any] = {}
+        for param in new_signature.parameters.values():
+            if param.name in original_annotations:
+                new_annotations[param.name] = original_annotations[param.name]
+            elif param.annotation is not inspect._empty:
+                new_annotations[param.name] = param.annotation
+        if "return" in original_annotations:
+            new_annotations["return"] = original_annotations["return"]
+        cast(Any, wrapper_handler).__annotations__ = new_annotations
         cast(Any, wrapper_handler).__signature__ = new_signature
         return return_annotation
 

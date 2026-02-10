@@ -1,15 +1,20 @@
 import asyncio
 import dataclasses
+import inspect
 import os.path
 import traceback
 from typing import Union, Type, Callable, Any
 
 from nestipy.core.guards import GuardProcessor
+from nestipy.core.interceptor import RequestInterceptor
+from nestipy.core.pipes.processor import PipeProcessor
+from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.meta import NestipyGraphqlKey
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc import RequestContextContainer
-from nestipy.metadata import Reflect
+from nestipy.ioc.helper import ContainerHelper
+from nestipy.metadata import Reflect, CtxDepKey
 from .graphql_explorer import GraphqlExplorer
 from .graphql_module import GraphqlModule, GraphqlOption
 from ..common import (
@@ -45,6 +50,7 @@ class GraphqlProxy:
     async def apply_resolvers(
         self, graphql_module: GraphqlModule, modules: list[Union[Type, object]]
     ):
+        self._graphql_server.reset()
         for module_ref in modules:
             query, mutation, subscription, field_resolver = GraphqlExplorer.explore(
                 module_ref
@@ -73,7 +79,7 @@ class GraphqlProxy:
                     fr, resolver, fr.get("field_options")
                 )
 
-        self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
+        await self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
 
     def _create_graphql_query_handler(
         self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
@@ -84,10 +90,45 @@ class GraphqlProxy:
         default_return_type = Reflect.get_metadata(
             method, NestipyGraphqlKey.return_type, None
         )
+        signature = inspect.signature(method)
+        arg_token_map: dict[str, str] = {}
+        for param_name, param in signature.parameters.items():
+            if param_name in ("self", "cls") or param.annotation is inspect.Parameter.empty:
+                continue
+            _annotation, dep_key = ContainerHelper.get_type_from_annotation(
+                param.annotation
+            )
+            if dep_key.metadata.key == CtxDepKey.Args:
+                token = dep_key.metadata.token
+                if isinstance(token, str) and token not in ("root", "info", "__all_args__"):
+                    arg_token_map[token] = param_name
 
         async def graphql_handler(*_args, **kwargs):
+            root = None
+            info = None
+            if _args:
+                root = _args[0] if len(_args) >= 1 else None
+                info = _args[1] if len(_args) >= 2 else None
+            if "root" in kwargs:
+                root = kwargs.get("root")
+            if "info" in kwargs:
+                info = kwargs.get("info")
+
             context_container = RequestContextContainer.get_instance()
             default_context = context_container.execution_context
+            graphql_args = dict(kwargs)
+            if root is not None:
+                graphql_args.setdefault("root", root)
+            if info is not None:
+                graphql_args.setdefault("info", info)
+            for token, param_name in arg_token_map.items():
+                if token in kwargs:
+                    graphql_args[param_name] = kwargs[token]
+            graphql_context = None
+            if info is not None and hasattr(info, "context"):
+                graphql_context = info.context
+            elif default_context is not None:
+                graphql_context = default_context.switch_to_graphql().get_context()
             execution_context = ExecutionContext(
                 self._adapter,
                 module_ref,
@@ -95,34 +136,59 @@ class GraphqlProxy:
                 getattr(resolver, method_name),
                 default_context.get_request(),
                 default_context.get_response(),
-                {**default_context.switch_to_graphql().get_args(), **kwargs}
-                if is_field
-                else kwargs,
-                None,
+                graphql_args,
+                graphql_context,
             )
             context_container.set_execution_context(execution_context)
             await self.container.preload_request_scoped_properties()
             try:
-                # TODO: Refactor with routerProxy
-                # create execution context
-                #  apply guards
                 guard_processor: GuardProcessor = await self.container.get(
                     GuardProcessor
                 )
                 can_activate = await guard_processor.process(execution_context)
                 if not can_activate[0]:
-                    # TODO: is this need to specify return Exception
                     raise HttpException(
                         HttpStatus.UNAUTHORIZED, HttpStatusMessages.UNAUTHORIZED
                     )
-                # perform query request
-                result = await self.container.get(resolver, method_name)
+
+                pipe_processor: PipeProcessor = await self.container.get(PipeProcessor)
+                pipes = await pipe_processor.get_pipes(
+                    execution_context, is_http=True
+                )
+                execution_context.set_pipes(pipes)
+
+                async def next_fn():
+                    return await self.container.get(resolver, method_name)
+
+                interceptor: RequestInterceptor = await self.container.get(
+                    RequestInterceptor
+                )
+                result = await interceptor.intercept(
+                    execution_context, next_fn, is_http=True
+                )
             except Exception as e:
                 tb = traceback.format_exc()
                 logger.error(e)
                 logger.error(tb)
-                result = self._graphql_server.raise_exception(e)
-            if is_field:
+                if not isinstance(e, HttpException):
+                    e = HttpException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        str(e),
+                        str(tb),
+                    )
+                exception_handler: ExceptionFilterHandler = await self.container.get(
+                    ExceptionFilterHandler
+                )
+                filter_result = await exception_handler.catch(
+                    e, execution_context, is_http=True
+                )
+                if isinstance(filter_result, Exception):
+                    result = self._graphql_server.raise_exception(filter_result)
+                elif filter_result is not None:
+                    result = filter_result
+                else:
+                    result = self._graphql_server.raise_exception(e)
+            if default_context is not None:
                 context_container.set_execution_context(default_context)
             else:
                 context_container.destroy()
@@ -137,14 +203,27 @@ class GraphqlProxy:
             graphql_handler,
         )
 
-    def _create_graphql_request_handler(self, option: GraphqlOption):
+    async def _create_graphql_request_handler(self, option: GraphqlOption):
         graphql_path = f"/{option.url.strip('/')}"
         schema_option: Any = option.schema_option or {}
         if dataclasses.is_dataclass(schema_option):
             schema_option = dataclasses.asdict(schema_option)
+        schema_option = {
+            key: value for key, value in schema_option.items() if value is not None
+        }
+        schema = option.schema
+        if schema is None and option.schema_factory:
+            schema = await NestipyContainer.get_instance().resolve_factory(
+                option.schema_factory,
+                inject=[],
+                search_scope=[],
+                disable_scope=True,
+            )
+        if schema is None:
+            schema = self._graphql_server.create_schema(**schema_option)
         gql_asgi = self._graphql_server.create_graphql_asgi_app(
             option=option,
-            schema=self._graphql_server.create_schema(**schema_option),
+            schema=schema,
         )
         gql_asgi.set_devtools_static_path(
             self._adapter.get_state(DEVTOOLS_STATIC_PATH_KEY) or "/_devtools/static"

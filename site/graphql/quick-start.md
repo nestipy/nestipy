@@ -37,8 +37,9 @@ class AppModule:
 - `ide` for the built-in playground.
 - `auto_schema_file` to write schema output to disk.
 - `context_callback` for custom request context.
-- `schema_option` for Strawberry `Schema` kwargs.
-- `asgi_option` for Strawberry ASGI `GraphQL` kwargs.
+- `schema_option` for Strawberry `Schema` kwargs (or `SchemaOption` dataclass).
+- `asgi_option` for Strawberry ASGI `GraphQL` kwargs (or `ASGIOption` dataclass).
+- `schema` or `schema_factory` for pre-built schemas (schema-first or custom build).
 
 ## Basic Resolver
 
@@ -47,10 +48,10 @@ import asyncio
 from typing import AsyncIterator, Annotated, Any
 
 from nestipy.common import UseGuards, Request
-from nestipy.graphql import Query, Resolver, Mutation, ResolveField
+from nestipy.graphql import Query, Resolver, Mutation, ResolveField, Args, Context, Parent, Info
 from nestipy.graphql.decorator import Subscription
-from nestipy.graphql.strawberry import Info, ObjectType
-from nestipy.ioc import Arg, Req
+from nestipy.graphql.strawberry import ObjectType
+from nestipy.ioc import Req
 
 
 @ObjectType()
@@ -64,8 +65,9 @@ class UserResolver:
     @Query()
     def test_query(
         self,
-        test: Annotated[str, Arg()],
+        test: Annotated[str, Args("test")],
         info: Annotated[Any, Info()],
+        ctx: Annotated[dict, Context()],
         req: Annotated[Request, Req()],
     ) -> Test:
         return Test(test1="test1", test2="hello")
@@ -75,15 +77,20 @@ class UserResolver:
         return "Mutation"
 
     @Subscription()
-    async def test_subscription(self, count: Annotated[int, Arg()] = 5) -> AsyncIterator[int]:
+    async def test_subscription(self, count: Annotated[int, Args("count")] = 5) -> AsyncIterator[int]:
         for i in range(count):
             yield i
             await asyncio.sleep(0.5)
 
     @ResolveField()
-    async def test2(self, root: Test) -> str:
+    async def test2(self, root: Annotated[Test, Parent()]) -> str:
         return "resolved " + root.test1
 ```
+
+Notes:
+
+- `Args()` returns the full arguments dict.
+- `Args("id")` returns a single argument by name.
 
 ## Advanced Options
 
@@ -99,12 +106,25 @@ GraphqlOption(
         "extensions": [],
         "directives": [],
         "types": [],
+        "schema_directives": [],
     },
     asgi_option={
-        "debug": True,
         "allow_queries_via_get": True,
+        "graphql_ide": None,
+        "multipart_uploads_enabled": False,
         "connection_init_wait_timeout": timedelta(minutes=1),
     },
+)
+```
+
+Or use typed options:
+
+```python
+from nestipy.graphql import GraphqlOption, SchemaOption, ASGIOption
+
+GraphqlOption(
+    schema_option=SchemaOption(types=[], directives=[]),
+    asgi_option=ASGIOption(allow_queries_via_get=True),
 )
 ```
 

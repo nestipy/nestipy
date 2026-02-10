@@ -6,6 +6,8 @@ from nestipy.common import Injectable, Scope, Module
 from nestipy.core import NestipyFactory
 from nestipy.graphql import GraphqlModule, GraphqlOption, Resolver, Query
 from nestipy.ioc import Inject
+from nestipy.ioc import NestipyContainer
+from nestipy.ioc.context_container import RequestContextContainer
 from nestipy.testing import TestClient
 
 
@@ -34,6 +36,8 @@ class AppModule(GraphqlModule):
 
 @pytest.mark.asyncio
 async def test_graphql_request_scope_isolated():
+    NestipyContainer.clear()
+    RequestContextContainer.get_instance().destroy()
     app = NestipyFactory.create(AppModule)
     await app.setup()
     client = TestClient(app)
@@ -48,3 +52,5 @@ async def test_graphql_request_scope_isolated():
     v2 = r2.json().get("data", {}).get("ping")
     assert v1 is not None and v2 is not None
     assert v1 != v2
+    NestipyContainer.clear()
+    RequestContextContainer.get_instance().destroy()

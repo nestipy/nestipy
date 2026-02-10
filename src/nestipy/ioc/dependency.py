@@ -204,7 +204,8 @@ def args_callback(
 ):
     """Callback for GraphQL arguments."""
     args = cast(Any, _request_context.execution_context).switch_to_graphql().get_args()
-    return args.get(_name)
+    key = _token or _name
+    return args.get(key)
 
 
 def context_callback(

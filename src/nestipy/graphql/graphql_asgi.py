@@ -43,12 +43,17 @@ class GraphqlASGI:
 
     async def modify_default_context(self, context: dict) -> dict:
         if self.option and self.option.context_callback:
-            return await NestipyContainer.get_instance().resolve_factory(
+            result = await NestipyContainer.get_instance().resolve_factory(
                 self.option.context_callback,
                 inject=[],
                 search_scope=[],
                 disable_scope=True,
             )
+            if result is None:
+                return context
+            if isinstance(result, dict):
+                return {**context, **result}
+            return result
         return context
 
     @classmethod

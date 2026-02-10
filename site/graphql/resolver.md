@@ -4,9 +4,8 @@ Resolvers define how GraphQL fields are fetched. In Nestipy, a resolver is a cla
 
 ```python
 from typing import Annotated
-from nestipy.graphql import Resolver, Query, ResolveField
+from nestipy.graphql import Resolver, Query, ResolveField, Args, Parent
 from nestipy.graphql.strawberry import ObjectType
-from nestipy.ioc import Arg
 
 
 @ObjectType()
@@ -18,11 +17,11 @@ class Cat:
 @Resolver(of=Cat)
 class CatsResolver:
     @Query()
-    async def cat(self, id: Annotated[str, Arg()]) -> Cat:
+    async def cat(self, id: Annotated[str, Args("id")]) -> Cat:
         return Cat(id=id, name="Misty")
 
     @ResolveField()
-    async def name(self, root: Cat) -> str:
+    async def name(self, root: Annotated[Cat, Parent()]) -> str:
         return root.name.upper()
 ```
 

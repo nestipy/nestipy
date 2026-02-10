@@ -18,6 +18,8 @@ class Reflect:
         :param value: The metadata value.
         """
         meta: dict[str, Any] = getattr(obj, cls.metadata, {})
+        if cls.metadata not in getattr(obj, "__dict__", {}):
+            meta = dict(meta)
         meta[key] = value
         setattr(obj, cls.metadata, meta)
 

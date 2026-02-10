@@ -101,13 +101,13 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         try:
             # Try to load the BlackSheep adapter
             adapter_module = import_module("nestipy.core.adapter.blacksheep_adapter")
-            logger.info("[Blacksheep Adapter] Using BlackSheepAdapter")
+            logger.info("[HttpAdapter] Using BlackSheepAdapter")
             return adapter_module.BlackSheepAdapter()
         except ImportError:
             try:
                 # Fallback to FastAPI adapter
                 adapter_module = import_module("nestipy.core.adapter.fastapi_adapter")
-                logger.info("[FastAPI Adapter] Using FastAPIAdapter")
+                logger.info("[HttpAdapter] Using FastAPIAdapter")
                 return adapter_module.FastApiAdapter()
             except ImportError:
                 raise RuntimeError(

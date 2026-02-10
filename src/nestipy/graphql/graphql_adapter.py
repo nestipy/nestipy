@@ -6,9 +6,10 @@ from .graphql_module import GraphqlOption
 
 
 class GraphqlAdapter(ABC):
-    _query_properties: list = []
-    _mutation_properties: list = []
-    _subscription_properties: list = []
+    def __init__(self) -> None:
+        self._query_properties: list = []
+        self._mutation_properties: list = []
+        self._subscription_properties: list = []
 
     @abstractmethod
     def create_query_field_resolver(
@@ -73,6 +74,11 @@ class GraphqlAdapter(ABC):
                 self.create_subscription_field_resolver(resolver, field_options),
             )
         )
+
+    def reset(self) -> None:
+        self._query_properties = []
+        self._mutation_properties = []
+        self._subscription_properties = []
 
     def create_query(self, name: str = "Query") -> Union[Type, None]:
         if len(self._query_properties) == 0:
