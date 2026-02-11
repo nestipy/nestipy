@@ -19,7 +19,12 @@ from .dependency import (
     Cookie,
     create_type_annotated,
 )
-from .middleware import MiddlewareProxy, MiddlewareRouteConfig, MiddlewareContainer
+from .middleware import (
+    MiddlewareProxy,
+    MiddlewareRouteConfig,
+    MiddlewareContainer,
+    MiddlewareExclude,
+)
 from .provider import ModuleProviderDict
 from .interface import NestipyIContainer
 
@@ -44,6 +49,7 @@ __all__ = [
     "MiddlewareProxy",
     "MiddlewareRouteConfig",
     "MiddlewareContainer",
+    "MiddlewareExclude",
     "Header",
     "Cookie",
     "GraphQlContext",

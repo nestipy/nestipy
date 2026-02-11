@@ -1,4 +1,4 @@
-Middleware is a function that executes before the route handler in the application's request-response cycle. It has access to the request and response objects, as well as the `next_fn()` function, which passes control to the subsequent middleware. The `next_fn()` function is typically represented by the variable `next_fn`.
+Middleware runs **before guards, pipes, and interceptors** in the request cycle. It has access to the request/response objects and the `next_fn()` function, which passes control to the next middleware (or the route handler).
 
 ```python
 from nestipy.common import Injectable
@@ -17,9 +17,28 @@ class LoggerMiddleware(NestipyMiddleware):
 
 ### Dependency injection
 
-Nestipy middleware support dependency injection. Similar to providers and controllers, they can inject dependencies that are available within the same module.
+Nestipy middleware supports dependency injection. Similar to providers and controllers, it can inject dependencies available in the same module.
 
-### Applying middleware#
+### Order (NestJS-like)
+
+Middleware executes in this order:
+
+1. Global middleware (registered with `app.use`)
+2. Module middleware (registered with `consumer.apply(...)`)
+
+Order is preserved within each group based on registration order. If you register the same middleware twice and both match, it runs twice (no automatic de-duplication).
+
+### Matching rules
+
+Nestipy uses NestJS-style route patterns:
+
+- Exact prefix matches: `"/cats"` matches `"/cats"` and `"/cats/123"`
+- Parameters: `"/cats/:id"` matches `"/cats/123"`
+- Wildcards: `"*"` or `"/*"` matches all paths
+
+Excludes use the same matching rules and can optionally be scoped to HTTP methods.
+
+### Applying middleware
 
 Nestipy apply middleware like the way Nestjs use. Modules that include middleware have to implement the NestipyModule.
 
@@ -33,7 +52,7 @@ from nestipy.core import MiddlewareConsumer
 @Module()
 class AppModule(NestipyModule):
     def configure(self, consumer: MiddlewareConsumer):
-        consumer.apply(LoggerMiddleware).for_route('cats')
+        consumer.apply(LoggerMiddleware).for_route("cats")
 
 ```
 
@@ -52,6 +71,18 @@ from nestipy.core import MiddlewareConsumer
 class AppModule(NestipyModule):
     def configure(self, consumer: MiddlewareConsumer):
         consumer.apply(LoggerMiddleware).for_route(CatsController).excludes([])
+
+You can exclude by **path** or **path + method**:
+
+```python
+from nestipy.ioc import MiddlewareExclude
+
+consumer.apply(LoggerMiddleware).for_route("/users").excludes([
+    "/users/health",
+    {"path": "/users/internal", "method": "GET"},
+    MiddlewareExclude(path="/users/:id/secret", method=["POST"]),
+])
+```
 
 ```
 
@@ -82,5 +113,16 @@ app = NestipyFactory.create(AppModule)
 app.use(logger)
 ```
 
-Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-middleware)** for an  example.
+### Method-specific middleware
 
+```python
+consumer.apply(LoggerMiddleware).for_route("/users", method=["GET", "POST"])
+```
+
+### Common patterns
+
+- **Request logging:** global middleware
+- **Auth header parsing:** module middleware on protected routes
+- **Request timing:** global middleware or a specific module
+
+Take a look **[here](https://github.com/nestipy/sample/tree/main/sample-app-middleware)** for an  example.

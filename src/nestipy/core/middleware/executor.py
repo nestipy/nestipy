@@ -1,28 +1,13 @@
 import inspect
-import re
 import traceback
-from typing import Callable, Any, Optional
+from typing import Callable, Any
 
 from nestipy.common.http_ import Request, Response
 from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
-from nestipy.ioc import MiddlewareContainer, MiddlewareProxy
-from nestipy.types_ import HTTPMethod
-
-
-def uniq_middleware_list(data: list[MiddlewareProxy]) -> list:
-    """
-    Remove duplicate middleware from the list, keeping only the first occurrence.
-    :param data: List of MiddlewareProxy objects.
-    :return: List of unique MiddlewareProxy objects.
-    """
-    uniq_middleware: list = []
-    uniq_data: list = []
-    for d in data:
-        if d.middleware not in uniq_middleware:
-            uniq_data.append(d)
-            uniq_middleware.append(d.middleware)
-    return uniq_data
+from nestipy.ioc import MiddlewareContainer
+from nestipy.ioc.middleware import _MiddlewareEntry
+from nestipy.ioc import NestipyContainer
 
 
 class MiddlewareExecutor:
@@ -39,8 +24,6 @@ class MiddlewareExecutor:
         :param next_fn: The next function to call after the middleware chain (usually the route handler).
         """
         self.container = MiddlewareContainer.get_instance()
-        # load all middleware inside a container
-        self._middlewares: list[MiddlewareProxy] = self.container.all()
         self._req = req
         self._res = res
         self._next_fn = next_fn
@@ -51,31 +34,20 @@ class MiddlewareExecutor:
         If no middleware matches, it immediately calls the next_fn.
         :return: The result of the middleware chain execution.
         """
-        middleware_to_apply = []
-        for proxy in self._middlewares:
-            if (
-                self._is_match(proxy.route.url)
-                and not self._is_exclude(proxy.path_excludes, proxy.route.url)
-                and self._is_method_match(proxy.route.method)
-            ):
-                for p in proxy.middlewares:
-                    p = MiddlewareProxy.form_dict(p, proxy.route, proxy.path_excludes)
-                    self.container.add_singleton(p)
-                    middleware_to_apply.append(p)
-        # get all middleware that match request path
+        middleware_to_apply = self.container.match(self._req.path, self._req.method)
         if len(middleware_to_apply) == 0:
             # if no middleware call next_fn that call handler
             return await self._next_fn()
-        middleware_to_apply = uniq_middleware_list(middleware_to_apply)
         return await self._recursively_call_middleware(0, middleware_to_apply)
 
-    async def _create_middleware_callable(self, proxy: MiddlewareProxy):
-        if inspect.isclass(proxy.middleware) and issubclass(
-            proxy.middleware, NestipyMiddleware
+    async def _create_middleware_callable(self, entry: _MiddlewareEntry):
+        middleware = entry.middleware
+        if inspect.isclass(middleware) and issubclass(
+            middleware, NestipyMiddleware
         ):
             try:
                 #  get instance of Middleware
-                instance = await self.container.get(proxy)
+                instance = await NestipyContainer.get_instance().get(middleware)
                 # get use method if it is a middleware class
                 return getattr(instance, "use")
             except Exception as e:
@@ -84,15 +56,15 @@ class MiddlewareExecutor:
                 logger.error(tb)
                 raise e
                 return None
-        elif inspect.isfunction(proxy.middleware):
-            return proxy.middleware
+        elif inspect.isfunction(middleware):
+            return middleware
         else:
             raise Exception(
                 "Middleware must be a function or a class that extends NestipyMiddleware"
             )
 
     async def _recursively_call_middleware(
-        self, index: int, middlewares: list[MiddlewareProxy]
+        self, index: int, middlewares: list[_MiddlewareEntry]
     ) -> Any:
         current = middlewares[index]
         to_call = await self._create_middleware_callable(current)
@@ -104,32 +76,3 @@ class MiddlewareExecutor:
             return await to_call(self._req, self._res, next_fn)
         else:
             return await to_call(self._req, self._res, self._next_fn)
-
-    def _is_match(self, to_match: str, route: Optional[str] = None) -> bool:
-        """
-        Check if the beginning of the route matches the given pattern.
-
-        Args:
-            to_match (str): The path prefix or pattern to match against (e.g., "/static").
-            route (Optional[str]): Optional route to test. If not provided, uses self._req.path.
-
-        Returns:
-            bool: True if the route starts with the given pattern, False otherwise.
-        """
-        pattern = re.compile(f"^{to_match}")
-        mitch = pattern.match(
-            route or self._req.path,
-        )
-        return mitch is not None
-
-    def _is_method_match(self, method: list[HTTPMethod]) -> bool:
-        if "ALL" in method or "ANY" in method:
-            return True
-        else:
-            return self._req.method.upper() in [m.upper() for m in method]
-
-    def _is_exclude(self, excludes: list[str], to_match: str) -> bool:
-        for ex in excludes:
-            if self._is_match(to_match, ex):
-                return True
-        return False
