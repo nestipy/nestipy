@@ -58,8 +58,27 @@
       .card.full {
         height: calc(100vh - 180px);
       }
+      .graph-viewport {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
       .mermaid {
         min-height: 200px;
+        width: 100%;
+        height: 100%;
+      }
+      .mermaid svg {
+        width: max-content;
+        height: max-content;
+        max-width: none;
+        max-height: none;
+        transform-origin: 0 0;
+        cursor: grab;
+      }
+      .graph-viewport.grabbing .mermaid svg {
+        cursor: grabbing;
       }
       .footer {
         padding: 10px 20px;
@@ -91,7 +110,9 @@
       </div>
     </div>
     <div class="card full">
-      <div class="mermaid" id="graph">Loading...</div>
+      <div class="graph-viewport" id="graphViewport">
+        <div class="mermaid" id="graph">Loading...</div>
+      </div>
     </div>
     <div class="footer">
       Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
@@ -102,6 +123,7 @@
         const localMermaidUrl = "__NESTIPY_STATIC_ROOT__/vendor/mermaid.min.js";
         const statusEl = document.getElementById("status");
         const graphEl = document.getElementById("graph");
+        const viewportEl = document.getElementById("graphViewport");
         const modeEl = document.getElementById("mode");
         const switchBtn = document.getElementById("switchRenderer");
         const params = new URLSearchParams(window.location.search);
@@ -251,10 +273,94 @@
             } else if (typeof mermaid.init === "function") {
               mermaid.init(undefined, document.querySelectorAll(".mermaid"));
             }
+            setupZoom();
           } catch (err) {
             statusEl.textContent =
               err && err.message ? `Mermaid render failed: ${err.message}` : "Mermaid render failed";
           }
+        }
+
+        function setupZoom() {
+          const svg = graphEl.querySelector("svg");
+          if (!svg) {
+            return;
+          }
+          const state = {
+            scale: 1,
+            x: 0,
+            y: 0,
+            dragging: false,
+            lastX: 0,
+            lastY: 0,
+          };
+
+          function apply() {
+            svg.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+          }
+
+          function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+          }
+
+          viewportEl.addEventListener(
+            "wheel",
+            (event) => {
+              event.preventDefault();
+              const rect = viewportEl.getBoundingClientRect();
+              const cx = event.clientX - rect.left;
+              const cy = event.clientY - rect.top;
+              const direction = event.deltaY > 0 ? -1 : 1;
+              const factor = direction > 0 ? 1.12 : 0.9;
+              const prevScale = state.scale;
+              const nextScale = clamp(prevScale * factor, 0.2, 4);
+              if (nextScale === prevScale) {
+                return;
+              }
+              const scaleRatio = nextScale / prevScale;
+              state.x = cx - (cx - state.x) * scaleRatio;
+              state.y = cy - (cy - state.y) * scaleRatio;
+              state.scale = nextScale;
+              apply();
+            },
+            { passive: false }
+          );
+
+          viewportEl.addEventListener("pointerdown", (event) => {
+            state.dragging = true;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            viewportEl.classList.add("grabbing");
+            viewportEl.setPointerCapture(event.pointerId);
+          });
+
+          viewportEl.addEventListener("pointermove", (event) => {
+            if (!state.dragging) {
+              return;
+            }
+            const dx = event.clientX - state.lastX;
+            const dy = event.clientY - state.lastY;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            state.x += dx;
+            state.y += dy;
+            apply();
+          });
+
+          function endDrag(event) {
+            if (!state.dragging) {
+              return;
+            }
+            state.dragging = false;
+            viewportEl.classList.remove("grabbing");
+            if (event && typeof event.pointerId === "number") {
+              viewportEl.releasePointerCapture(event.pointerId);
+            }
+          }
+
+          viewportEl.addEventListener("pointerup", endDrag);
+          viewportEl.addEventListener("pointerleave", endDrag);
+          viewportEl.addEventListener("pointercancel", endDrag);
+          apply();
         }
 
         loadGraph().catch(() => {
