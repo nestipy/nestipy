@@ -414,6 +414,10 @@ class NestipyApplication:
             and self._granian_log_access_format is not None
         ):
             options["log_access_format"] = self._granian_log_access_format
+        if options.get("reload") and "reload_ignore_patterns" not in options:
+            # Default: reload only for .py changes (ignore other extensions).
+            # Keep directories visible to avoid skipping python packages.
+            options["reload_ignore_patterns"] = [r".*\.(?!py$)[^/]+$"]
 
         if target is None:
             unsupported = set(options.keys()) - {
@@ -625,7 +629,7 @@ class NestipyApplication:
   </body>
 </html>
 """
-            return await res.send(html)
+            return await res.header("Content-Type", "text/html; charset=utf-8").send(html)
 
         self._http_adapter.get(graph_path, graph_html_handler, {})
         self._http_adapter.get(graph_json_path, graph_json_handler, {})
@@ -801,19 +805,7 @@ class NestipyApplication:
                 total_elapsed = (time.perf_counter() - setup_start) * 1000
                 logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
-            await self._http_adapter.start()
-            self._ready = True
-
-        except Exception as e:
-            _tb = traceback.format_exc()
-            logger.error(e)
-            logger.error(_tb)
-            raise e
-        finally:
-            if self._log_bootstrap:
-                total_elapsed = (time.perf_counter() - setup_start) * 1000
-                logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
-            # Register devtools graph + static paths
+            # Register devtools graph + static paths before adapter starts
             self._register_devtools_graph()
             self._register_devtools_static()
             # Router spec endpoint (optional)
@@ -830,6 +822,19 @@ class NestipyApplication:
                 ),
                 {},
             )
+
+            await self._http_adapter.start()
+            self._ready = True
+
+        except Exception as e:
+            _tb = traceback.format_exc()
+            logger.error(e)
+            logger.error(_tb)
+            raise e
+        finally:
+            if self._log_bootstrap:
+                total_elapsed = (time.perf_counter() - setup_start) * 1000
+                logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
     def build_openapi(self):
         if self._openapi_built:

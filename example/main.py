@@ -21,12 +21,13 @@ config = NestipyConfig(
     router_spec_enabled=True,  # enable /_router/spec
     router_spec_path="/_router/spec",  # optional override
     router_spec_token="secret",  # optional token protection
-    # devtools_static_path="/_devtools/<token>/static",  # optional: hide devtools path
+    devtools_static_path="/_devtools/static",  # stable devtools path (no token)
 )
 
 
 # default use blacksheep
 app = NestipyFactory[BlackSheepApplication].create(AppModule, config=config)
+app.enable_router_spec(path="/_router/spec", token="secret")
 # enable cors
 app.enable_cors()
 # setup swagger
