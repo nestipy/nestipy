@@ -38,3 +38,12 @@ class AppModule:
 ```
 In the example above, every controller registered within the `DashboardModule` will automatically inherit the additional `/admin/dashboard` prefix. This is because the module recursively concatenates paths from parent to child. Similarly, controllers defined inside the `MetricsModule` will include the module-level prefix `/admin/metrics` in their routes.  
 
+### Conflict Detection
+
+Nestipy detects conflicting routes (same method + path) during bootstrapping and raises an error so you can fix duplicate handlers early.
+
+### Versioning
+
+Version prefixes are applied before the module path. For example, `@Version("1")` on a controller inside the `RouterModule` above produces:
+
+- `GET /v1/admin/dashboard/...`

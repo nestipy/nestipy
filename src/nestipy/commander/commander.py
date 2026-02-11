@@ -1,3 +1,4 @@
+import os
 import traceback
 from typing import Type, Optional, cast, Union, Callable
 
@@ -21,6 +22,11 @@ from nestipy.ioc.provider import ModuleProviderDict
 from nestipy.metadata import ModuleMetadata
 from nestipy.metadata.reflect import Reflect
 from nestipy.websocket.adapter import IoAdapter, SocketIoAdapter
+from nestipy.router import (
+    build_router_spec,
+    write_client_file,
+    write_typescript_client_file,
+)
 from .abstract import BaseCommand
 from .meta import CommanderMeta
 from .style import echo
@@ -36,6 +42,13 @@ class NestipyCommander(object):
         self._mock_graphql_adapter = StrawberryAdapter()
         self._bg_task = BackgroundTasks()
         self._router_proxy = RouterProxy(self._mock_adapter)
+        try:
+            from nestipy.core.router.route_explorer import RouteExplorer
+
+            prefix = os.getenv("NESTIPY_ROUTER_VERSION_PREFIX", "v")
+            RouteExplorer.set_version_prefix(prefix)
+        except Exception:
+            pass
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -89,6 +102,60 @@ class NestipyCommander(object):
             dots = "." * (max_path_len - len(path) + 40)
             echo.info(f"{methods:<10} {path} {dots} {controller}")
 
+    def _codegen_client(self, modules: list[type], args: tuple):
+        enabled = os.getenv("NESTIPY_ROUTER_SPEC", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        force = "--enable" in args
+        if not enabled and not force:
+            echo.error(
+                "Router spec codegen is disabled. Set NESTIPY_ROUTER_SPEC=1 "
+                "or pass --enable to run."
+            )
+            return
+
+        context_args = tuple(arg for arg in args if arg != "--enable")
+        output = None
+        class_name = "ApiClient"
+        async_client = False
+        prefix = ""
+        language = "python"
+        i = 0
+        while i < len(context_args):
+            arg = context_args[i]
+            if arg in {"--output", "-o"} and i + 1 < len(context_args):
+                output = context_args[i + 1]
+                i += 1
+            elif arg in {"--class", "--name"} and i + 1 < len(context_args):
+                class_name = context_args[i + 1]
+                i += 1
+            elif arg == "--async":
+                async_client = True
+            elif arg == "--prefix" and i + 1 < len(context_args):
+                prefix = context_args[i + 1]
+                i += 1
+            elif arg in {"--lang", "--language"} and i + 1 < len(context_args):
+                language = context_args[i + 1].lower()
+                i += 1
+            i += 1
+
+        if not output:
+            echo.error("Missing --output for codegen:client")
+            return
+
+        spec = build_router_spec(modules, prefix=prefix)
+        if language in {"ts", "typescript"}:
+            write_typescript_client_file(spec, output, class_name=class_name)
+            echo.info(f"TypeScript client written to {output}")
+        else:
+            write_client_file(
+                spec, output, class_name=class_name, async_client=async_client
+            )
+            echo.info(f"Python client written to {output}")
+
     async def run(self, command_name: str, args: tuple):
         try:
             modules = self._get_modules(self._root_module)
@@ -107,6 +174,8 @@ class NestipyCommander(object):
             else:
                 if command_name == "list:route":
                     self._list_route(modules)
+                elif command_name == "codegen:client":
+                    self._codegen_client(modules, args)
                 else:
                     echo.error(f"Command '{command_name}' not found ")
             await self.instance_loader.destroy()

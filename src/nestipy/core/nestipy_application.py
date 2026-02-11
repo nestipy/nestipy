@@ -171,6 +171,11 @@ class NestipyConfig:
     granian_log_access_format: Optional[str] = (
         '[%(time)s] %(addr)s - "%(method)s %(path)s %(protocol)s" %(status)d - %(dt_ms).3f ms'
     )
+    router_spec_enabled: bool = False
+    router_spec_path: Optional[str] = None
+    router_spec_token: Optional[str] = None
+    router_version_prefix: str = "v"
+    router_detect_conflicts: bool = True
 
 
 class NestipyApplication:
@@ -194,6 +199,10 @@ class NestipyApplication:
     _dependency_graph_limit: int = 200
     _dependency_graph_json_path: Optional[str] = None
     _http_log_enabled: bool = False
+    _router_spec_enabled: bool = False
+    _router_spec_path: str = "/_router/spec"
+    _router_spec_token: Optional[str] = None
+    _router_detect_conflicts: bool = True
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -222,6 +231,35 @@ class NestipyApplication:
         self._granian_log_access = config.granian_log_access
         self._granian_log_access_format = config.granian_log_access_format
         self._log_bootstrap = config.log_bootstrap
+        env_router_spec = os.getenv("NESTIPY_ROUTER_SPEC", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        self._router_spec_enabled = bool(config.router_spec_enabled or env_router_spec)
+        router_spec_path = (
+            config.router_spec_path
+            or os.getenv("NESTIPY_ROUTER_SPEC_PATH")
+            or "/_router/spec"
+        )
+        self._router_spec_path = (
+            router_spec_path
+            if router_spec_path.startswith("/")
+            else f"/{router_spec_path.strip('/')}"
+        )
+        self._router_spec_token = config.router_spec_token or os.getenv(
+            "NESTIPY_ROUTER_SPEC_TOKEN"
+        )
+        self._router_detect_conflicts = config.router_detect_conflicts
+        try:
+            from nestipy.core.router.route_explorer import RouteExplorer
+            version_prefix = os.getenv(
+                "NESTIPY_ROUTER_VERSION_PREFIX", config.router_version_prefix
+            )
+            RouteExplorer.set_version_prefix(version_prefix)
+        except Exception:
+            pass
         self.process_config(config)
         self._profile = config.profile
         self._dependency_graph_debug = config.dependency_graph_debug
@@ -272,6 +310,17 @@ class NestipyApplication:
     def get_devtools_static_path(self) -> str:
         return self._devtools_static_path
 
+    def enable_router_spec(
+        self, path: Optional[str] = None, token: Optional[str] = None
+    ) -> None:
+        self._router_spec_enabled = True
+        if path:
+            self._router_spec_path = (
+                path if path.startswith("/") else f"/{path.strip('/')}"
+            )
+        if token is not None:
+            self._router_spec_token = token
+
     def get_router_spec(self, prefix: Optional[str] = None):
         """
         Build a RouterSpec from registered modules for typed client generation.
@@ -298,6 +347,22 @@ class NestipyApplication:
         spec = self.get_router_spec(prefix=prefix)
         return write_client_file(
             spec, output_path=output_path, class_name=class_name, async_client=async_client
+        )
+
+    def generate_typescript_client(
+        self,
+        output_path: str,
+        class_name: str = "ApiClient",
+        prefix: Optional[str] = None,
+    ) -> str:
+        """
+        Generate a TypeScript HTTP client file from current route metadata.
+        """
+        from nestipy.router import write_typescript_client_file
+
+        spec = self.get_router_spec(prefix=prefix)
+        return write_typescript_client_file(
+            spec, output_path=output_path, class_name=class_name
         )
 
     @staticmethod
@@ -506,6 +571,7 @@ class NestipyApplication:
                 for dep in deps:
                     mermaid_lines.append(f"{node_ids[name]} --> {node_ids[dep]}")
             mermaid_graph = "\\n".join(mermaid_lines)
+            static_root = self._devtools_static_path
             html = f"""<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -553,9 +619,9 @@ class NestipyApplication:
     </div>
     <div class="note">
       If the graph doesn't render, open <a href="{graph_json_path}">graph.json</a> instead.
-      This page relies on Mermaid from a CDN.
+      Mermaid is bundled locally for offline usage.
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="{static_root}/vendor/mermaid.min.js"></script>
     <script>
       mermaid.initialize({{ startOnLoad: true, theme: "dark" }});
     </script>
@@ -566,6 +632,26 @@ class NestipyApplication:
 
         self._http_adapter.get(graph_path, graph_html_handler, {})
         self._http_adapter.get(graph_json_path, graph_json_handler, {})
+
+    def _register_router_spec(self) -> None:
+        if not self._router_spec_enabled:
+            return
+
+        path = self._router_spec_path
+
+        async def router_spec_handler(req: "Request", res: "Response", _next_fn):
+            if self._router_spec_token:
+                headers = {k.lower(): v for k, v in req.headers.items()}
+                header_token = headers.get("x-router-spec-token")
+                query_token = req.query_params.get("token")
+                if self._router_spec_token not in {header_token, query_token}:
+                    return await res.status(403).send("Forbidden")
+            from nestipy.router import router_spec_to_dict
+
+            spec = self.get_router_spec()
+            return await res.json(router_spec_to_dict(spec))
+
+        self._http_adapter.get(path, router_spec_handler, {})
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -665,6 +751,7 @@ class NestipyApplication:
                     self._prefix or "",
                     build_openapi=False,
                     register_routes=True,
+                    detect_conflicts=self._router_detect_conflicts,
                 )
             )
             self._openapi_built = False
@@ -732,6 +819,8 @@ class NestipyApplication:
             # Register devtools graph + static paths
             self._register_devtools_graph()
             self._register_devtools_static()
+            # Router spec endpoint (optional)
+            self._register_router_spec()
             # Not found
             not_found_path = self._http_adapter.create_wichard()
             if not not_found_path.startswith("/"):
@@ -756,6 +845,7 @@ class NestipyApplication:
             self._prefix or "",
             build_openapi=True,
             register_routes=False,
+            detect_conflicts=self._router_detect_conflicts,
         )
         self._openapi_built = True
 

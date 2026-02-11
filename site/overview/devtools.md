@@ -11,5 +11,5 @@ The graph endpoint is available at:
 The graph is built from providers, controllers, and modules discovered at startup.
 
 Notes:
-- The HTML view loads Mermaid from a CDN.
+- The HTML view bundles Mermaid locally for offline use.
 - If you prefer fully offline use, consume the JSON endpoint and render it in your own UI.

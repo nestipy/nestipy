@@ -9,6 +9,8 @@ from .decorator import (
     Patch,
     Put,
     Delete,
+    Version,
+    Cache,
     apply_decorators,
 )
 from .exception import (
@@ -36,6 +38,7 @@ from .pipes import (
     ValidationPipe,
 )
 from .logger import logger, console
+from .cache import CachePolicy
 from .constant import NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON, SCOPE_TRANSIENT, SCOPE_REQUEST
 from .openapi_error import OpenApiErrorResponse, OpenApiErrorDetail
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
@@ -67,6 +70,8 @@ __all__ = [
     "Put",
     "Patch",
     "Delete",
+    "Version",
+    "Cache",
     "HttpException",
     "HttpStatusMessages",
     "HttpStatus",
@@ -112,4 +117,5 @@ __all__ = [
     "SCOPE_REQUEST",
     "OpenApiErrorResponse",
     "OpenApiErrorDetail",
+    "CachePolicy",
 ]

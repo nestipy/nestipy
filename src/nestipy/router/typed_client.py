@@ -58,8 +58,17 @@ def generate_client_code(
         "from __future__ import annotations",
         "",
         "import dataclasses",
+        "import inspect",
         "import typing",
-        "import httpx",
+        "",
+        "try:",
+        "    import httpx  # type: ignore",
+        "except Exception:",
+        "    httpx = None",
+        "try:",
+        "    import requests  # type: ignore",
+        "except Exception:",
+        "    requests = None",
         "",
         "",
         "def _jsonify(value: typing.Any) -> typing.Any:",
@@ -74,9 +83,16 @@ def generate_client_code(
         "    return value",
         "",
         "",
+        "def _join_url(base_url: str, path: str) -> str:",
+        "    if path.startswith(\"http://\") or path.startswith(\"https://\"):",
+        "        return path",
+        "    if not base_url:",
+        "        return path",
+        "    return base_url.rstrip(\"/\") + \"/\" + path.lstrip(\"/\")",
+        "",
+        "",
     ]
 
-    client_type = "httpx.AsyncClient" if async_client else "httpx.Client"
     await_kw = "await " if async_client else ""
     async_kw = "async " if async_client else ""
     close_name = "aclose" if async_client else "close"
@@ -84,12 +100,65 @@ def generate_client_code(
     lines.extend(
         [
             f"class {class_name}:",
-            f"    def __init__(self, base_url: str, client: typing.Optional[{client_type}] = None):",
-            f"        self._client = client or {client_type}(base_url=base_url)",
+            "    def __init__(",
+            "        self,",
+            "        base_url: str,",
+            "        client: typing.Any = None,",
+            "        request: typing.Optional[typing.Callable[..., typing.Any]] = None,",
+            "    ):",
+            "        self._base_url = base_url.rstrip(\"/\")",
+            "        self._client = client",
+            "        self._owns_client = False",
+            "        if request is not None:",
+            "            self._requester = request",
+            "        else:",
+            "            if client is None:",
+            f"                self._client = self._build_default_client(async_client={async_client})",
+            "                self._owns_client = True",
+            "            if not hasattr(self._client, \"request\"):",
+            "                raise TypeError(\"Client must provide a request(method, url, ...) method\")",
+            "            self._requester = self._client.request",
+            "",
+            "    def _build_default_client(self, async_client: bool = False):",
+            "        if async_client:",
+            "            if httpx is None:",
+            "                raise RuntimeError(\"httpx is required for async clients\")",
+            "            return httpx.AsyncClient()",
+            "        if httpx is not None:",
+            "            return httpx.Client()",
+            "        if requests is not None:",
+            "            return requests.Session()",
+            "        raise RuntimeError(\"No supported HTTP client found. Install httpx or requests.\")",
             "",
             f"    {async_kw}def {close_name}(self) -> None:",
-            f"        {await_kw}self._client.{close_name}()",
-            "",
+            "        if not self._owns_client or self._client is None:",
+            "            return",
+        ]
+    )
+    if async_client:
+        lines.extend(
+            [
+                "        close_fn = getattr(self._client, \"aclose\", None) or getattr(self._client, \"close\", None)",
+                "        if close_fn is None:",
+                "            return",
+                "        result = close_fn()",
+                "        if inspect.isawaitable(result):",
+                f"            {await_kw}result",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "        close_fn = getattr(self._client, \"close\", None)",
+                "        if close_fn is not None:",
+                "            close_fn()",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
             f"    {async_kw}def _request(",
             "        self,",
             "        method: str,",
@@ -99,20 +168,60 @@ def generate_client_code(
             "        json: typing.Any = None,",
             "        headers: typing.Optional[dict[str, typing.Any]] = None,",
             "    ) -> typing.Any:",
-            f"        response = {await_kw}self._client.request(",
+            "        url = _join_url(self._base_url, path)",
+            f"        response = self._requester(",
             "            method,",
-            "            path,",
+            "            url,",
             "            params=params,",
             "            json=json,",
             "            headers=headers,",
             "        )",
-            "        response.raise_for_status()",
-            "        if response.status_code == 204:",
+        ]
+    )
+    if async_client:
+        lines.extend(
+            [
+                "        if inspect.isawaitable(response):",
+                "            response = await response",
+            ]
+        )
+    lines.extend(
+        [
+            "        if hasattr(response, \"raise_for_status\"):",
+            "            response.raise_for_status()",
+            "        status_code = getattr(response, \"status_code\", None)",
+            "        if status_code == 204:",
             "            return None",
             "        try:",
-            "            return response.json()",
+            "            payload = response.json()",
+        ]
+    )
+    if async_client:
+        lines.extend(
+            [
+                "            if inspect.isawaitable(payload):",
+                "                payload = await payload",
+            ]
+        )
+    lines.extend(
+        [
+            "            return payload",
             "        except Exception:",
-            "            return response.text",
+            "            text = getattr(response, \"text\", None)",
+            "            if callable(text):",
+            "                text = text()",
+        ]
+    )
+    if async_client:
+        lines.extend(
+            [
+                "            if inspect.isawaitable(text):",
+                "                text = await text",
+            ]
+        )
+    lines.extend(
+        [
+            "            return text",
             "",
         ]
     )
@@ -158,7 +267,7 @@ def generate_client_code(
             token = spec.name
             var_name = param_names.get("path:" + token, token)
             lines.append(
-                f"        path = path.replace(\"{{{token}}}\", str({var_name}))\""
+                f"        path = path.replace(\"{{{token}}}\", str({var_name}))"
             )
 
         # Query params

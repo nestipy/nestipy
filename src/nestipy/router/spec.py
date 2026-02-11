@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import typing
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 from nestipy.metadata import CtxDepKey
 from nestipy.core.router.route_explorer import RouteExplorer
@@ -27,6 +27,8 @@ class RouteSpec:
     operation_id: str
     params: list[RouteParamSpec] = field(default_factory=list)
     return_type: typing.Any = typing.Any
+    version: typing.Optional[str] = None
+    cache: typing.Any = None
 
 
 @dataclass(frozen=True)
@@ -125,6 +127,51 @@ def build_router_spec(
                     operation_id=operation_id,
                     params=params,
                     return_type=return_type,
+                    version=route.get("version"),
+                    cache=route.get("cache"),
                 )
             )
     return RouterSpec(prefix=normalized_prefix, routes=routes)
+
+
+def _type_to_str(tp: typing.Any) -> str:
+    if tp is typing.Any:
+        return "Any"
+    origin = typing.get_origin(tp)
+    if origin is not None:
+        args = ", ".join(_type_to_str(arg) for arg in typing.get_args(tp))
+        return f"{getattr(origin, '__name__', str(origin))}[{args}]"
+    if hasattr(tp, "__name__"):
+        return tp.__name__
+    return str(tp)
+
+
+def router_spec_to_dict(spec: RouterSpec) -> dict:
+    return {
+        "prefix": spec.prefix,
+        "routes": [
+            {
+                "path": route.path,
+                "methods": route.methods,
+                "controller": route.controller,
+                "handler": route.handler,
+                "operation_id": route.operation_id,
+                "version": route.version,
+                "params": [
+                    {
+                        "name": param.name,
+                        "source": param.source,
+                        "required": param.required,
+                        "token": param.token,
+                        "type": _type_to_str(param.type),
+                    }
+                    for param in route.params
+                ],
+                "return_type": _type_to_str(route.return_type),
+                "cache": asdict(route.cache)
+                if hasattr(route.cache, "__dataclass_fields__")
+                else route.cache,
+            }
+            for route in spec.routes
+        ],
+    }

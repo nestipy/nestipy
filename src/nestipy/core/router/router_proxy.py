@@ -14,6 +14,7 @@ from nestipy.common.exception.message import HttpStatusMessages
 from nestipy.common.exception.status import HttpStatus
 from nestipy.common.http_ import Request, Response
 from nestipy.common.utils import snakecase_to_camelcase
+from nestipy.common.cache import CachePolicy
 from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards import GuardProcessor
 from nestipy.core.interceptor import RequestInterceptor
@@ -60,6 +61,7 @@ class RouterProxy:
         prefix: str = "",
         build_openapi: bool = True,
         register_routes: bool = True,
+        detect_conflicts: bool = True,
     ):
         """
         Explore the provided modules for controllers and register their routes with the HTTP adapter.
@@ -75,6 +77,7 @@ class RouterProxy:
         json_paths = {}
         json_schemas = {}
         list_routes = []
+        seen_routes: dict[str, dict] = {}
         for module_ref in modules:
             routes = RouteExplorer.explore(module_ref, include_openapi=build_openapi)
             list_routes = [
@@ -91,15 +94,37 @@ class RouterProxy:
                 method_name = route["method_name"]
                 controller = route["controller"]
                 handler = None
+                cache_policy = route.get("cache")
+                if cache_policy is not None and not isinstance(
+                    cache_policy, CachePolicy
+                ):
+                    if isinstance(cache_policy, dict):
+                        try:
+                            cache_policy = CachePolicy(**cache_policy)
+                        except Exception:
+                            cache_policy = None
+                    else:
+                        cache_policy = None
                 if register_routes:
                     handler = self.create_request_handler(
                         self.router,
                         typing.cast(Type, module_ref),
                         controller,
                         method_name,
+                        cache_policy=cache_policy,
                         container=self.container,
                     )
                 for method in methods:
+                    if detect_conflicts:
+                        key = f"{method.upper()} {path}"
+                        existing = seen_routes.get(key)
+                        if existing is not None:
+                            raise ValueError(
+                                "Route conflict for "
+                                f"{key}: {existing['controller_name']}.{existing['method_name']} "
+                                f"and {route['controller_name']}.{route['method_name']}"
+                            )
+                        seen_routes[key] = route
                     if register_routes and handler is not None:
                         getattr(self.router, method.lower())(path, handler, route)
                     # OPEN API REGISTER
@@ -133,6 +158,7 @@ class RouterProxy:
         custom_callback: typing.Optional[
             typing.Callable[["Request", "Response", NextFn], typing.Any]
         ] = None,
+        cache_policy: typing.Optional[CachePolicy] = None,
         container: typing.Optional[NestipyIContainer] = None,
     ) -> CallableHandler:
         controller_method_handler = custom_callback or getattr(
@@ -220,6 +246,8 @@ class RouterProxy:
                     result = await res.html(_template_processor.render() or "")
                 # transform result to response
                 handler_response = await cls._ensure_response(res, result)
+                if cache_policy is not None:
+                    cls._apply_cache_policy(handler_response, cache_policy)
 
             except Exception as e:
                 handler_response = await cls.handle_exception(
@@ -254,6 +282,25 @@ class RouterProxy:
             return await res.json(
                 content={"error": "Unknown response format"}, status_code=403
             )
+
+    @staticmethod
+    def _response_has_header(res: "Response", name: str) -> bool:
+        return any(
+            k.lower() == name.lower() for k, _ in getattr(res, "_headers", set())
+        )
+
+    @classmethod
+    def _apply_cache_policy(cls, res: "Response", policy: CachePolicy) -> None:
+        cache_control = policy.build_cache_control()
+        if cache_control and not cls._response_has_header(res, "Cache-Control"):
+            res.header("Cache-Control", cache_control)
+        vary = policy.build_vary()
+        if vary and not cls._response_has_header(res, "Vary"):
+            res.header("Vary", vary)
+        if policy.etag and not cls._response_has_header(res, "ETag"):
+            res.header("ETag", policy.etag)
+        if policy.last_modified and not cls._response_has_header(res, "Last-Modified"):
+            res.header("Last-Modified", policy.last_modified)
 
     @classmethod
     def get_center_elements(cls, lst: list, p: int, m: int):

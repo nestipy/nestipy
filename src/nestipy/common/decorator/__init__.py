@@ -1,7 +1,7 @@
 from typing import Callable, Type, Union, Any
 
 from .class_ import Module, Controller, Injectable, Scope
-from .method import Route, Get, Post, Patch, Put, Delete
+from .method import Route, Get, Post, Patch, Put, Delete, Version, Cache
 
 
 def apply_decorators(*callback: Callable[[Union[Type | Callable]], Any]):
@@ -24,5 +24,7 @@ __all__ = [
     "Put",
     "Patch",
     "Delete",
+    "Version",
+    "Cache",
     "apply_decorators",
 ]

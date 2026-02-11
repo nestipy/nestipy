@@ -17,6 +17,7 @@ class RouteExplorer:
 
     _middleware_container: MiddlewareContainer
     _openapi_scanner = OpenApiExplorer()
+    _version_prefix: str = "v"
 
     @classmethod
     def _normalize_path(cls, path: str) -> str:
@@ -26,6 +27,29 @@ class RouteExplorer:
         :return: Normalized path.
         """
         return path.strip("/")
+
+    @classmethod
+    def _normalize_versions(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, (list, tuple, set)):
+            versions = [str(v) for v in value if str(v)]
+            return versions or None
+        return [str(value)] if str(value) else None
+
+    @classmethod
+    def _format_version(cls, version: str) -> str:
+        version = version.strip("/")
+        prefix = cls._version_prefix.strip("/")
+        if not prefix:
+            return version
+        if version.startswith(prefix):
+            return version
+        return f"{prefix}{version}"
+
+    @classmethod
+    def set_version_prefix(cls, prefix: str) -> None:
+        cls._version_prefix = prefix or ""
 
     @classmethod
     def explore(cls, module_ref: Union[Type, object], include_openapi: bool = True):
@@ -59,6 +83,10 @@ class RouteExplorer:
         controller_path = self._normalize_path(
             Reflect.get_metadata(controller, RouteKey.path, "")
         )
+        controller_versions = self._normalize_versions(
+            Reflect.get_metadata(controller, RouteKey.version, None)
+        )
+        controller_cache = Reflect.get_metadata(controller, RouteKey.cache, None)
         for method_name, _ in getmembers(controller, isfunction):
             if method_name.startswith("__"):
                 continue
@@ -66,45 +94,65 @@ class RouteExplorer:
             path = Reflect.get_metadata(method, RouteKey.path, None)
             if path is not None:
                 method_path = self._normalize_path(path)
-                path = f"/{self._normalize_path(f'{controller_path}/{method_path}')}"
+                base_path = f"{controller_path}/{method_path}".strip("/")
                 request_method = Reflect.get_metadata(method, RouteKey.method)
+                method_versions = self._normalize_versions(
+                    Reflect.get_metadata(method, RouteKey.version, None)
+                )
+                versions = method_versions if method_versions is not None else controller_versions
+                cache_policy = Reflect.get_metadata(method, RouteKey.cache, None)
+                if cache_policy is None:
+                    cache_policy = controller_cache
+
+                if not versions:
+                    versions = [None]
+                for version in versions:
+                    if version:
+                        version_segment = self._format_version(str(version))
+                        full_path = f"/{self._normalize_path(f'{version_segment}/{base_path}')}"
+                    else:
+                        full_path = f"/{self._normalize_path(base_path)}"
 
                 # openapi docs
-                if include_openapi:
-                    params = RouteParamsExtractor.extract_params(path)
-                    parameters = [
-                        Parameter(
-                            name=name,
-                            in_=ParameterLocation.PATH,
-                            required=True,
-                            description="Route path",
-                            allow_empty_value=False,
+                    if include_openapi:
+                        params = RouteParamsExtractor.extract_params(full_path)
+                        parameters = [
+                            Parameter(
+                                name=name,
+                                in_=ParameterLocation.PATH,
+                                required=True,
+                                description="Route path",
+                                allow_empty_value=False,
+                            )
+                            for name in params.keys()
+                        ]
+                        method_deps, method_schemas = self._openapi_scanner.explore(
+                            method
                         )
-                        for name in params.keys()
-                    ]
-                    method_deps, method_schemas = self._openapi_scanner.explore(method)
-                    method_docs = deep_merge(method_deps, {"parameters": parameters})
-                    merged_docs = deep_merge(docs, method_docs)
-                    merged_schemas = deep_merge(schemas, method_schemas)
-                    path_docs = deep_merge(
-                        {"tags": [controller.__name__.replace("Controller", "")]},
-                        merged_docs,
-                    )
-                    path_docs["tags"] = [path_docs["tags"][0]]
-                else:
-                    merged_schemas = {}
-                    path_docs = {}
+                        method_docs = deep_merge(method_deps, {"parameters": parameters})
+                        merged_docs = deep_merge(docs, method_docs)
+                        merged_schemas = deep_merge(schemas, method_schemas)
+                        path_docs = deep_merge(
+                            {"tags": [controller.__name__.replace("Controller", "")]},
+                            merged_docs,
+                        )
+                        path_docs["tags"] = [path_docs["tags"][0]]
+                    else:
+                        merged_schemas = {}
+                        path_docs = {}
 
-                # end open api
+                    # end open api
 
-                route_info = {
-                    "path": path,
-                    "request_method": request_method,
-                    "method_name": method_name,
-                    "controller": controller,
-                    "controller_name": controller.__name__,
-                    "openapi": path_docs,  # openapi docs
-                    "schemas": merged_schemas,
-                }
-                routes.append(route_info)
+                    route_info = {
+                        "path": full_path,
+                        "request_method": request_method,
+                        "method_name": method_name,
+                        "controller": controller,
+                        "controller_name": controller.__name__,
+                        "openapi": path_docs,  # openapi docs
+                        "schemas": merged_schemas,
+                        "version": version,
+                        "cache": cache_policy,
+                    }
+                    routes.append(route_info)
         return routes

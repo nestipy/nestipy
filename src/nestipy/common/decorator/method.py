@@ -1,6 +1,7 @@
-from typing import Callable, Literal, Union
+from typing import Callable, Iterable, Literal, Optional, Union
 
 from nestipy.metadata import Reflect, RouteKey
+from nestipy.common.cache import CachePolicy
 
 HTTPMethod = Literal[
     "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "ALL", "ANY"
@@ -83,3 +84,64 @@ def Delete(path: str = "", **kwargs):
     :param kwargs: Additional metadata for the route.
     """
     return Route(path=path, method=["DELETE"], **kwargs)
+
+
+class Version:
+    """
+    Decorator that assigns a version to a controller or handler.
+    """
+
+    def __init__(self, *versions: Union[str, Iterable[str]]):
+        flat: list[str] = []
+        for version in versions:
+            if isinstance(version, (list, tuple, set)):
+                flat.extend([str(v) for v in version])
+            else:
+                flat.append(str(version))
+        self.versions = [v for v in flat if v]
+
+    def __call__(self, target: Callable):
+        Reflect.set_metadata(target, RouteKey.version, self.versions or None)
+        return target
+
+
+class Cache:
+    """
+    Decorator that sets a cache policy for a controller or handler.
+    """
+
+    def __init__(
+        self,
+        policy: Optional[CachePolicy] = None,
+        *,
+        max_age: Optional[int] = None,
+        s_maxage: Optional[int] = None,
+        public: Optional[bool] = None,
+        private: Optional[bool] = None,
+        no_store: bool = False,
+        no_cache: bool = False,
+        must_revalidate: bool = False,
+        stale_while_revalidate: Optional[int] = None,
+        stale_if_error: Optional[int] = None,
+        vary: Optional[Iterable[str]] = None,
+        etag: Optional[str] = None,
+        last_modified: Optional[str] = None,
+    ):
+        self.policy = policy or CachePolicy(
+            max_age=max_age,
+            s_maxage=s_maxage,
+            public=public,
+            private=private,
+            no_store=no_store,
+            no_cache=no_cache,
+            must_revalidate=must_revalidate,
+            stale_while_revalidate=stale_while_revalidate,
+            stale_if_error=stale_if_error,
+            vary=vary,
+            etag=etag,
+            last_modified=last_modified,
+        )
+
+    def __call__(self, target: Callable):
+        Reflect.set_metadata(target, RouteKey.cache, self.policy)
+        return target

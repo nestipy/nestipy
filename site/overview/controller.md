@@ -88,6 +88,50 @@ class CatsController:
         return f"This action removes a #{cat_id} cat"
 ```
 
+## Versioned Routes
+
+You can version controllers or individual handlers. By default, `@Version("1")`
+maps to the `/v1` path prefix.
+
+```python
+from nestipy.common import Controller, Get, Version
+
+
+@Controller("cats")
+@Version("1")
+class CatsController:
+    @Get()
+    async def list_v1(self):
+        return ["v1"]
+
+    @Version("2")
+    @Get()
+    async def list_v2(self):
+        return ["v2"]
+```
+
+This generates:
+- `GET /v1/cats`
+- `GET /v2/cats`
+
+You can change the prefix (default `v`) using `NestipyConfig(router_version_prefix="api")`.
+
+## Cache Policy
+
+Use `@Cache()` to set `Cache-Control` and related headers:
+
+```python
+from nestipy.common import Controller, Get, Cache
+
+
+@Controller("cats")
+class CatsController:
+    @Cache(max_age=60, public=True)
+    @Get("/cached")
+    async def cached(self):
+        return {"cached": True}
+```
+
 ## Pipes in Controllers
 
 You can apply pipes at controller, method, or parameter level:
