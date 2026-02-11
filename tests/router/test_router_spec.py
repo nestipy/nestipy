@@ -94,3 +94,4 @@ def test_generate_typescript_client_code():
     code = generate_typescript_client_code(spec, class_name="CatsClient")
     assert "class CatsClient" in code
     assert "fetch" in code
+    assert "any" not in code

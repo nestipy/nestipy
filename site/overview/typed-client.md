@@ -44,7 +44,7 @@ write_typescript_client_file(spec, "clients/api_client.ts", class_name="ApiClien
 from clients.api_client import ApiClient
 
 client = ApiClient(base_url="http://localhost:8001")
-cat = client.get_cat(1, q="tom")
+cat = client.get_cat(1, query={"q": "tom"})
 client.close()
 ```
 
@@ -52,6 +52,7 @@ Notes:
 - Query/body/header values set to `None` are skipped.
 - `Body` values support dicts, dataclasses, and Pydantic models.
 - The generated client can use `httpx`, `requests`, or any client that exposes `.request(...)`.
+- Path params are positional arguments; query/headers/body/cookies are grouped into dicts.
 
 ## Dynamic HTTP Clients
 
@@ -85,6 +86,8 @@ app.generate_typescript_client("clients/api_client.ts", class_name="ApiClient")
 ```
 
 The generated client uses `fetch` by default and accepts a custom fetcher.
+It groups inputs into a single `options` object with `query`, `headers`, `body`, and `cookies` fields.
+Path params are positional arguments.
 
 ## Router Spec Endpoint (Optional)
 

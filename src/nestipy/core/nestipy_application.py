@@ -76,9 +76,6 @@ if TYPE_CHECKING:
     )
     from granian.http import HTTP1Settings, HTTP2Settings
     from watchfiles import BaseFilter
-else:
-    Interfaces = RuntimeModes = Loops = TaskImpl = HTTPModes = LogLevels = SSLProtocols = Any
-    HTTP1Settings = HTTP2Settings = BaseFilter = Any
 
 
 class GranianOptions(TypedDict, total=False):

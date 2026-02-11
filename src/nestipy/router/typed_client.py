@@ -8,11 +8,24 @@ import typing
 from .spec import RouterSpec, RouteSpec, RouteParamSpec
 
 
-def _type_repr(tp: typing.Any) -> str:
+def _type_repr(tp: typing.Any, custom_types: dict[str, str] | None = None) -> str:
     if tp is typing.Any:
         return "typing.Any"
+    if tp is dict:
+        return "dict[str, typing.Any]"
+    origin = typing.get_origin(tp)
+    if origin is not None:
+        args = typing.get_args(tp)
+        rendered = ", ".join(_type_repr(arg, custom_types) for arg in args)
+        origin_name = getattr(origin, "__name__", repr(origin).replace("typing.", ""))
+        return f"{origin_name}[{rendered}]" if rendered else origin_name
     if hasattr(tp, "__name__"):
-        return tp.__name__
+        name = tp.__name__
+        module = getattr(tp, "__module__", "")
+        if custom_types is not None and module not in {"builtins", "typing", "typing_extensions"}:
+            if name not in {"dict", "list", "set", "tuple"}:
+                custom_types.setdefault(name, "typing.Any")
+        return name
     return repr(tp).replace("typing.", "typing.")
 
 
@@ -49,6 +62,15 @@ def _group_params(route: RouteSpec) -> dict[str, list[RouteParamSpec]]:
     return grouped
 
 
+def _pascal_case(value: str) -> str:
+    parts = re.split(r"[^A-Za-z0-9]+", value)
+    return "".join(p[:1].upper() + p[1:] for p in parts if p)
+
+
+def _path_tokens(path: str) -> list[str]:
+    return re.findall(r"{(\w+)", path or "")
+
+
 def generate_client_code(
     router_spec: RouterSpec,
     class_name: str = "ApiClient",
@@ -60,6 +82,7 @@ def generate_client_code(
         "import dataclasses",
         "import inspect",
         "import typing",
+        "from typing import TypedDict, Required, NotRequired",
         "",
         "try:",
         "    import httpx  # type: ignore",
@@ -82,6 +105,17 @@ def generate_client_code(
         "        return value.model_dump(mode=\"json\")",
         "    return value",
         "",
+        "def _normalize_mapping(value: typing.Any) -> typing.Optional[dict[str, typing.Any]]:",
+        "    if value is None:",
+        "        return None",
+        "    payload = _jsonify(value)",
+        "    if isinstance(payload, dict):",
+        "        return payload",
+        "    return None",
+        "",
+        "def _encode_cookies(cookies: dict[str, typing.Any]) -> str:",
+        "    return \"; \".join(f\"{k}={v}\" for k, v in cookies.items())",
+        "",
         "",
         "def _join_url(base_url: str, path: str) -> str:",
         "    if path.startswith(\"http://\") or path.startswith(\"https://\"):",
@@ -92,6 +126,39 @@ def generate_client_code(
         "",
         "",
     ]
+
+    type_defs: list[str] = []
+    custom_types: dict[str, str] = {}
+    for route in router_spec.routes:
+        grouped = _group_params(route)
+        base_name = _pascal_case(f"{route.controller}_{route.handler}")
+
+        def build_typeddict(name: str, specs: list[RouteParamSpec]) -> None:
+            if not specs:
+                return
+            type_defs.append(f"class {name}(TypedDict, total=False):")
+            for spec in specs:
+                annotation = _type_repr(spec.type, custom_types)
+                if spec.required:
+                    type_defs.append(f"    {spec.name}: Required[{annotation}]")
+                else:
+                    type_defs.append(f"    {spec.name}: NotRequired[{annotation}]")
+            type_defs.append("")
+
+        build_typeddict(f"{base_name}Query", grouped.get("query", []))
+        build_typeddict(f"{base_name}Headers", grouped.get("header", []))
+        build_typeddict(f"{base_name}Cookies", grouped.get("cookie", []))
+        body_params = grouped.get("body", [])
+        if body_params:
+            if len(body_params) == 1:
+                body_type = _type_repr(body_params[0].type, custom_types)
+                type_defs.append(f"{base_name}Body = {body_type}")
+                type_defs.append("")
+            else:
+                build_typeddict(f"{base_name}Body", body_params)
+
+    if type_defs:
+        lines.extend(type_defs)
 
     await_kw = "await " if async_client else ""
     async_kw = "async " if async_client else ""
@@ -231,88 +298,98 @@ def generate_client_code(
     for route in router_spec.routes:
         used_names: set[str] = set(reserved_names)
         grouped = _group_params(route)
-        params_order: list[tuple[str, RouteParamSpec]] = []
+        base_name = _pascal_case(f"{route.controller}_{route.handler}")
+
+        path_tokens = _path_tokens(route.path)
         param_names: dict[str, str] = {}
-        for source in ("path", "query", "body", "header", "cookie"):
-            for spec in grouped.get(source, []):
-                base_name = spec.name
-                unique = _unique_name(base_name, used_names, source)
-                param_names[(source + ":" + spec.name)] = unique
-                params_order.append((unique, spec))
-
         signature_parts: list[str] = []
-        for name, spec in params_order:
-            annotation = _type_repr(spec.type)
-            if not spec.required:
-                annotation = f"typing.Optional[{annotation}]"
-                signature_parts.append(f"{name}: {annotation} = None")
-            else:
-                signature_parts.append(f"{name}: {annotation}")
-        signature_parts.append("query: typing.Optional[dict[str, typing.Any]] = None")
-        signature_parts.append("headers: typing.Optional[dict[str, typing.Any]] = None")
-        signature = ", ".join(signature_parts)
+        for token in path_tokens:
+            if token in param_names:
+                continue
+            spec = next((p for p in grouped.get("path", []) if p.name == token), None)
+            annotation = _type_repr(spec.type, custom_types) if spec else "typing.Any"
+            unique = _unique_name(token, used_names, "path")
+            param_names[token] = unique
+            signature_parts.append(f"{unique}: {annotation}")
 
-        return_hint = _type_repr(route.return_type)
+        query_name = _unique_name("query", used_names, "extra")
+        headers_name = _unique_name("headers", used_names, "extra")
+        body_name = _unique_name("body", used_names, "extra")
+        cookies_name = _unique_name("cookies", used_names, "extra")
+
+        has_extra = bool(
+            grouped.get("query") or grouped.get("header") or grouped.get("body") or grouped.get("cookie")
+        )
+        if has_extra:
+            signature_parts.append("*")
+
+        if grouped.get("query"):
+            signature_parts.append(
+                f"{query_name}: typing.Optional[{base_name}Query] = None"
+            )
+        if grouped.get("header"):
+            signature_parts.append(
+                f"{headers_name}: typing.Optional[{base_name}Headers] = None"
+            )
+        if grouped.get("body"):
+            signature_parts.append(
+                f"{body_name}: typing.Optional[{base_name}Body] = None"
+            )
+        if grouped.get("cookie"):
+            signature_parts.append(
+                f"{cookies_name}: typing.Optional[{base_name}Cookies] = None"
+            )
+
+        signature = ", ".join(part for part in signature_parts if part)
+        signature_prefix = f"self, {signature}" if signature else "self"
+
+        return_hint = _type_repr(route.return_type, custom_types)
         method_name = _safe_identifier(route.handler)
         if method_name in used_method_names:
             method_name = _safe_identifier(f"{route.controller}_{route.handler}")
         used_method_names.add(method_name)
-        lines.append(f"    {async_kw}def {method_name}(self, {signature}) -> {return_hint}:")
+        lines.append(
+            f"    {async_kw}def {method_name}({signature_prefix}) -> {return_hint}:"
+        )
 
-        # Path formatting
         path_template = route.path
-        path_params = grouped.get("path", [])
         lines.append(f"        path = \"{path_template}\"")
-        for spec in path_params:
-            token = spec.name
-            var_name = param_names.get("path:" + token, token)
+        for token in path_tokens:
+            var_name = param_names.get(token, token)
             lines.append(
                 f"        path = path.replace(\"{{{token}}}\", str({var_name}))"
             )
 
-        # Query params
-        lines.append("        query_params: dict[str, typing.Any] = {}")
-        for spec in grouped.get("query", []):
-            token = spec.name
-            var_name = param_names.get("query:" + token, token)
-            lines.append(f"        if {var_name} is not None:")
-            lines.append(f"            query_params[\"{token}\"] = {var_name}")
-        lines.append("        if query:")
-        lines.append("            query_params.update(query)")
-
-        # Header params
-        lines.append("        header_params: dict[str, typing.Any] = {}")
-        for spec in grouped.get("header", []):
-            token = spec.name
-            var_name = param_names.get("header:" + token, token)
-            lines.append(f"        if {var_name} is not None:")
-            lines.append(f"            header_params[\"{token}\"] = {var_name}")
-        lines.append("        if headers:")
-        lines.append("            header_params.update(headers)")
-
-        # Body params
-        body_params = grouped.get("body", [])
-        if len(body_params) == 1:
-            token = body_params[0].name
-            var_name = param_names.get("body:" + token, token)
-            lines.append(f"        json_body = _jsonify({var_name})")
-        elif len(body_params) > 1:
-            lines.append("        json_body = {")
-            for spec in body_params:
-                token = spec.name
-                var_name = param_names.get("body:" + token, token)
-                lines.append(f"            \"{token}\": _jsonify({var_name}),")
-            lines.append("        }")
+        if grouped.get("query"):
+            lines.append(f"        query_params = _normalize_mapping({query_name})")
+        else:
+            lines.append("        query_params = None")
+        if grouped.get("header"):
+            lines.append(f"        header_params = _normalize_mapping({headers_name})")
+        else:
+            lines.append("        header_params = None")
+        if grouped.get("body"):
+            lines.append(
+                f"        json_body = _jsonify({body_name}) if {body_name} is not None else None"
+            )
         else:
             lines.append("        json_body = None")
+        if grouped.get("cookie"):
+            lines.append(f"        cookie_params = _normalize_mapping({cookies_name})")
+            lines.append("        if cookie_params:")
+            lines.append("            header_params = header_params or {}")
+            lines.append("            header_params['Cookie'] = _encode_cookies(cookie_params)")
 
         method = (route.methods[0] if route.methods else "GET").upper()
         lines.append(
             f"        return {await_kw}self._request(\"{method}\", path, params=query_params or None, json=json_body, headers=header_params or None)"
         )
         lines.append("")
-
-    return "\\n".join(lines)
+    if custom_types:
+        lines.append("")
+        for name, alias in sorted(custom_types.items()):
+            lines.append(f"{name} = {alias}")
+    return "\n".join(lines)
 
 
 def write_client_file(
