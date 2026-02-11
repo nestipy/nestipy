@@ -272,6 +272,34 @@ class NestipyApplication:
     def get_devtools_static_path(self) -> str:
         return self._devtools_static_path
 
+    def get_router_spec(self, prefix: Optional[str] = None):
+        """
+        Build a RouterSpec from registered modules for typed client generation.
+        """
+        from nestipy.router import build_router_spec
+
+        modules = self._modules_cache or self._get_modules(
+            typing.cast(Type, self._root_module)
+        )
+        return build_router_spec(modules, prefix=prefix or self._prefix or "")
+
+    def generate_typed_client(
+        self,
+        output_path: str,
+        class_name: str = "ApiClient",
+        async_client: bool = False,
+        prefix: Optional[str] = None,
+    ) -> str:
+        """
+        Generate a typed HTTP client file from current route metadata.
+        """
+        from nestipy.router import write_client_file
+
+        spec = self.get_router_spec(prefix=prefix)
+        return write_client_file(
+            spec, output_path=output_path, class_name=class_name, async_client=async_client
+        )
+
     @staticmethod
     def _resolve_devtools_static_path(config_path: Optional[str]) -> str:
         if config_path:
@@ -408,6 +436,91 @@ class NestipyApplication:
             static_route = "/" + static_route
         self._http_adapter.get(static_route, devtools_static_handler, {})
         self._http_adapter.head(static_route, devtools_static_handler, {})
+
+    def _register_devtools_graph(self) -> None:
+        root_path = self._devtools_static_path
+        if root_path.endswith("/static"):
+            root_path = root_path[: -len("/static")]
+        if not root_path:
+            root_path = "/_devtools"
+        graph_path = f"{root_path.rstrip('/')}/graph"
+        graph_json_path = f"{root_path.rstrip('/')}/graph.json"
+
+        async def graph_json_handler(_req: "Request", res: "Response", _next_fn):
+            graph = NestipyContainer.get_instance().get_dependency_graph()
+            return await res.json({"graph": graph})
+
+        async def graph_html_handler(_req: "Request", res: "Response", _next_fn):
+            graph = NestipyContainer.get_instance().get_dependency_graph()
+            nodes = sorted({*graph.keys(), *{d for deps in graph.values() for d in deps}})
+            node_ids = {name: f"n{idx}" for idx, name in enumerate(nodes)}
+            mermaid_lines = ["graph TD"]
+            for name in nodes:
+                mermaid_lines.append(f'{node_ids[name]}["{name}"]')
+            for name, deps in graph.items():
+                for dep in deps:
+                    mermaid_lines.append(f"{node_ids[name]} --> {node_ids[dep]}")
+            mermaid_graph = "\\n".join(mermaid_lines)
+            html = f"""<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestipy Devtools - Dependency Graph</title>
+    <style>
+      body {{
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #0f172a;
+        color: #e2e8f0;
+      }}
+      h1 {{
+        font-size: 20px;
+        margin: 0 0 16px 0;
+      }}
+      .card {{
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 12px;
+        padding: 16px;
+        overflow: auto;
+      }}
+      .mermaid {{
+        min-height: 200px;
+      }}
+      .note {{
+        margin-top: 16px;
+        font-size: 12px;
+        color: #94a3b8;
+      }}
+      a {{
+        color: #38bdf8;
+      }}
+    </style>
+  </head>
+  <body>
+    <h1>Nestipy Dependency Graph</h1>
+    <div class="card">
+      <div class="mermaid">
+{mermaid_graph}
+      </div>
+    </div>
+    <div class="note">
+      If the graph doesn't render, open <a href="{graph_json_path}">graph.json</a> instead.
+      This page relies on Mermaid from a CDN.
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({{ startOnLoad: true, theme: "dark" }});
+    </script>
+  </body>
+</html>
+"""
+            return await res.send(html)
+
+        self._http_adapter.get(graph_path, graph_html_handler, {})
+        self._http_adapter.get(graph_json_path, graph_json_handler, {})
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -573,6 +686,7 @@ class NestipyApplication:
                 logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
             # Register devtools static path
             self._register_devtools_static()
+            self._register_devtools_graph()
             # Not found
             not_found_path = self._http_adapter.create_wichard()
             if not not_found_path.startswith("/"):

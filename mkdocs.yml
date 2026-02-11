@@ -86,6 +86,8 @@ nav:
       - Interceptors: overview/interceptor.md
       - Pipes: overview/pipes.md
       - Scopes + Pipes + Lifecycle: overview/scopes-pipes-lifecycle.md
+      - Devtools Graph: overview/devtools.md
+      - Typed Client: overview/typed-client.md
       - Custom decorators: overview/custom-decorator.md
   - Fundamentals:
       - Custom providers: fundamental/custom-provider.md

@@ -51,7 +51,7 @@ class _NestipyRichFormatter(logging.Formatter):
             import re
 
             style = cls._style_status(status)
-            pattern = re.compile(rf"(?<!\\d){status}(?!\\d)")
+            pattern = re.compile(rf"(?<!\d){status}(?!\d)")
             return pattern.sub(f"[{style}]{status}[/{style}]", message, count=1)
         except Exception:
             return message
@@ -61,14 +61,14 @@ class _NestipyRichFormatter(logging.Formatter):
         try:
             import re
 
-            primary = re.search(r"\"[^\"]*\"\\s+(\\d{3})\\b", message)
+            primary = re.search(r"\"[^\"]*\"\s+(\d{3})\b", message)
             if primary:
                 value = int(primary.group(1))
                 if 100 <= value <= 599:
                     return value
             candidates = [
                 int(m.group(1))
-                for m in re.finditer(r"(?<!\\d)(\\d{3})(?!\\d)", message)
+                for m in re.finditer(r"(?<!\d)(\d{3})(?!\d)", message)
                 if 100 <= int(m.group(1)) <= 599
             ]
             if candidates:
@@ -79,8 +79,7 @@ class _NestipyRichFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         original_levelname = record.levelname
-        style = self._LEVEL_STYLES.get(original_levelname, "white")
-        record.levelname = f"[{style}]{original_levelname}[/{style}]"
+        record.levelname = f"[green]{original_levelname}[/green]"
         try:
             rendered = super().format(record)
             status = getattr(record, "status", None)
@@ -92,9 +91,18 @@ class _NestipyRichFormatter(logging.Formatter):
                 extracted = self._extract_status_from_message(rendered)
                 if extracted is not None:
                     rendered = self._colorize_status(rendered, extracted)
-            return rendered
+            return f"[green]{rendered}[/green]"
         finally:
             record.levelname = original_levelname
+
+
+class _NestipyRichHandler(RichHandler):
+    def __init__(self, *args, **kwargs):
+        from rich.highlighter import NullHighlighter
+
+        if "highlighter" not in kwargs or kwargs["highlighter"] is None:
+            kwargs["highlighter"] = NullHighlighter()
+        super().__init__(*args, **kwargs)
 
 
 def _apply_handlers(
@@ -138,6 +146,8 @@ def configure_logger(
             show_level=False,
             show_path=False,
         )
+        # Ensure no Rich default highlighter overrides our status coloring.
+        console_handler.highlighter = None
         console_handler.setFormatter(_NestipyRichFormatter(fmt=fmt, datefmt=datefmt))
     else:
         console_handler = logging.StreamHandler()
@@ -180,12 +190,11 @@ def build_granian_log_dictconfig(
         }
     if use_color:
         handler = {
-            "()": "rich.logging.RichHandler",
+            "()": _NestipyRichHandler,
             "level": level,
             "formatter": "nestipy",
             "rich_tracebacks": True,
             "markup": True,
-            "highlighter": None,
             "show_time": False,
             "show_level": False,
             "show_path": False,
