@@ -450,6 +450,38 @@ class NestipyApplication:
         self._http_adapter.get(static_route, devtools_static_handler, {})
         self._http_adapter.head(static_route, devtools_static_handler, {})
 
+        async def devtools_static_fallback(req: "Request", res: "Response", _next_fn):
+            path = req.path or ""
+            marker = "/static/"
+            idx = path.find(marker)
+            if idx < 0:
+                return await res.status(404).send("Not found")
+            rel_path = path[idx + len(marker) :].lstrip("/")
+            if not rel_path:
+                return await res.status(404).send("Not found")
+            file_path = os.path.realpath(os.path.join(static_dir, rel_path))
+            if not file_path.startswith(static_dir) or not os.path.isfile(file_path):
+                return await res.status(404).send("Not found")
+            mime_type, _ = mimetypes.guess_type(file_path)
+            mime_type = mime_type or "application/octet-stream"
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in {".js", ".css", ".html"}:
+                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                # Normalize to current static path for relative links
+                content = content.replace("/_devtools/static", static_path)
+                return await res.header("Content-Type", mime_type).send(content)
+            async with aiofiles.open(file_path, "rb") as f:
+                payload = await f.read()
+            res.header("Content-Type", mime_type)
+            await res._write(payload)
+            return res
+
+        fallback_route = self._http_adapter.create_wichard("_devtools", name="path")
+        if not fallback_route.startswith("/"):
+            fallback_route = "/" + fallback_route
+        self._http_adapter.get(fallback_route, devtools_static_fallback, {})
+        self._http_adapter.head(fallback_route, devtools_static_fallback, {})
     def _register_devtools_graph(self) -> None:
         root_path = self._devtools_static_path
         if root_path.endswith("/static"):
@@ -697,9 +729,9 @@ class NestipyApplication:
             if self._log_bootstrap:
                 total_elapsed = (time.perf_counter() - setup_start) * 1000
                 logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
-            # Register devtools static path
-            self._register_devtools_static()
+            # Register devtools graph + static paths
             self._register_devtools_graph()
+            self._register_devtools_static()
             # Not found
             not_found_path = self._http_adapter.create_wichard()
             if not not_found_path.startswith("/"):
