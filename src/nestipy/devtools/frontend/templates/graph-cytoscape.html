@@ -81,17 +81,27 @@
       <h1>Nestipy Dependency Graph (Cytoscape)</h1>
       <div class="toolbar">
         <input id="search" placeholder="Search service" />
+        <select id="mode">
+          <option value="modules" selected>Modules</option>
+          <option value="dependencies">Dependencies</option>
+        </select>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12px;">
+          <input type="checkbox" id="showProviders" checked />
+          Providers
+        </label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12px;">
+          <input type="checkbox" id="showControllers" checked />
+          Controllers
+        </label>
         <select id="layoutMode">
-          <option value="cose" selected>Force</option>
-          <option value="breadthfirst">Layers</option>
+          <option value="circle" selected>Circle</option>
           <option value="grid">Grid</option>
-          <option value="circle">Circle</option>
+          <option value="breadthfirst">Layers</option>
+          <option value="cose">Force</option>
         </select>
         <button id="fit">Fit</button>
         <button id="layout">Layout</button>
-        <button onclick="location.href='__NESTIPY_GRAPH_PATH__?renderer=mermaid'">
-          Mermaid View
-        </button>
+        <button id="switchRenderer">Mermaid View</button>
         <span id="status" class="status"></span>
       </div>
     </div>
@@ -106,9 +116,46 @@
         const graphUrl = "__NESTIPY_GRAPH_JSON__";
         const statusEl = document.getElementById("status");
         const searchEl = document.getElementById("search");
+        const modeEl = document.getElementById("mode");
+        const providersEl = document.getElementById("showProviders");
+        const controllersEl = document.getElementById("showControllers");
         const layoutModeEl = document.getElementById("layoutMode");
+        const switchBtn = document.getElementById("switchRenderer");
         const fitBtn = document.getElementById("fit");
         const layoutBtn = document.getElementById("layout");
+        const params = new URLSearchParams(window.location.search);
+
+        function currentMode() {
+          return params.get("mode") || "modules";
+        }
+
+        modeEl.value = currentMode();
+        modeEl.addEventListener("change", () => {
+          params.set("mode", modeEl.value);
+          window.location.search = params.toString();
+        });
+
+        function boolParam(name, fallback) {
+          const value = params.get(name);
+          if (value === null) return fallback;
+          return value === "1" || value === "true" || value === "yes";
+        }
+
+        providersEl.checked = boolParam("providers", true);
+        controllersEl.checked = boolParam("controllers", true);
+        providersEl.addEventListener("change", () => {
+          params.set("providers", providersEl.checked ? "1" : "0");
+          window.location.search = params.toString();
+        });
+        controllersEl.addEventListener("change", () => {
+          params.set("controllers", controllersEl.checked ? "1" : "0");
+          window.location.search = params.toString();
+        });
+
+        switchBtn.addEventListener("click", () => {
+          params.set("renderer", "mermaid");
+          window.location.search = params.toString();
+        });
 
         function loadScript(src) {
           return new Promise((resolve, reject) => {
@@ -132,26 +179,50 @@
           }
         }
 
-        function buildElements(graph) {
+        function colorFromString(value) {
+          let hash = 0;
+          for (let i = 0; i < value.length; i += 1) {
+            hash = (hash << 5) - hash + value.charCodeAt(i);
+            hash |= 0;
+          }
+          const hue = Math.abs(hash) % 360;
+          return `hsl(${hue}, 70%, 55%)`;
+        }
+
+        function buildElements(graph, colorBySource) {
           const nodes = [];
           const edges = [];
           const nodeSet = new Set();
           const edgeSet = new Set();
+          const colorMap = new Map();
           for (const [source, deps] of Object.entries(graph)) {
             if (!source) continue;
             if (!nodeSet.has(source)) {
-              nodes.push({ data: { id: source, label: source } });
+              const nodeColor = colorBySource ? colorFromString(source) : undefined;
+              nodes.push({
+                data: { id: source, label: source, color: nodeColor },
+              });
               nodeSet.add(source);
+            }
+            if (colorBySource && !colorMap.has(source)) {
+              colorMap.set(source, colorFromString(source));
             }
             for (const target of deps || []) {
               if (!target) continue;
               if (!nodeSet.has(target)) {
-                nodes.push({ data: { id: target, label: target } });
+                const nodeColor = colorBySource ? colorFromString(target) : undefined;
+                nodes.push({
+                  data: { id: target, label: target, color: nodeColor },
+                });
                 nodeSet.add(target);
               }
               const edgeId = `${source}=>${target}`;
               if (!edgeSet.has(edgeId)) {
-                edges.push({ data: { id: edgeId, source, target } });
+                const edgeData = { id: edgeId, source, target };
+                if (colorBySource) {
+                  edgeData.color = colorMap.get(source);
+                }
+                edges.push({ data: edgeData });
                 edgeSet.add(edgeId);
               }
             }
@@ -178,9 +249,10 @@
             return {
               name: "breadthfirst",
               directed: true,
-              padding: 80,
-              spacingFactor: nodeCount > 200 ? 1.8 : 1.4,
+              padding: 140,
+              spacingFactor: nodeCount > 200 ? 4 : 3,
               avoidOverlap: true,
+              nodeDimensionsIncludeLabels: true,
               fit: true,
             };
           }
@@ -231,8 +303,49 @@
             return;
           }
           const payload = await response.json();
-          const graph = payload.graph || {};
-          const elements = buildElements(graph);
+          const mode = currentMode();
+          let elements;
+          let layoutMode = layoutModeEl.value;
+          if (mode === "modules" && payload.modules) {
+            const moduleGraph = payload.modules;
+            const showProviders = providersEl.checked;
+            const showControllers = controllersEl.checked;
+            const rawNodes = moduleGraph.nodes || [];
+            const filteredNodes = rawNodes.filter((node) => {
+              if (node.type === "provider") return showProviders;
+              if (node.type === "controller") return showControllers;
+              return true;
+            });
+            const allowedIds = new Set(filteredNodes.map((node) => node.id));
+            const rawEdges = moduleGraph.edges || [];
+            const filteredEdges = rawEdges.filter(
+              (edge) => allowedIds.has(edge.source) && allowedIds.has(edge.target)
+            );
+            elements = {
+              nodes: filteredNodes.map((node) => ({
+                data: {
+                  id: node.id,
+                  label: node.label,
+                  type: node.type,
+                  module: node.module,
+                  global: node.global ? "true" : "false",
+                },
+              })),
+              edges: filteredEdges.map((edge) => ({
+                data: {
+                  id: `${edge.source}=>${edge.target}:${edge.type}`,
+                  source: edge.source,
+                  target: edge.target,
+                  type: edge.type,
+                },
+              })),
+            };
+            layoutMode = "breadthfirst";
+          } else {
+            const graph = payload.dependency_graph || payload.graph || {};
+            elements = buildElements(graph, true);
+            layoutMode = layoutModeEl.value || "circle";
+          }
           if (!elements.nodes.length) {
             statusEl.textContent = "Graph is empty.";
           } else {
@@ -257,6 +370,35 @@
                 },
               },
               {
+                selector: "node[color]",
+                style: {
+                  "background-color": "data(color)",
+                  "text-background-color": "#0f172a",
+                },
+              },
+              {
+                selector: 'node[type = "module"]',
+                style: {
+                  "background-color": "#6366f1",
+                  "font-size": 12,
+                  "text-background-color": "#1e1b4b",
+                },
+              },
+              {
+                selector: 'node[type = "controller"]',
+                style: {
+                  "background-color": "#22c55e",
+                  "text-background-color": "#052e16",
+                },
+              },
+              {
+                selector: 'node[type = "provider"]',
+                style: {
+                  "background-color": "#0ea5e9",
+                  "text-background-color": "#082f49",
+                },
+              },
+              {
                 selector: "edge",
                 style: {
                   "line-color": "#334155",
@@ -264,6 +406,34 @@
                   "target-arrow-shape": "triangle",
                   "curve-style": "bezier",
                   width: 1,
+                },
+              },
+              {
+                selector: "edge[color]",
+                style: {
+                  "line-color": "data(color)",
+                  "target-arrow-color": "data(color)",
+                },
+              },
+              {
+                selector: 'edge[type = "import"]',
+                style: {
+                  "line-color": "#475569",
+                  "target-arrow-color": "#475569",
+                },
+              },
+              {
+                selector: 'edge[type = "controller"]',
+                style: {
+                  "line-color": "#16a34a",
+                  "target-arrow-color": "#16a34a",
+                },
+              },
+              {
+                selector: 'edge[type = "provider"]',
+                style: {
+                  "line-color": "#0ea5e9",
+                  "target-arrow-color": "#0ea5e9",
                 },
               },
               {
@@ -281,7 +451,7 @@
                 },
               },
             ],
-            layout: buildLayout(layoutModeEl.value, elements.nodes.length),
+            layout: buildLayout(layoutMode, elements.nodes.length),
           });
 
           searchEl.addEventListener("input", () =>
@@ -289,7 +459,9 @@
           );
           fitBtn.addEventListener("click", () => cy.fit(undefined, 60));
           layoutBtn.addEventListener("click", () => {
-            cy.layout(buildLayout(layoutModeEl.value, elements.nodes.length)).run();
+            const mode = currentMode();
+            const layoutMode = mode === "modules" ? "breadthfirst" : layoutModeEl.value;
+            cy.layout(buildLayout(layoutMode, elements.nodes.length)).run();
           });
         }
 

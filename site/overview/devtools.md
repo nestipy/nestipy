@@ -13,6 +13,9 @@ The graph is built from providers, controllers, and modules discovered at startu
 Notes:
 - Renderer can be switched via config (`devtools_graph_renderer="mermaid"` or `"cytoscape"`).
 - You can also switch at runtime: `/_devtools/<token>/graph?renderer=mermaid` or `renderer=cytoscape`.
+- View modes:
+  - `mode=modules` (tree: AppModule → imports → providers/controllers)
+  - `mode=dependencies` (DI dependency graph)
 - The Mermaid view bundles Mermaid locally for offline use.
 - The Cytoscape view loads a local `/_devtools/static/vendor/cytoscape.min.js` if available and falls back to CDN.
 - To bundle Cytoscape locally, run `scripts/fetch_devtools_vendor.sh`.

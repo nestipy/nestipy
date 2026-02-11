@@ -569,8 +569,15 @@ class NestipyApplication:
         graph_json_path = f"{root_path.rstrip('/')}/graph.json"
 
         async def graph_json_handler(_req: "Request", res: "Response", _next_fn):
-            graph = NestipyContainer.get_instance().get_dependency_graph()
-            return await res.json({"graph": graph})
+            dependency_graph = NestipyContainer.get_instance().get_dependency_graph()
+            module_graph = self._build_module_graph()
+            return await res.json(
+                {
+                    "graph": dependency_graph,
+                    "dependency_graph": dependency_graph,
+                    "modules": module_graph,
+                }
+            )
 
         async def graph_html_handler(req: "Request", res: "Response", _next_fn):
             static_root = self._devtools_static_path
@@ -631,6 +638,111 @@ class NestipyApplication:
             else:
                 modules.append(m)
         return [module, *uniq_list(modules)]
+
+    def _build_module_graph(self) -> dict[str, Any]:
+        if self._root_module is None:
+            return {"root": None, "nodes": [], "edges": []}
+
+        def module_name(mod: Any) -> str:
+            return getattr(mod, "__name__", str(mod))
+
+        def module_id(mod: Any) -> str:
+            return f"module:{module_name(mod)}"
+
+        def token_name(token: Any) -> str:
+            if token is None:
+                return "Unknown"
+            if hasattr(token, "__name__"):
+                return token.__name__
+            return str(token)
+
+        def provider_name(provider: Any) -> str:
+            token = getattr(provider, "token", None)
+            if token is not None:
+                return token_name(token)
+            return token_name(provider)
+
+        nodes: list[dict[str, Any]] = []
+        edges: list[dict[str, Any]] = []
+        module_seen: set[Any] = set()
+        node_ids: set[str] = set()
+
+        def add_node(node: dict[str, Any]) -> None:
+            node_id = node["id"]
+            if node_id in node_ids:
+                return
+            node_ids.add(node_id)
+            nodes.append(node)
+
+        def visit(module_ref: Any) -> None:
+            module = module_ref.module if hasattr(module_ref, "module") else module_ref
+            if module is None:
+                return
+            if module not in module_seen:
+                module_seen.add(module)
+                add_node(
+                    {
+                        "id": module_id(module),
+                        "label": module_name(module),
+                        "type": "module",
+                        "global": Reflect.get_metadata(module, ModuleMetadata.Global, False),
+                    }
+                )
+
+            module_key = module_name(module)
+            for controller in Reflect.get_metadata(module, ModuleMetadata.Controllers, []):
+                ctrl_label = token_name(controller)
+                ctrl_id = f"controller:{module_key}:{ctrl_label}"
+                add_node(
+                    {
+                        "id": ctrl_id,
+                        "label": ctrl_label,
+                        "type": "controller",
+                        "module": module_key,
+                    }
+                )
+                edges.append(
+                    {
+                        "source": module_id(module),
+                        "target": ctrl_id,
+                        "type": "controller",
+                    }
+                )
+
+            for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
+                prov_label = provider_name(provider)
+                prov_id = f"provider:{module_key}:{prov_label}"
+                add_node(
+                    {
+                        "id": prov_id,
+                        "label": prov_label,
+                        "type": "provider",
+                        "module": module_key,
+                    }
+                )
+                edges.append(
+                    {
+                        "source": module_id(module),
+                        "target": prov_id,
+                        "type": "provider",
+                    }
+                )
+
+            for imp in Reflect.get_metadata(module, ModuleMetadata.Imports, []):
+                imp_module = imp.module if hasattr(imp, "module") else imp
+                if imp_module is None:
+                    continue
+                edges.append(
+                    {
+                        "source": module_id(module),
+                        "target": module_id(imp_module),
+                        "type": "import",
+                    }
+                )
+                visit(imp_module)
+
+        visit(self._root_module)
+        return {"root": module_id(self._root_module), "nodes": nodes, "edges": edges}
 
     def init(self, root_module: Type):
         self._root_module = root_module

@@ -37,6 +37,13 @@
         border-radius: 8px;
         cursor: pointer;
       }
+      .toolbar select {
+        background: #0f172a;
+        border: 1px solid #1f2937;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
       .toolbar button:hover {
         border-color: #334155;
       }
@@ -72,14 +79,16 @@
     <div class="header">
       <h1>Nestipy Dependency Graph (Mermaid)</h1>
       <div class="toolbar">
-        <button onclick="location.href='__NESTIPY_GRAPH_PATH__?renderer=cytoscape'">
-          Cytoscape View
-        </button>
+        <select id="mode">
+          <option value="modules">Modules</option>
+          <option value="dependencies">Dependencies</option>
+        </select>
+        <button id="switchRenderer">Cytoscape View</button>
         <span id="status" class="status"></span>
       </div>
     </div>
     <div class="card">
-      <div class="mermaid" id="graph">Loading...</div>
+      <pre class="mermaid" id="graph">Loading...</pre>
     </div>
     <div class="footer">
       Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
@@ -90,6 +99,24 @@
         const graphUrl = "__NESTIPY_GRAPH_JSON__";
         const statusEl = document.getElementById("status");
         const graphEl = document.getElementById("graph");
+        const modeEl = document.getElementById("mode");
+        const switchBtn = document.getElementById("switchRenderer");
+        const params = new URLSearchParams(window.location.search);
+
+        function currentMode() {
+          return params.get("mode") || "modules";
+        }
+
+        modeEl.value = currentMode();
+        modeEl.addEventListener("change", () => {
+          params.set("mode", modeEl.value);
+          window.location.search = params.toString();
+        });
+
+        switchBtn.addEventListener("click", () => {
+          params.set("renderer", "cytoscape");
+          window.location.search = params.toString();
+        });
 
         async function loadGraph() {
           statusEl.textContent = "Loading graph...";
@@ -99,35 +126,63 @@
             return;
           }
           const payload = await response.json();
-          const graph = payload.graph || {};
-          const nodes = new Set();
-          Object.keys(graph).forEach((key) => key && nodes.add(key));
-          Object.values(graph).forEach((deps) => {
-            (deps || []).forEach((dep) => dep && nodes.add(dep));
-          });
-          const ordered = Array.from(nodes).sort();
-          const nodeIds = new Map();
-          ordered.forEach((name, idx) => nodeIds.set(name, `n${idx}`));
+          const mode = currentMode();
           const lines = ["graph TD"];
-          ordered.forEach((name) => {
-            const id = nodeIds.get(name);
-            const label = JSON.stringify(name);
-            lines.push(`${id}[${label}]`);
-          });
-          for (const [name, deps] of Object.entries(graph)) {
-            const sourceId = nodeIds.get(name);
-            if (!sourceId) continue;
-            (deps || []).forEach((dep) => {
-              const targetId = nodeIds.get(dep);
-              if (targetId) {
+          if (mode === "dependencies" || !payload.modules) {
+            const graph = payload.dependency_graph || payload.graph || {};
+            const nodes = new Set();
+            Object.keys(graph).forEach((key) => key && nodes.add(key));
+            Object.values(graph).forEach((deps) => {
+              (deps || []).forEach((dep) => dep && nodes.add(dep));
+            });
+            const ordered = Array.from(nodes).sort();
+            const nodeIds = new Map();
+            ordered.forEach((name, idx) => nodeIds.set(name, `n${idx}`));
+            ordered.forEach((name) => {
+              const id = nodeIds.get(name);
+              const label = String(name).replace(/[^A-Za-z0-9_\\-]/g, "_");
+              lines.push(`${id}[${label}]`);
+            });
+            for (const [name, deps] of Object.entries(graph)) {
+              const sourceId = nodeIds.get(name);
+              if (!sourceId) continue;
+              (deps || []).forEach((dep) => {
+                const targetId = nodeIds.get(dep);
+                if (targetId) {
+                  lines.push(`${sourceId} --> ${targetId}`);
+                }
+              });
+            }
+            statusEl.textContent = `${ordered.length} nodes`;
+          } else {
+            const moduleGraph = payload.modules;
+            const nodes = moduleGraph.nodes || [];
+            const edges = moduleGraph.edges || [];
+            const idMap = new Map();
+            nodes.forEach((node, idx) => idMap.set(node.id, `m${idx}`));
+            nodes.forEach((node, idx) => {
+              const id = idMap.get(node.id) || `m${idx}`;
+              const label = String(node.label).replace(/[^A-Za-z0-9_\\-]/g, "_");
+              if (node.type === "module") {
+                lines.push(`${id}[${label}]`);
+              } else if (node.type === "controller") {
+                lines.push(`${id}(${label})`);
+              } else {
+                lines.push(`${id}((${label}))`);
+              }
+            });
+            edges.forEach((edge) => {
+              const sourceId = idMap.get(edge.source);
+              const targetId = idMap.get(edge.target);
+              if (sourceId && targetId) {
                 lines.push(`${sourceId} --> ${targetId}`);
               }
             });
+            statusEl.textContent = `${nodes.length} nodes`;
           }
           const definition = lines.join("\n").replace(/\\n/g, "\n");
           graphEl.removeAttribute("data-processed");
           graphEl.textContent = definition;
-          statusEl.textContent = `${ordered.length} nodes`;
           if (window.mermaid) {
             mermaid.initialize({ startOnLoad: false, theme: "dark" });
             try {
@@ -144,6 +199,8 @@
             } catch (err) {
               statusEl.textContent = "Mermaid render failed";
             }
+          } else {
+            statusEl.textContent = "Mermaid not loaded";
           }
         }
 

@@ -36,7 +36,7 @@ document = (
     DocumentBuilder()
     .set_title("Nestipy API Documentation")
     .set_description(
-        "Nestipy is a Python framework inspired by NestJS and built on top of FastAPI or Blacksheep"
+        "Nestipy is a Python framework inspired by NestJS and built on top of FastAPI or Blacksheep" 
     )
     .set_version("1.0")
     .add_bearer_auth()
