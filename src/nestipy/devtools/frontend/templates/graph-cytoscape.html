@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestipy Devtools - Dependency Graph</title>
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #1f2937;
+        background: #0b1220;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .toolbar input {
+        background: #0f172a;
+        border: 1px solid #1f2937;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        min-width: 220px;
+      }
+      .toolbar select {
+        background: #0f172a;
+        border: 1px solid #1f2937;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
+      .toolbar button {
+        background: #111827;
+        border: 1px solid #1f2937;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .toolbar button:hover {
+        border-color: #334155;
+      }
+      #cy {
+        width: 100vw;
+        height: calc(100vh - 110px);
+      }
+      .footer {
+        padding: 10px 20px;
+        font-size: 12px;
+        color: #94a3b8;
+        border-top: 1px solid #1f2937;
+        background: #0b1220;
+      }
+      .status {
+        font-size: 12px;
+        color: #cbd5f5;
+        margin-left: 12px;
+      }
+      a {
+        color: #38bdf8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Nestipy Dependency Graph (Cytoscape)</h1>
+      <div class="toolbar">
+        <input id="search" placeholder="Search service" />
+        <select id="layoutMode">
+          <option value="cose" selected>Force</option>
+          <option value="breadthfirst">Layers</option>
+          <option value="grid">Grid</option>
+          <option value="circle">Circle</option>
+        </select>
+        <button id="fit">Fit</button>
+        <button id="layout">Layout</button>
+        <button onclick="location.href='__NESTIPY_GRAPH_PATH__?renderer=mermaid'">
+          Mermaid View
+        </button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+    <div id="cy"></div>
+    <div class="footer">
+      Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
+      <span>· If the graph is blank, ensure Cytoscape is available.</span>
+    </div>
+    <script src="__NESTIPY_STATIC_ROOT__/vendor/cytoscape.min.js"></script>
+    <script>
+      (function () {
+        const graphUrl = "__NESTIPY_GRAPH_JSON__";
+        const statusEl = document.getElementById("status");
+        const searchEl = document.getElementById("search");
+        const layoutModeEl = document.getElementById("layoutMode");
+        const fitBtn = document.getElementById("fit");
+        const layoutBtn = document.getElementById("layout");
+
+        function loadScript(src) {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        async function ensureCytoscape() {
+          if (window.cytoscape) return;
+          try {
+            await loadScript(
+              "https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"
+            );
+          } catch (err) {
+            statusEl.textContent = "Failed to load Cytoscape. Try Mermaid view.";
+            throw err;
+          }
+        }
+
+        function buildElements(graph) {
+          const nodes = [];
+          const edges = [];
+          const nodeSet = new Set();
+          const edgeSet = new Set();
+          for (const [source, deps] of Object.entries(graph)) {
+            if (!source) continue;
+            if (!nodeSet.has(source)) {
+              nodes.push({ data: { id: source, label: source } });
+              nodeSet.add(source);
+            }
+            for (const target of deps || []) {
+              if (!target) continue;
+              if (!nodeSet.has(target)) {
+                nodes.push({ data: { id: target, label: target } });
+                nodeSet.add(target);
+              }
+              const edgeId = `${source}=>${target}`;
+              if (!edgeSet.has(edgeId)) {
+                edges.push({ data: { id: edgeId, source, target } });
+                edgeSet.add(edgeId);
+              }
+            }
+          }
+          return { nodes, edges };
+        }
+
+        function applySearch(cy, query) {
+          const normalized = query.trim().toLowerCase();
+          cy.nodes().removeClass("highlighted dimmed");
+          if (!normalized) return;
+          const matches = cy.nodes().filter((node) =>
+            String(node.data("label")).toLowerCase().includes(normalized)
+          );
+          cy.nodes().addClass("dimmed");
+          matches.removeClass("dimmed").addClass("highlighted");
+          if (matches.length) {
+            cy.fit(matches, 80);
+          }
+        }
+
+        function buildLayout(mode, nodeCount) {
+          if (mode === "breadthfirst") {
+            return {
+              name: "breadthfirst",
+              directed: true,
+              padding: 80,
+              spacingFactor: nodeCount > 200 ? 1.8 : 1.4,
+              avoidOverlap: true,
+              fit: true,
+            };
+          }
+          if (mode === "grid") {
+            return {
+              name: "grid",
+              padding: 80,
+              spacingFactor: nodeCount > 200 ? 1.6 : 1.2,
+              avoidOverlap: true,
+              fit: true,
+            };
+          }
+          if (mode === "circle") {
+            return {
+              name: "circle",
+              padding: 80,
+              spacingFactor: nodeCount > 200 ? 1.4 : 1.1,
+              avoidOverlap: true,
+              fit: true,
+            };
+          }
+          return {
+            name: "cose",
+            animate: false,
+            fit: true,
+            padding: 80,
+            nodeDimensionsIncludeLabels: true,
+            avoidOverlap: true,
+            avoidOverlapPadding: 30,
+            spacingFactor: nodeCount > 200 ? 2.2 : 1.8,
+            nodeRepulsion: nodeCount > 200 ? 22000 : 14000,
+            idealEdgeLength: nodeCount > 200 ? 220 : 180,
+            edgeElasticity: 0.12,
+            gravity: 0.12,
+            numIter: 1500,
+            componentSpacing: 160,
+            randomize: true,
+            quality: "proof",
+          };
+        }
+
+        async function init() {
+          statusEl.textContent = "Loading graph...";
+          await ensureCytoscape();
+          const response = await fetch(graphUrl, { cache: "no-store" });
+          if (!response.ok) {
+            statusEl.textContent = "Failed to load graph.json";
+            return;
+          }
+          const payload = await response.json();
+          const graph = payload.graph || {};
+          const elements = buildElements(graph);
+          if (!elements.nodes.length) {
+            statusEl.textContent = "Graph is empty.";
+          } else {
+            statusEl.textContent = `${elements.nodes.length} nodes · ${elements.edges.length} edges`;
+          }
+          const cy = window.cytoscape({
+            container: document.getElementById("cy"),
+            elements,
+            style: [
+              {
+                selector: "node",
+                style: {
+                  "background-color": "#38bdf8",
+                  label: "data(label)",
+                  color: "#e2e8f0",
+                  "font-size": 10,
+                  "text-wrap": "wrap",
+                  "text-max-width": 180,
+                  "text-background-color": "#0f172a",
+                  "text-background-opacity": 0.7,
+                  "text-background-padding": 3,
+                },
+              },
+              {
+                selector: "edge",
+                style: {
+                  "line-color": "#334155",
+                  "target-arrow-color": "#334155",
+                  "target-arrow-shape": "triangle",
+                  "curve-style": "bezier",
+                  width: 1,
+                },
+              },
+              {
+                selector: ".highlighted",
+                style: {
+                  "background-color": "#22c55e",
+                  "line-color": "#22c55e",
+                  "target-arrow-color": "#22c55e",
+                },
+              },
+              {
+                selector: ".dimmed",
+                style: {
+                  opacity: 0.25,
+                },
+              },
+            ],
+            layout: buildLayout(layoutModeEl.value, elements.nodes.length),
+          });
+
+          searchEl.addEventListener("input", () =>
+            applySearch(cy, searchEl.value)
+          );
+          fitBtn.addEventListener("click", () => cy.fit(undefined, 60));
+          layoutBtn.addEventListener("click", () => {
+            cy.layout(buildLayout(layoutModeEl.value, elements.nodes.length)).run();
+          });
+        }
+
+        init().catch(() => {});
+      })();
+    </script>
+  </body>
+</html>

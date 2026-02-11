@@ -22,6 +22,7 @@ config = NestipyConfig(
     router_spec_path="/_router/spec",  # optional override
     router_spec_token="secret",  # optional token protection
     devtools_static_path="/_devtools/static",  # stable devtools path (no token)
+    devtools_graph_renderer="cytoscape",    # switch to "mermaid" if you prefer
 )
 
 

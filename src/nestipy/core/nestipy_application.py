@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import logging
 import mimetypes
 import os.path
@@ -155,6 +156,7 @@ class NestipyConfig:
     dependency_graph_json_path: Optional[str] = None
     graphql_adapter: Optional[GraphqlAdapter] = None
     devtools_static_path: Optional[str] = None
+    devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
     log_level: Optional[Union[int, str]] = None
     log_file: Optional[str] = None
     log_file_level: Optional[Union[int, str]] = None
@@ -200,6 +202,7 @@ class NestipyApplication:
     _router_spec_path: str = "/_router/spec"
     _router_spec_token: Optional[str] = None
     _router_detect_conflicts: bool = True
+    _devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -249,6 +252,14 @@ class NestipyApplication:
             "NESTIPY_ROUTER_SPEC_TOKEN"
         )
         self._router_detect_conflicts = config.router_detect_conflicts
+        env_graph_renderer = os.getenv("NESTIPY_DEVTOOLS_GRAPH_RENDERER")
+        if env_graph_renderer:
+            env_graph_renderer = env_graph_renderer.strip().lower()
+        self._devtools_graph_renderer = (
+            env_graph_renderer
+            if env_graph_renderer in {"mermaid", "cytoscape"}
+            else config.devtools_graph_renderer
+        )
         try:
             from nestipy.core.router.route_explorer import RouteExplorer
             version_prefix = os.getenv(
@@ -561,74 +572,31 @@ class NestipyApplication:
             graph = NestipyContainer.get_instance().get_dependency_graph()
             return await res.json({"graph": graph})
 
-        async def graph_html_handler(_req: "Request", res: "Response", _next_fn):
-            graph = NestipyContainer.get_instance().get_dependency_graph()
-            nodes = sorted({*graph.keys(), *{d for deps in graph.values() for d in deps}})
-            node_ids = {name: f"n{idx}" for idx, name in enumerate(nodes)}
-            mermaid_lines = ["graph TD"]
-            for name in nodes:
-                mermaid_lines.append(f'{node_ids[name]}["{name}"]')
-            for name, deps in graph.items():
-                for dep in deps:
-                    mermaid_lines.append(f"{node_ids[name]} --> {node_ids[dep]}")
-            mermaid_graph = "\\n".join(mermaid_lines)
+        async def graph_html_handler(req: "Request", res: "Response", _next_fn):
             static_root = self._devtools_static_path
-            html = f"""<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nestipy Devtools - Dependency Graph</title>
-    <style>
-      body {{
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        margin: 0;
-        padding: 24px;
-        background: #0f172a;
-        color: #e2e8f0;
-      }}
-      h1 {{
-        font-size: 20px;
-        margin: 0 0 16px 0;
-      }}
-      .card {{
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 12px;
-        padding: 16px;
-        overflow: auto;
-      }}
-      .mermaid {{
-        min-height: 200px;
-      }}
-      .note {{
-        margin-top: 16px;
-        font-size: 12px;
-        color: #94a3b8;
-      }}
-      a {{
-        color: #38bdf8;
-      }}
-    </style>
-  </head>
-  <body>
-    <h1>Nestipy Dependency Graph</h1>
-    <div class="card">
-      <div class="mermaid">
-{mermaid_graph}
-      </div>
-    </div>
-    <div class="note">
-      If the graph doesn't render, open <a href="{graph_json_path}">graph.json</a> instead.
-      Mermaid is bundled locally for offline usage.
-    </div>
-    <script src="{static_root}/vendor/mermaid.min.js"></script>
-    <script>
-      mermaid.initialize({{ startOnLoad: true, theme: "dark" }});
-    </script>
-  </body>
-</html>
-"""
+            renderer = (req.query_params.get("renderer") or self._devtools_graph_renderer).lower()
+            if renderer not in {"mermaid", "cytoscape"}:
+                renderer = self._devtools_graph_renderer
+            template_dir = os.path.realpath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "devtools",
+                    "frontend",
+                    "templates",
+                )
+            )
+            template_name = "graph-cytoscape.html"
+            if renderer == "mermaid":
+                template_name = "graph-mermaid.html"
+            template_path = os.path.join(template_dir, template_name)
+            with open(template_path, "r", encoding="utf-8") as handle:
+                html = handle.read()
+            html = (
+                html.replace("__NESTIPY_STATIC_ROOT__", static_root)
+                .replace("__NESTIPY_GRAPH_JSON__", graph_json_path)
+                .replace("__NESTIPY_GRAPH_PATH__", graph_path)
+            )
             return await res.header("Content-Type", "text/html; charset=utf-8").send(html)
 
         self._http_adapter.get(graph_path, graph_html_handler, {})

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestipy Devtools - Dependency Graph</title>
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #1f2937;
+        background: #0b1220;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .toolbar button {
+        background: #111827;
+        border: 1px solid #1f2937;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .toolbar button:hover {
+        border-color: #334155;
+      }
+      .card {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 16px 20px;
+        overflow: auto;
+      }
+      .mermaid {
+        min-height: 200px;
+      }
+      .footer {
+        padding: 10px 20px;
+        font-size: 12px;
+        color: #94a3b8;
+        border-top: 1px solid #1f2937;
+        background: #0b1220;
+      }
+      .status {
+        font-size: 12px;
+        color: #cbd5f5;
+        margin-left: 12px;
+      }
+      a {
+        color: #38bdf8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Nestipy Dependency Graph (Mermaid)</h1>
+      <div class="toolbar">
+        <button onclick="location.href='__NESTIPY_GRAPH_PATH__?renderer=cytoscape'">
+          Cytoscape View
+        </button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="mermaid" id="graph">Loading...</div>
+    </div>
+    <div class="footer">
+      Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
+    </div>
+    <script src="__NESTIPY_STATIC_ROOT__/vendor/mermaid.min.js"></script>
+    <script>
+      (function () {
+        const graphUrl = "__NESTIPY_GRAPH_JSON__";
+        const statusEl = document.getElementById("status");
+        const graphEl = document.getElementById("graph");
+
+        async function loadGraph() {
+          statusEl.textContent = "Loading graph...";
+          const response = await fetch(graphUrl, { cache: "no-store" });
+          if (!response.ok) {
+            statusEl.textContent = "Failed to load graph.json";
+            return;
+          }
+          const payload = await response.json();
+          const graph = payload.graph || {};
+          const nodes = new Set();
+          Object.keys(graph).forEach((key) => key && nodes.add(key));
+          Object.values(graph).forEach((deps) => {
+            (deps || []).forEach((dep) => dep && nodes.add(dep));
+          });
+          const ordered = Array.from(nodes).sort();
+          const nodeIds = new Map();
+          ordered.forEach((name, idx) => nodeIds.set(name, `n${idx}`));
+          const lines = ["graph TD"];
+          ordered.forEach((name) => {
+            const id = nodeIds.get(name);
+            const label = JSON.stringify(name);
+            lines.push(`${id}[${label}]`);
+          });
+          for (const [name, deps] of Object.entries(graph)) {
+            const sourceId = nodeIds.get(name);
+            if (!sourceId) continue;
+            (deps || []).forEach((dep) => {
+              const targetId = nodeIds.get(dep);
+              if (targetId) {
+                lines.push(`${sourceId} --> ${targetId}`);
+              }
+            });
+          }
+          const definition = lines.join("\n").replace(/\\n/g, "\n");
+          graphEl.removeAttribute("data-processed");
+          graphEl.textContent = definition;
+          statusEl.textContent = `${ordered.length} nodes`;
+          if (window.mermaid) {
+            mermaid.initialize({ startOnLoad: false, theme: "dark" });
+            try {
+              if (typeof mermaid.run === "function") {
+                const result = mermaid.run({ nodes: [graphEl] });
+                if (result && typeof result.then === "function") {
+                  result.catch(() => {
+                    statusEl.textContent = "Mermaid render failed";
+                  });
+                }
+              } else if (typeof mermaid.init === "function") {
+                mermaid.init(undefined, document.querySelectorAll(".mermaid"));
+              }
+            } catch (err) {
+              statusEl.textContent = "Mermaid render failed";
+            }
+          }
+        }
+
+        loadGraph().catch(() => {
+          statusEl.textContent = "Graph render failed";
+        });
+      })();
+    </script>
+  </body>
+</html>
