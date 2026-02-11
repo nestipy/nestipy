@@ -304,8 +304,21 @@ class NestipyApplication:
     def _resolve_devtools_static_path(config_path: Optional[str]) -> str:
         if config_path:
             return "/" + config_path.strip("/")
-        token = secrets.token_hex(16)
+        env_path = os.getenv("NESTIPY_DEVTOOLS_STATIC_PATH")
+        if env_path:
+            return env_path if env_path.startswith("/") else f"/{env_path.strip('/')}"
+        env_token = os.getenv("NESTIPY_DEVTOOLS_TOKEN")
+        token = env_token or NestipyApplication._read_or_create_devtools_token()
         return f"/_devtools/{token}/static"
+
+    @staticmethod
+    def _read_or_create_devtools_token() -> str:
+        import hashlib
+
+        cwd = os.path.abspath(os.getcwd())
+        digest = hashlib.sha256(cwd.encode("utf-8")).hexdigest()
+        # Stable, deterministic token across workers to avoid asset 404s.
+        return digest[:32]
 
     def listen(self, target: Optional[str] = None, **options: Unpack[GranianOptions]):
         """
