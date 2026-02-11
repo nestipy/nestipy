@@ -55,6 +55,9 @@
         margin: 16px 20px;
         overflow: auto;
       }
+      .card.full {
+        height: calc(100vh - 180px);
+      }
       .mermaid {
         min-height: 200px;
       }
@@ -87,16 +90,16 @@
         <span id="status" class="status"></span>
       </div>
     </div>
-    <div class="card">
-      <pre class="mermaid" id="graph">Loading...</pre>
+    <div class="card full">
+      <div class="mermaid" id="graph">Loading...</div>
     </div>
     <div class="footer">
       Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
     </div>
-    <script src="__NESTIPY_STATIC_ROOT__/vendor/mermaid.min.js"></script>
     <script>
       (function () {
         const graphUrl = "__NESTIPY_GRAPH_JSON__";
+        const localMermaidUrl = "__NESTIPY_STATIC_ROOT__/vendor/mermaid.min.js";
         const statusEl = document.getElementById("status");
         const graphEl = document.getElementById("graph");
         const modeEl = document.getElementById("mode");
@@ -118,8 +121,41 @@
           window.location.search = params.toString();
         });
 
+        function loadScript(src) {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        async function ensureMermaid() {
+          if (window.mermaid && typeof window.mermaid.render === "function") {
+            return;
+          }
+          try {
+            await loadScript(localMermaidUrl);
+          } catch (err) {
+            // ignore and try CDN
+          }
+          if (window.mermaid && typeof window.mermaid.render === "function") {
+            return;
+          }
+          await loadScript(
+            "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"
+          );
+        }
+
         async function loadGraph() {
           statusEl.textContent = "Loading graph...";
+          try {
+            await ensureMermaid();
+          } catch (err) {
+            statusEl.textContent = "Mermaid not loaded";
+            return;
+          }
           const response = await fetch(graphUrl, { cache: "no-store" });
           if (!response.ok) {
             statusEl.textContent = "Failed to load graph.json";
@@ -159,16 +195,20 @@
             const nodes = moduleGraph.nodes || [];
             const edges = moduleGraph.edges || [];
             const idMap = new Map();
+            lines.push("classDef module fill:#1e3a8a,stroke:#1e40af,color:#ffffff,rx:4,ry:4;");
+            lines.push("classDef controller fill:#0f766e,stroke:#115e59,color:#ffffff,rx:4,ry:4;");
+            lines.push("classDef provider fill:#0ea5e9,stroke:#0369a1,color:#ffffff,rx:4,ry:4;");
             nodes.forEach((node, idx) => idMap.set(node.id, `m${idx}`));
             nodes.forEach((node, idx) => {
               const id = idMap.get(node.id) || `m${idx}`;
               const label = String(node.label).replace(/[^A-Za-z0-9_\\-]/g, "_");
+              lines.push(`${id}[${label}]`);
               if (node.type === "module") {
-                lines.push(`${id}[${label}]`);
+                lines.push(`class ${id} module`);
               } else if (node.type === "controller") {
-                lines.push(`${id}(${label})`);
+                lines.push(`class ${id} controller`);
               } else {
-                lines.push(`${id}((${label}))`);
+                lines.push(`class ${id} provider`);
               }
             });
             edges.forEach((edge) => {
@@ -182,25 +222,38 @@
           }
           const definition = lines.join("\n").replace(/\\n/g, "\n");
           graphEl.removeAttribute("data-processed");
-          graphEl.textContent = definition;
-          if (window.mermaid) {
-            mermaid.initialize({ startOnLoad: false, theme: "dark" });
-            try {
-              if (typeof mermaid.run === "function") {
-                const result = mermaid.run({ nodes: [graphEl] });
-                if (result && typeof result.then === "function") {
-                  result.catch(() => {
-                    statusEl.textContent = "Mermaid render failed";
-                  });
-                }
-              } else if (typeof mermaid.init === "function") {
-                mermaid.init(undefined, document.querySelectorAll(".mermaid"));
+          graphEl.innerHTML = definition;
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: "dark",
+            flowchart: {
+              nodeSpacing: 110,
+              rankSpacing: 500,
+            },
+          });
+          try {
+            if (typeof mermaid.render === "function") {
+              graphEl.innerHTML = "";
+              const result = await mermaid.render(
+                `graph-${Date.now()}`,
+                definition
+              );
+              graphEl.innerHTML = result.svg;
+              if (result.bindFunctions) {
+                result.bindFunctions(graphEl);
               }
-            } catch (err) {
-              statusEl.textContent = "Mermaid render failed";
+            } else if (typeof mermaid.run === "function") {
+              const nodes = document.querySelectorAll(".mermaid");
+              const result = mermaid.run({ nodes });
+              if (result && typeof result.then === "function") {
+                await result;
+              }
+            } else if (typeof mermaid.init === "function") {
+              mermaid.init(undefined, document.querySelectorAll(".mermaid"));
             }
-          } else {
-            statusEl.textContent = "Mermaid not loaded";
+          } catch (err) {
+            statusEl.textContent =
+              err && err.message ? `Mermaid render failed: ${err.message}` : "Mermaid render failed";
           }
         }
 

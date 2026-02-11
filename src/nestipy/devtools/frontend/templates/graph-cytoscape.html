@@ -110,9 +110,9 @@
       Data: <a href="__NESTIPY_GRAPH_JSON__">graph.json</a>
       <span>· If the graph is blank, ensure Cytoscape is available.</span>
     </div>
-    <script src="__NESTIPY_STATIC_ROOT__/vendor/cytoscape.min.js"></script>
     <script>
       (function () {
+        const localCytoscapeUrl = "__NESTIPY_STATIC_ROOT__/vendor/cytoscape.min.js";
         const graphUrl = "__NESTIPY_GRAPH_JSON__";
         const statusEl = document.getElementById("status");
         const searchEl = document.getElementById("search");
@@ -170,12 +170,16 @@
         async function ensureCytoscape() {
           if (window.cytoscape) return;
           try {
-            await loadScript(
-              "https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"
-            );
+            await loadScript(localCytoscapeUrl);
           } catch (err) {
-            statusEl.textContent = "Failed to load Cytoscape. Try Mermaid view.";
-            throw err;
+            try {
+              await loadScript(
+                "https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"
+              );
+            } catch (cdnErr) {
+              statusEl.textContent = "Failed to load Cytoscape. Try Mermaid view.";
+              throw cdnErr;
+            }
           }
         }
 
