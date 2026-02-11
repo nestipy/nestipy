@@ -26,13 +26,73 @@ class _NestipyRichFormatter(logging.Formatter):
         "ERROR": "red",
         "CRITICAL": "bold red",
     }
+    _STATUS_STYLES = {
+        "2xx": "green",
+        "3xx": "cyan",
+        "4xx": "yellow",
+        "5xx": "red",
+    }
+
+    @classmethod
+    def _style_status(cls, status: int) -> str:
+        if 200 <= status < 300:
+            return cls._STATUS_STYLES["2xx"]
+        if 300 <= status < 400:
+            return cls._STATUS_STYLES["3xx"]
+        if 400 <= status < 500:
+            return cls._STATUS_STYLES["4xx"]
+        if 500 <= status < 600:
+            return cls._STATUS_STYLES["5xx"]
+        return "white"
+
+    @classmethod
+    def _colorize_status(cls, message: str, status: int) -> str:
+        try:
+            import re
+
+            style = cls._style_status(status)
+            pattern = re.compile(rf"(?<!\\d){status}(?!\\d)")
+            return pattern.sub(f"[{style}]{status}[/{style}]", message, count=1)
+        except Exception:
+            return message
+
+    @staticmethod
+    def _extract_status_from_message(message: str) -> Optional[int]:
+        try:
+            import re
+
+            primary = re.search(r"\"[^\"]*\"\\s+(\\d{3})\\b", message)
+            if primary:
+                value = int(primary.group(1))
+                if 100 <= value <= 599:
+                    return value
+            candidates = [
+                int(m.group(1))
+                for m in re.finditer(r"(?<!\\d)(\\d{3})(?!\\d)", message)
+                if 100 <= int(m.group(1)) <= 599
+            ]
+            if candidates:
+                return candidates[-1]
+        except Exception:
+            return None
+        return None
 
     def format(self, record: logging.LogRecord) -> str:
         original_levelname = record.levelname
         style = self._LEVEL_STYLES.get(original_levelname, "white")
         record.levelname = f"[{style}]{original_levelname}[/{style}]"
         try:
-            return super().format(record)
+            rendered = super().format(record)
+            status = getattr(record, "status", None)
+            if status is None:
+                status = getattr(record, "status_code", None)
+            if isinstance(status, int):
+                rendered = self._colorize_status(rendered, status)
+            else:
+                extracted = self._extract_status_from_message(rendered)
+                if extracted is not None:
+                    rendered = self._colorize_status(rendered, extracted)
+            return rendered
         finally:
             record.levelname = original_levelname
 
@@ -73,6 +133,7 @@ def configure_logger(
             console=console,
             rich_tracebacks=True,
             markup=True,
+            highlighter=None,
             show_time=False,
             show_level=False,
             show_path=False,
@@ -107,10 +168,16 @@ def build_granian_log_dictconfig(
     Build a logging.dictConfig for Granian so its logs follow Nestipy format.
     """
     formatter = {
-        "()": "logging.Formatter",
+        "()": _NestipyRichFormatter,
         "fmt": fmt,
         "datefmt": datefmt,
     }
+    if not use_color:
+        formatter = {
+            "()": logging.Formatter,
+            "fmt": fmt,
+            "datefmt": datefmt,
+        }
     if use_color:
         handler = {
             "()": "rich.logging.RichHandler",
@@ -118,6 +185,7 @@ def build_granian_log_dictconfig(
             "formatter": "nestipy",
             "rich_tracebacks": True,
             "markup": True,
+            "highlighter": None,
             "show_time": False,
             "show_level": False,
             "show_path": False,
