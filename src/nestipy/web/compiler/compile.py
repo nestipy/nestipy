@@ -491,12 +491,16 @@ def build_page_tsx(
     inline_components = dict(page.components)
     inline_props = dict(page.props)
     inline_component_props = dict(page.component_props)
+    inline_hooks = dict(page.hooks)
+    module_prelude = list(page.module_prelude)
 
     if root_layout is not None:
         layout_tree = root_layout.components.get(root_layout.primary)
         if layout_tree is None:
             raise CompilerError("Root layout component not found")
-        layout_tsx = build_layout_tsx(layout_tree)
+        layout_tsx = build_layout_tsx(
+            layout_tree, hooks=root_layout.hooks.get(root_layout.primary, [])
+        )
         layout_wrap_start = "<RootLayout>"
         layout_wrap_end = "</RootLayout>"
         for name, tree in root_layout.components.items():
@@ -505,6 +509,9 @@ def build_page_tsx(
             inline_props.setdefault(name, spec)
         for name, prop_name in root_layout.component_props.items():
             inline_component_props.setdefault(name, prop_name)
+        for name, hook_lines in root_layout.hooks.items():
+            inline_hooks.setdefault(name, hook_lines)
+        module_prelude.extend(root_layout.module_prelude)
 
     page_tree = page.components.get(page.primary)
     if page_tree is None:
@@ -523,6 +530,7 @@ def build_page_tsx(
     component_defs = build_component_defs(
         page.components,
         component_props=inline_component_props,
+        component_hooks=inline_hooks,
         root_layout=root_layout.components if root_layout else None,
         page_primary=page.primary,
         layout_primary=root_layout.primary if root_layout else None,
@@ -532,8 +540,11 @@ def build_page_tsx(
     if root_layout is not None:
         body = f"{layout_wrap_start}{body}{layout_wrap_end}"
 
+    page_hooks = inline_hooks.get(page.primary, [])
+    hook_lines = [f"  {line}" for line in page_hooks]
     component = [
         "export default function Page(): JSX.Element {",
+        *hook_lines,
         "  return (",
         indent(body, 4),
         "  );",
@@ -541,14 +552,23 @@ def build_page_tsx(
         "",
     ]
 
-    imports_block = render_imports(imports, include_react_node=bool(root_layout))
+    needs_react = bool(module_prelude) or any(inline_hooks.values())
+    imports_block = render_imports(
+        imports,
+        include_react_node=bool(root_layout),
+        include_react_default=needs_react,
+    )
     component_import_block = render_component_imports(component_imports)
+    module_prelude_block = "\n".join(module_prelude).strip()
+    if module_prelude_block:
+        module_prelude_block += "\n"
     return (
         "\n".join(
             [
                 imports_block,
                 component_import_block,
                 "",
+                module_prelude_block,
                 props_interfaces,
                 layout_tsx,
                 component_defs,
@@ -560,12 +580,14 @@ def build_page_tsx(
     )
 
 
-def build_layout_tsx(layout_tree: Node) -> str:
+def build_layout_tsx(layout_tree: Node, *, hooks: list[str] | None = None) -> str:
     """Render the root layout wrapper TSX."""
     layout_body = render_node(layout_tree, slot_token="{children}")
+    hook_lines = [f"  {line}" for line in (hooks or [])]
     return "\n".join(
         [
             "export function RootLayout({ children }: { children: ReactNode }): JSX.Element {",
+            *hook_lines,
             "  return (",
             indent(layout_body, 4),
             "  );",
@@ -576,10 +598,15 @@ def build_layout_tsx(layout_tree: Node) -> str:
 
 
 def render_imports(
-    imports: dict[str, dict[str, set[str]]], *, include_react_node: bool = False
+    imports: dict[str, dict[str, set[str]]],
+    *,
+    include_react_node: bool = False,
+    include_react_default: bool = False,
 ) -> str:
     """Render import statements for external components."""
     lines: list[str] = []
+    if include_react_default:
+        lines.append("import React from 'react';")
     if include_react_node:
         lines.append("import type { ReactNode } from 'react';")
     for module, spec in imports.items():
@@ -798,8 +825,16 @@ def build_component_module_tsx(
     """Render a TSX module for reusable components."""
     imports = collect_imports(parsed.components)
     props_interfaces = render_props_interfaces(parsed.props)
-    component_defs = build_component_exports(parsed.components, parsed.component_props)
-    imports_block = render_imports(imports)
+    component_defs = build_component_exports(
+        parsed.components,
+        parsed.component_props,
+        component_hooks=parsed.hooks,
+    )
+    module_prelude_block = "\n".join(parsed.module_prelude).strip()
+    if module_prelude_block:
+        module_prelude_block += "\n"
+    needs_react = bool(parsed.module_prelude) or any(parsed.hooks.values())
+    imports_block = render_imports(imports, include_react_default=needs_react)
     component_import_block = render_component_imports(component_imports)
     return (
         "\n".join(
@@ -807,6 +842,7 @@ def build_component_module_tsx(
                 imports_block,
                 component_import_block,
                 "",
+                module_prelude_block,
                 props_interfaces,
                 component_defs,
             ]
@@ -817,14 +853,21 @@ def build_component_module_tsx(
 
 
 def build_component_exports(
-    components: dict[str, Node], component_props: dict[str, str]
+    components: dict[str, Node],
+    component_props: dict[str, str],
+    *,
+    component_hooks: dict[str, list[str]] | None = None,
 ) -> str:
     """Render exported component functions."""
     blocks: list[str] = []
     for name, tree in components.items():
         blocks.append(
             _component_block(
-                name, tree, component_props.get(name), exported=True
+                name,
+                tree,
+                component_props.get(name),
+                hooks=(component_hooks or {}).get(name),
+                exported=True,
             )
         )
     return "\n".join(blocks) + ("\n" if blocks else "")
@@ -893,6 +936,7 @@ def build_component_defs(
     page_components: dict[str, Node],
     *,
     component_props: dict[str, str],
+    component_hooks: dict[str, list[str]] | None = None,
     root_layout: dict[str, Node] | None = None,
     page_primary: str,
     layout_primary: str | None = None,
@@ -906,7 +950,14 @@ def build_component_defs(
         if name in seen:
             continue
         seen.add(name)
-        blocks.append(_component_block(name, tree, component_props.get(name)))
+        blocks.append(
+            _component_block(
+                name,
+                tree,
+                component_props.get(name),
+                hooks=(component_hooks or {}).get(name),
+            )
+        )
     if root_layout:
         for name, tree in root_layout.items():
             if layout_primary and name == layout_primary:
@@ -914,7 +965,14 @@ def build_component_defs(
             if name in seen:
                 continue
             seen.add(name)
-            blocks.append(_component_block(name, tree, component_props.get(name)))
+            blocks.append(
+                _component_block(
+                    name,
+                    tree,
+                    component_props.get(name),
+                    hooks=(component_hooks or {}).get(name),
+                )
+            )
     return "\n".join(blocks) + ("\n" if blocks else "")
 
 
@@ -923,6 +981,7 @@ def _component_block(
     tree: Node,
     props_type: str | None = None,
     *,
+    hooks: list[str] | None = None,
     exported: bool = False,
 ) -> str:
     """Render a component function block."""
@@ -934,9 +993,11 @@ def _component_block(
     )
     if exported:
         signature = f"export {signature}"
+    hook_lines = [f"  {line}" for line in (hooks or [])]
     return "\n".join(
         [
             f"{signature} {{",
+            *hook_lines,
             "  return (",
             indent(body, 4),
             "  );",

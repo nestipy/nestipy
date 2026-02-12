@@ -52,6 +52,8 @@ class ParsedFile:
     imports: list[ImportSpec]
     props: dict[str, PropsSpec]
     component_props: dict[str, str]
+    hooks: dict[str, list[str]]
+    module_prelude: list[str]
 
 
 def parse_component_file(
@@ -72,6 +74,7 @@ def parse_component_file(
         imports=imports,
         props=props_specs,
     )
+    module_prelude = _collect_contexts(module)
     target = _select_component(parsed.functions, target_names)
     if target is None:
         raise CompilerError(f"No component found in {path}")
@@ -83,6 +86,7 @@ def parse_component_file(
     component_names.update(imported_names)
 
     components: dict[str, Node] = {}
+    hooks: dict[str, list[str]] = {}
     for fn in parsed.functions:
         if fn.name.value not in component_names:
             continue
@@ -97,6 +101,7 @@ def parse_component_file(
                 f"Component '{fn.name.value}' must return a Node (use h())"
             )
         components[fn.name.value] = tree
+        hooks[fn.name.value] = _collect_hook_statements(fn)
 
     component_props = _collect_component_props(parsed.functions, props_specs)
 
@@ -106,6 +111,8 @@ def parse_component_file(
         imports=imports,
         props=props_specs,
         component_props=component_props,
+        hooks=hooks,
+        module_prelude=module_prelude,
     )
 
 
@@ -274,6 +281,164 @@ def _collect_component_props(
         if props_name and props_name in props_specs:
             mapping[fn.name.value] = props_name
     return mapping
+
+
+def _collect_contexts(module: cst.Module) -> list[str]:
+    """Collect React context declarations from module-level assignments."""
+    contexts: list[str] = []
+    for stmt in module.body:
+        statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            statements = list(stmt.body)
+        else:
+            statements = [stmt]
+        for inner in statements:
+            if not isinstance(inner, cst.Assign):
+                continue
+            if len(inner.targets) != 1:
+                continue
+            target = inner.targets[0].target
+            if not isinstance(target, cst.Name):
+                continue
+            if not isinstance(inner.value, cst.Call):
+                continue
+            if _call_name(inner.value) != "create_context":
+                continue
+            default_expr = _get_call_arg(inner.value, 0, ("default",))
+            default_js = _expr_to_js(default_expr) if default_expr else "undefined"
+            contexts.append(
+                f"export const {target.value} = React.createContext({default_js});"
+            )
+    return contexts
+
+
+def _collect_hook_statements(fn: cst.FunctionDef) -> list[str]:
+    """Collect React hook statements from a component body."""
+    body = fn.body
+    if not isinstance(body, cst.IndentedBlock):
+        return []
+    hooks: list[str] = []
+    for stmt in body.body:
+        inner_statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            inner_statements = list(stmt.body)
+        else:
+            inner_statements = [stmt]
+        for inner in inner_statements:
+            if isinstance(inner, cst.Return):
+                return hooks
+            hook_line = _hook_from_statement(inner)
+            if hook_line:
+                hooks.append(hook_line)
+    return hooks
+
+
+def _hook_from_statement(stmt: cst.CSTNode) -> str | None:
+    """Convert a hook assignment/expression into a JS statement."""
+    if isinstance(stmt, cst.Assign):
+        return _hook_from_assignment(stmt)
+    if isinstance(stmt, cst.AnnAssign):
+        return _hook_from_ann_assignment(stmt)
+    if isinstance(stmt, cst.Expr) and isinstance(stmt.value, cst.Call):
+        return _hook_from_call(stmt.value, target_names=None)
+    return None
+
+
+def _hook_from_assignment(stmt: cst.Assign) -> str | None:
+    """Handle hook calls in assignment statements."""
+    if len(stmt.targets) != 1:
+        return None
+    target = stmt.targets[0].target
+    if not isinstance(stmt.value, cst.Call):
+        return None
+    return _hook_from_call(stmt.value, target_names=_target_names(target))
+
+
+def _hook_from_ann_assignment(stmt: cst.AnnAssign) -> str | None:
+    """Handle hook calls in annotated assignments."""
+    if not isinstance(stmt.value, cst.Call):
+        return None
+    return _hook_from_call(stmt.value, target_names=_target_names(stmt.target))
+
+
+def _target_names(target: cst.BaseAssignTargetExpression) -> list[str] | None:
+    """Extract assignment target names for hook destructuring."""
+    if isinstance(target, cst.Name):
+        return [target.value]
+    if isinstance(target, (cst.Tuple, cst.List)):
+        names: list[str] = []
+        for element in target.elements:
+            if isinstance(element, cst.Element) and isinstance(element.value, cst.Name):
+                names.append(element.value.value)
+            else:
+                return None
+        return names
+    return None
+
+
+def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | None:
+    """Render hook calls into React hook statements."""
+    name = _call_name(call)
+    if name is None:
+        return None
+    if name == "use_effect":
+        if target_names:
+            raise CompilerError("use_effect cannot be assigned to a name")
+        effect = _get_call_arg(call, 0, ("effect",))
+        if effect is None:
+            raise CompilerError("use_effect requires an effect callback")
+        deps = _get_call_arg(call, 1, ("deps", "dependencies"))
+        effect_js = _expr_to_js(effect)
+        if deps is None:
+            return f"React.useEffect({effect_js});"
+        return f"React.useEffect({effect_js}, {_expr_to_js(deps)});"
+
+    hook_map = {
+        "use_state": "useState",
+        "use_memo": "useMemo",
+        "use_callback": "useCallback",
+        "use_context": "useContext",
+        "use_ref": "useRef",
+    }
+    if name not in hook_map:
+        return None
+    if not target_names:
+        raise CompilerError(f"{name} must be assigned to a variable")
+
+    hook_name = hook_map[name]
+    args = _call_args_to_js(call)
+    args_str = ", ".join(args) if args else ""
+
+    if name == "use_state":
+        if len(target_names) == 2:
+            return (
+                f"const [{target_names[0]}, {target_names[1]}] = React.{hook_name}({args_str});"
+            )
+        if len(target_names) == 1:
+            return f"const {target_names[0]} = React.{hook_name}({args_str});"
+        raise CompilerError("use_state must assign to one or two names")
+
+    if len(target_names) != 1:
+        raise CompilerError(f"{name} must assign to a single name")
+    return f"const {target_names[0]} = React.{hook_name}({args_str});"
+
+
+def _call_args_to_js(call: cst.Call) -> list[str]:
+    """Convert call arguments into JS strings."""
+    return [_expr_to_js(arg.value) for arg in call.args if arg.keyword is None]
+
+
+def _get_call_arg(
+    call: cst.Call, index: int, keyword_names: tuple[str, ...]
+) -> cst.BaseExpression | None:
+    """Fetch a positional or keyword argument from a call."""
+    positional = [arg for arg in call.args if arg.keyword is None]
+    if len(positional) > index:
+        return positional[index].value
+    for arg in call.args:
+        if arg.keyword and arg.keyword.value in keyword_names:
+            return arg.value
+    return None
 
 
 def _select_component(
@@ -580,6 +745,25 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
         return f"{_expr_to_js(expr.value)}.{expr.attr.value}"
     if isinstance(expr, cst.SimpleString):
         return json.dumps(_eval_string(expr))
+    if isinstance(expr, cst.List):
+        items = [_expr_to_js(el.value) for el in expr.elements if el is not None]
+        return "[" + ", ".join(items) + "]"
+    if isinstance(expr, cst.Tuple):
+        items = [_expr_to_js(el.value) for el in expr.elements if el is not None]
+        return "[" + ", ".join(items) + "]"
+    if isinstance(expr, cst.Dict):
+        parts: list[str] = []
+        for element in expr.elements:
+            if element is None:
+                continue
+            if isinstance(element, cst.StarredDictElement):
+                parts.append("..." + _expr_to_js(element.value))
+                continue
+            if element.key is None or element.value is None:
+                continue
+            key = _eval_key(element.key)
+            parts.append(f"{json.dumps(key)}: {_expr_to_js(element.value)}")
+        return "{" + ", ".join(parts) + "}"
     if isinstance(expr, cst.Integer):
         return expr.value
     if isinstance(expr, cst.Float):

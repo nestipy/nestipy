@@ -183,3 +183,36 @@ def Page():
     assert "server" in vite_config
     assert "/_actions" in vite_config
     assert "127.0.0.1:8001" in vite_config
+
+
+def test_compile_hooks_and_context(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h, js, use_state, use_effect, use_context, create_context
+
+AppContext = create_context("default")
+
+@component
+def Page():
+    count, set_count = use_state(0)
+    value = use_context(AppContext)
+    use_effect(js("() => { console.log(value); }"), deps=[count])
+    return h.div(js("value"))
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "import React from 'react';" in page_tsx
+    assert "export const AppContext = React.createContext(\"default\");" in page_tsx
+    assert "const [count, set_count] = React.useState(0);" in page_tsx
+    assert "const value = React.useContext(AppContext);" in page_tsx
+    assert "React.useEffect(() => { console.log(value); }, [count]);" in page_tsx

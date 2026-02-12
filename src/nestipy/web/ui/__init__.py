@@ -266,6 +266,41 @@ def props(cls: type) -> type:
     return cls
 
 
+def use_state(initial: Any = None) -> tuple[Any, Any]:
+    """Declare a React useState hook (compile-time only)."""
+    raise RuntimeError("use_state is a compile-time hook and cannot run at runtime.")
+
+
+def use_effect(effect: Any, deps: Any | None = None) -> None:
+    """Declare a React useEffect hook (compile-time only)."""
+    raise RuntimeError("use_effect is a compile-time hook and cannot run at runtime.")
+
+
+def use_memo(factory: Any, deps: Any | None = None) -> Any:
+    """Declare a React useMemo hook (compile-time only)."""
+    raise RuntimeError("use_memo is a compile-time hook and cannot run at runtime.")
+
+
+def use_callback(callback: Any, deps: Any | None = None) -> Any:
+    """Declare a React useCallback hook (compile-time only)."""
+    raise RuntimeError("use_callback is a compile-time hook and cannot run at runtime.")
+
+
+def use_context(context: Any) -> Any:
+    """Declare a React useContext hook (compile-time only)."""
+    raise RuntimeError("use_context is a compile-time hook and cannot run at runtime.")
+
+
+def use_ref(initial: Any = None) -> Any:
+    """Declare a React useRef hook (compile-time only)."""
+    raise RuntimeError("use_ref is a compile-time hook and cannot run at runtime.")
+
+
+def create_context(default: Any = None) -> Any:
+    """Declare a React context at module scope (compile-time only)."""
+    raise RuntimeError("create_context is a compile-time helper and cannot run at runtime.")
+
+
 def _flatten_children(children: Iterable[Any]) -> list[Any]:
     """Flatten nested children lists into a single list."""
     out: list[Any] = []
@@ -369,4 +404,11 @@ __all__ = [
     "props",
     "component",
     "h",
+    "use_state",
+    "use_effect",
+    "use_memo",
+    "use_callback",
+    "use_context",
+    "use_ref",
+    "create_context",
 ]
