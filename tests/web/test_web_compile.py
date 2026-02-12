@@ -192,7 +192,17 @@ def test_compile_hooks_and_context(tmp_path: Path) -> None:
     _write(
         app_dir / "page.py",
         """
-from nestipy.web import component, h, js, use_state, use_effect, use_context, create_context
+from nestipy.web import (
+    component,
+    h,
+    js,
+    use_state,
+    use_effect,
+    use_context,
+    use_callback,
+    use_memo,
+    create_context,
+)
 
 AppContext = create_context("default")
 
@@ -200,8 +210,17 @@ AppContext = create_context("default")
 def Page():
     count, set_count = use_state(0)
     value = use_context(AppContext)
-    use_effect(js("() => { console.log(value); }"), deps=[count])
-    return h.div(js("value"))
+
+    def bump():
+        set_count(count + 1)
+
+    def label():
+        return f"Count: {count}"
+
+    handler = use_callback(bump, deps=[count])
+    memo_label = use_memo(label, deps=[count])
+    use_effect(bump, deps=[count])
+    return h.div(js("memo_label"))
 """.strip(),
     )
 
@@ -215,4 +234,9 @@ def Page():
     assert "export const AppContext = React.createContext(\"default\");" in page_tsx
     assert "const [count, set_count] = React.useState(0);" in page_tsx
     assert "const value = React.useContext(AppContext);" in page_tsx
-    assert "React.useEffect(() => { console.log(value); }, [count]);" in page_tsx
+    assert "const bump = () =>" in page_tsx
+    assert "set_count(" in page_tsx
+    assert "const label = () =>" in page_tsx
+    assert "const handler = React.useCallback(bump, [count]);" in page_tsx
+    assert "const memo_label = React.useMemo(label, [count]);" in page_tsx
+    assert "React.useEffect(bump, [count]);" in page_tsx

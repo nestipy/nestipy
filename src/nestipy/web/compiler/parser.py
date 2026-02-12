@@ -54,6 +54,8 @@ class ParsedFile:
     component_props: dict[str, str]
     hooks: dict[str, list[str]]
     module_prelude: list[str]
+    externals: dict[str, ExternalComponent]
+    component_prelude: dict[str, list[str]]
 
 
 def parse_component_file(
@@ -74,7 +76,7 @@ def parse_component_file(
         imports=imports,
         props=props_specs,
     )
-    module_prelude = _collect_contexts(module)
+    module_prelude = _collect_module_prelude(module)
     target = _select_component(parsed.functions, target_names)
     if target is None:
         raise CompilerError(f"No component found in {path}")
@@ -87,6 +89,7 @@ def parse_component_file(
 
     components: dict[str, Node] = {}
     hooks: dict[str, list[str]] = {}
+    component_prelude: dict[str, list[str]] = {}
     for fn in parsed.functions:
         if fn.name.value not in component_names:
             continue
@@ -102,6 +105,7 @@ def parse_component_file(
             )
         components[fn.name.value] = tree
         hooks[fn.name.value] = _collect_hook_statements(fn)
+        component_prelude[fn.name.value] = _collect_component_prelude(fn)
 
     component_props = _collect_component_props(parsed.functions, props_specs)
 
@@ -113,6 +117,8 @@ def parse_component_file(
         component_props=component_props,
         hooks=hooks,
         module_prelude=module_prelude,
+        externals=parsed.externals,
+        component_prelude=component_prelude,
     )
 
 
@@ -283,8 +289,8 @@ def _collect_component_props(
     return mapping
 
 
-def _collect_contexts(module: cst.Module) -> list[str]:
-    """Collect React context declarations from module-level assignments."""
+def _collect_module_prelude(module: cst.Module) -> list[str]:
+    """Collect module-level declarations for generated TSX."""
     contexts: list[str] = []
     for stmt in module.body:
         statements = []
@@ -302,13 +308,21 @@ def _collect_contexts(module: cst.Module) -> list[str]:
                 continue
             if not isinstance(inner.value, cst.Call):
                 continue
-            if _call_name(inner.value) != "create_context":
+            call_name = _call_name(inner.value)
+            if call_name == "create_context":
+                default_expr = _get_call_arg(inner.value, 0, ("default",))
+                default_js = _expr_to_js(default_expr) if default_expr else "undefined"
+                contexts.append(
+                    f"export const {target.value} = React.createContext({default_js});"
+                )
                 continue
-            default_expr = _get_call_arg(inner.value, 0, ("default",))
-            default_js = _expr_to_js(default_expr) if default_expr else "undefined"
-            contexts.append(
-                f"export const {target.value} = React.createContext({default_js});"
-            )
+            if call_name == "js":
+                js_expr = _get_call_arg(inner.value, 0, ("expr",))
+                if js_expr is None:
+                    raise CompilerError("js() requires a string literal")
+                contexts.append(
+                    f"const {target.value} = {_eval_string(js_expr)};"
+                )
     return contexts
 
 
@@ -333,6 +347,22 @@ def _collect_hook_statements(fn: cst.FunctionDef) -> list[str]:
     return hooks
 
 
+def _collect_component_prelude(fn: cst.FunctionDef) -> list[str]:
+    """Collect helper function declarations inside a component."""
+    body = fn.body
+    if not isinstance(body, cst.IndentedBlock):
+        return []
+    prelude: list[str] = []
+    for stmt in body.body:
+        if isinstance(stmt, cst.FunctionDef):
+            prelude.extend(_render_function_def(stmt))
+        elif isinstance(stmt, cst.SimpleStatementLine):
+            for inner in stmt.body:
+                if isinstance(inner, cst.FunctionDef):
+                    prelude.extend(_render_function_def(inner))
+    return prelude
+
+
 def _hook_from_statement(stmt: cst.CSTNode) -> str | None:
     """Convert a hook assignment/expression into a JS statement."""
     if isinstance(stmt, cst.Assign):
@@ -341,6 +371,8 @@ def _hook_from_statement(stmt: cst.CSTNode) -> str | None:
         return _hook_from_ann_assignment(stmt)
     if isinstance(stmt, cst.Expr) and isinstance(stmt.value, cst.Call):
         return _hook_from_call(stmt.value, target_names=None)
+    if isinstance(stmt, cst.FunctionDef):
+        return None
     return None
 
 
@@ -406,7 +438,27 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
         raise CompilerError(f"{name} must be assigned to a variable")
 
     hook_name = hook_map[name]
-    args = _call_args_to_js(call)
+    if name == "use_state":
+        initial = _get_call_arg(call, 0, ("initial", "value"))
+        args = [_expr_to_js(initial)] if initial is not None else []
+    elif name == "use_ref":
+        initial = _get_call_arg(call, 0, ("initial", "value"))
+        args = [_expr_to_js(initial)] if initial is not None else []
+    elif name == "use_context":
+        ctx = _get_call_arg(call, 0, ("context",))
+        if ctx is None:
+            raise CompilerError("use_context requires a context argument")
+        args = [_expr_to_js(ctx)]
+    elif name in {"use_memo", "use_callback"}:
+        fn_arg = _get_call_arg(call, 0, ("fn", "callback", "factory"))
+        if fn_arg is None:
+            raise CompilerError(f"{name} requires a callback argument")
+        args = [_expr_to_js(fn_arg)]
+        deps = _get_call_arg(call, 1, ("deps", "dependencies"))
+        if deps is not None:
+            args.append(_expr_to_js(deps))
+    else:
+        args = _call_args_to_js(call)
     args_str = ", ".join(args) if args else ""
 
     if name == "use_state":
@@ -421,6 +473,60 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
     if len(target_names) != 1:
         raise CompilerError(f"{name} must assign to a single name")
     return f"const {target_names[0]} = React.{hook_name}({args_str});"
+
+
+def _render_function_def(fn: cst.FunctionDef) -> list[str]:
+    """Render a nested Python function as a JS function expression."""
+    if isinstance(fn.params.star_arg, cst.Param) or isinstance(
+        fn.params.star_kwarg, cst.Param
+    ):
+        raise CompilerError("Hook functions do not support *args or **kwargs.")
+    params: list[str] = []
+    for param in fn.params.params:
+        name = param.name.value
+        if param.default is not None:
+            default_value = _expr_to_js(param.default)
+            params.append(f"{name} = {default_value}")
+        else:
+            params.append(name)
+    async_prefix = "async " if fn.asynchronous else ""
+    body_lines = _render_function_body(fn)
+    lines = [f"const {fn.name.value} = {async_prefix}({', '.join(params)}) => {{"]
+    if body_lines:
+        lines.extend(["  " + line for line in body_lines])
+    lines.append("};")
+    return lines
+
+
+def _render_function_body(fn: cst.FunctionDef) -> list[str]:
+    """Render a function body into JS statements."""
+    body = fn.body
+    if not isinstance(body, cst.IndentedBlock):
+        return []
+    lines: list[str] = []
+    for stmt in body.body:
+        inner_statements: list[cst.CSTNode] = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            inner_statements = list(stmt.body)
+        else:
+            inner_statements = [stmt]
+        for inner in inner_statements:
+            if isinstance(inner, cst.Return):
+                if inner.value is None:
+                    lines.append("return;")
+                else:
+                    lines.append(f"return {_expr_to_js(inner.value)};")
+                continue
+            if isinstance(inner, cst.Expr):
+                if isinstance(inner.value, (cst.Call, cst.Attribute, cst.Await)):
+                    lines.append(f"{_expr_to_js(inner.value)};")
+                    continue
+            if isinstance(inner, cst.Pass):
+                continue
+            raise CompilerError(
+                f"Unsupported statement in hook function: {inner.__class__.__name__}"
+            )
+    return lines
 
 
 def _call_args_to_js(call: cst.Call) -> list[str]:
@@ -812,6 +918,24 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
             return _eval_string(expr.args[0].value)
     if isinstance(expr, cst.FormattedString):
         return _format_fstring(expr)
+    if isinstance(expr, cst.Subscript):
+        target = _expr_to_js(expr.value)
+        if len(expr.slice) != 1:
+            raise CompilerError("Unsupported subscript expression.")
+        sub = expr.slice[0].slice
+        if isinstance(sub, cst.Index):
+            return f"{target}[{_expr_to_js(sub.value)}]"
+        raise CompilerError("Unsupported subscript expression.")
+    if isinstance(expr, cst.Call):
+        func = _expr_to_js(expr.func)
+        args: list[str] = []
+        for arg in expr.args:
+            if arg.keyword is not None:
+                raise CompilerError("Keyword arguments are not supported in hook functions.")
+            args.append(_expr_to_js(arg.value))
+        return f"{func}({', '.join(args)})"
+    if isinstance(expr, cst.Await):
+        return f"await {_expr_to_js(expr.expression)}"
     raise CompilerError("Unsupported expression in JS context. Use js('...')")
 
 

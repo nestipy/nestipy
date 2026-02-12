@@ -492,6 +492,8 @@ def build_page_tsx(
     inline_props = dict(page.props)
     inline_component_props = dict(page.component_props)
     inline_hooks = dict(page.hooks)
+    inline_prelude = dict(page.component_prelude)
+    inline_externals = dict(page.externals)
     module_prelude = list(page.module_prelude)
 
     if root_layout is not None:
@@ -499,7 +501,9 @@ def build_page_tsx(
         if layout_tree is None:
             raise CompilerError("Root layout component not found")
         layout_tsx = build_layout_tsx(
-            layout_tree, hooks=root_layout.hooks.get(root_layout.primary, [])
+            layout_tree,
+            hooks=root_layout.hooks.get(root_layout.primary, []),
+            prelude=root_layout.component_prelude.get(root_layout.primary, []),
         )
         layout_wrap_start = "<RootLayout>"
         layout_wrap_end = "</RootLayout>"
@@ -511,6 +515,9 @@ def build_page_tsx(
             inline_component_props.setdefault(name, prop_name)
         for name, hook_lines in root_layout.hooks.items():
             inline_hooks.setdefault(name, hook_lines)
+        for name, prelude_lines in root_layout.component_prelude.items():
+            inline_prelude.setdefault(name, prelude_lines)
+        inline_externals.update(root_layout.externals)
         module_prelude.extend(root_layout.module_prelude)
 
     page_tree = page.components.get(page.primary)
@@ -525,12 +532,13 @@ def build_page_tsx(
         imported_props=imported_props,
     )
 
-    imports = collect_imports(inline_components)
+    imports = collect_imports(inline_components, extra_externals=inline_externals)
     props_interfaces = render_props_interfaces(inline_props)
     component_defs = build_component_defs(
         page.components,
         component_props=inline_component_props,
         component_hooks=inline_hooks,
+        component_prelude=inline_prelude,
         root_layout=root_layout.components if root_layout else None,
         page_primary=page.primary,
         layout_primary=root_layout.primary if root_layout else None,
@@ -541,9 +549,12 @@ def build_page_tsx(
         body = f"{layout_wrap_start}{body}{layout_wrap_end}"
 
     page_hooks = inline_hooks.get(page.primary, [])
+    page_prelude = inline_prelude.get(page.primary, [])
+    prelude_lines = [f"  {line}" for line in page_prelude]
     hook_lines = [f"  {line}" for line in page_hooks]
     component = [
         "export default function Page(): JSX.Element {",
+        *prelude_lines,
         *hook_lines,
         "  return (",
         indent(body, 4),
@@ -580,13 +591,20 @@ def build_page_tsx(
     )
 
 
-def build_layout_tsx(layout_tree: Node, *, hooks: list[str] | None = None) -> str:
+def build_layout_tsx(
+    layout_tree: Node,
+    *,
+    hooks: list[str] | None = None,
+    prelude: list[str] | None = None,
+) -> str:
     """Render the root layout wrapper TSX."""
     layout_body = render_node(layout_tree, slot_token="{children}")
+    prelude_lines = [f"  {line}" for line in (prelude or [])]
     hook_lines = [f"  {line}" for line in (hooks or [])]
     return "\n".join(
         [
             "export function RootLayout({ children }: { children: ReactNode }): JSX.Element {",
+            *prelude_lines,
             *hook_lines,
             "  return (",
             indent(layout_body, 4),
@@ -667,7 +685,11 @@ def merge_component_imports(imports: list[ComponentImport]) -> list[ComponentImp
     return result
 
 
-def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]]]:
+def collect_imports(
+    components: dict[str, Node],
+    *,
+    extra_externals: dict[str, ExternalComponent] | None = None,
+) -> dict[str, dict[str, set[str]]]:
     """Collect external component imports referenced by rendered nodes."""
     imports: dict[str, dict[str, set[str]]] = {}
 
@@ -692,6 +714,9 @@ def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]
 
     for tree in components.values():
         visit(tree)
+    if extra_externals:
+        for component in extra_externals.values():
+            add_import(component)
     return imports
 
 
@@ -823,12 +848,13 @@ def build_component_module_tsx(
     component_imports: list[ComponentImport],
 ) -> str:
     """Render a TSX module for reusable components."""
-    imports = collect_imports(parsed.components)
+    imports = collect_imports(parsed.components, extra_externals=parsed.externals)
     props_interfaces = render_props_interfaces(parsed.props)
     component_defs = build_component_exports(
         parsed.components,
         parsed.component_props,
         component_hooks=parsed.hooks,
+        component_prelude=parsed.component_prelude,
     )
     module_prelude_block = "\n".join(parsed.module_prelude).strip()
     if module_prelude_block:
@@ -857,6 +883,7 @@ def build_component_exports(
     component_props: dict[str, str],
     *,
     component_hooks: dict[str, list[str]] | None = None,
+    component_prelude: dict[str, list[str]] | None = None,
 ) -> str:
     """Render exported component functions."""
     blocks: list[str] = []
@@ -867,6 +894,7 @@ def build_component_exports(
                 tree,
                 component_props.get(name),
                 hooks=(component_hooks or {}).get(name),
+                prelude=(component_prelude or {}).get(name),
                 exported=True,
             )
         )
@@ -937,6 +965,7 @@ def build_component_defs(
     *,
     component_props: dict[str, str],
     component_hooks: dict[str, list[str]] | None = None,
+    component_prelude: dict[str, list[str]] | None = None,
     root_layout: dict[str, Node] | None = None,
     page_primary: str,
     layout_primary: str | None = None,
@@ -956,6 +985,7 @@ def build_component_defs(
                 tree,
                 component_props.get(name),
                 hooks=(component_hooks or {}).get(name),
+                prelude=(component_prelude or {}).get(name),
             )
         )
     if root_layout:
@@ -971,6 +1001,7 @@ def build_component_defs(
                     tree,
                     component_props.get(name),
                     hooks=(component_hooks or {}).get(name),
+                    prelude=(component_prelude or {}).get(name),
                 )
             )
     return "\n".join(blocks) + ("\n" if blocks else "")
@@ -982,6 +1013,7 @@ def _component_block(
     props_type: str | None = None,
     *,
     hooks: list[str] | None = None,
+    prelude: list[str] | None = None,
     exported: bool = False,
 ) -> str:
     """Render a component function block."""
@@ -993,10 +1025,12 @@ def _component_block(
     )
     if exported:
         signature = f"export {signature}"
+    prelude_lines = [f"  {line}" for line in (prelude or [])]
     hook_lines = [f"  {line}" for line in (hooks or [])]
     return "\n".join(
         [
             f"{signature} {{",
+            *prelude_lines,
             *hook_lines,
             "  return (",
             indent(body, 4),
@@ -1040,6 +1074,8 @@ def render_tag(tag: Any) -> str:
         return tag.import_name
     if isinstance(tag, LocalComponent):
         return tag.name
+    if isinstance(tag, JSExpr):
+        return str(tag)
     if hasattr(tag, COMPONENT_NAME_ATTR):
         return getattr(tag, COMPONENT_NAME_ATTR)
     if isinstance(tag, str):
