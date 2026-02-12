@@ -846,6 +846,12 @@ def _normalize_prop_key(key: str) -> str:
 def _expr_to_js(expr: cst.BaseExpression) -> str:
     """Convert a CST expression into a JS expression string."""
     if isinstance(expr, cst.Name):
+        if expr.value == "None":
+            return "null"
+        if expr.value == "True":
+            return "true"
+        if expr.value == "False":
+            return "false"
         return expr.value
     if isinstance(expr, cst.Attribute):
         return f"{_expr_to_js(expr.value)}.{expr.attr.value}"
