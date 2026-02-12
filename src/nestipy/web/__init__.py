@@ -2,7 +2,6 @@
 
 from .config import WebConfig
 from .compiler import compile_app, build_routes, CompilerError
-from .client import codegen_client, codegen_client_from_url
 from .ui import component, h, external, js, props, Fragment, Slot
 
 __all__ = [
@@ -10,8 +9,6 @@ __all__ = [
     "compile_app",
     "build_routes",
     "CompilerError",
-    "codegen_client",
-    "codegen_client_from_url",
     "component",
     "h",
     "external",
@@ -20,3 +17,18 @@ __all__ = [
     "Fragment",
     "Slot",
 ]
+
+
+def codegen_client(*args, **kwargs):
+    from .client import codegen_client as _codegen_client
+
+    return _codegen_client(*args, **kwargs)
+
+
+def codegen_client_from_url(*args, **kwargs):
+    from .client import codegen_client_from_url as _codegen_client_from_url
+
+    return _codegen_client_from_url(*args, **kwargs)
+
+
+__all__.extend(["codegen_client", "codegen_client_from_url"])

@@ -5,7 +5,10 @@ from blacksheep import (
     Response as BlackSheepResponse,
     Request as BlackSheepRequest,
 )
-from blacksheep.server.routing import Router
+try:
+    from blacksheep.server.routing import Router  # type: ignore
+except Exception:
+    Router = None
 from blacksheep import (
     get,
     put,
@@ -28,7 +31,13 @@ from nestipy.common.http_ import Response, Websocket
 
 class BlackSheepAdapter(HttpAdapter):
     def __init__(self):
-        self.instance = Application(router=Router())
+        if Router is None:
+            self.instance = Application()
+        else:
+            try:
+                self.instance = Application(router=Router())
+            except TypeError:
+                self.instance = Application()
         self.instance.on_start(self.on_startup)
         self.instance.on_stop(self.on_shutdown)
         self._cors_enabled = False

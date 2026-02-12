@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from .provider import ModuleProviderDict
 
 _INIT = "__init__"
+_MISSING = object()
 
 
 class RequestScopedProxy:
@@ -362,21 +363,15 @@ class NestipyContainer:
             instance = self._singleton_instances[key]
             # to keep improve
             if isinstance(instance, ModuleProviderDict):
-                search_scope = self.get_dependency_metadata(instance)
-                if instance.token in search_scope:
-                    value = await self._resolve_module_provider_dict(
-                        instance, search_scope=search_scope
-                    )
-                    # update singleton instance to have the async value from ModuleProviderDict
-                    self._singleton_instances[key] = value
-                    return value
-                else:
-                    raise ValueError(
-                        f"Service {instance.__class__.__name__} not found in scope"
-                    )
-            else:
-                return instance
-        return None
+                search_scope = instance.inject or []
+                value = await self._resolve_module_provider_dict(
+                    instance, search_scope=search_scope
+                )
+                # update singleton instance to have the async value from ModuleProviderDict
+                self._singleton_instances[key] = value
+                return value
+            return instance
+        return _MISSING
 
     def _check_service(
         self, key: Union[Type, str, object], origin: Optional[set] = None
@@ -739,7 +734,7 @@ class NestipyContainer:
                 return cache[key]
 
         in_singleton = await self._check_exist_singleton(key=key)
-        if in_singleton:
+        if in_singleton is not _MISSING:
             if method == _INIT:
                 return in_singleton
         else:

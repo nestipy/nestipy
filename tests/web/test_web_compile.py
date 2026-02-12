@@ -146,6 +146,11 @@ def Page():
     page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
         encoding="utf-8"
     )
-    assert "interface CardProps" in page_tsx
-    assert "function Card(props: CardProps)" in page_tsx
+    assert "import { Card }" in page_tsx
     assert "<Card" in page_tsx
+
+    card_tsx = (
+        out_dir / "src" / "components" / "components" / "card.tsx"
+    ).read_text(encoding="utf-8")
+    assert "interface CardProps" in card_tsx
+    assert "export function Card(props: CardProps)" in card_tsx

@@ -59,6 +59,16 @@ class MetadataCreator(ABC):
             Reflect.set_metadata(im.module, ModuleMetadata.Exports, im.exports)
             Reflect.set_metadata(im.module, ModuleMetadata.Global, im.is_global)
             NestipyContainer.get_instance().add_singleton(im.module)
+            try:
+                from nestipy.ioc.provider import ModuleProviderDict
+            except Exception:
+                ModuleProviderDict = None
+            if ModuleProviderDict is not None:
+                for provider in im.providers:
+                    if isinstance(provider, ModuleProviderDict):
+                        NestipyContainer.get_instance().add_singleton_instance(
+                            provider.token, provider
+                        )
             return im.module
         else:
             return im

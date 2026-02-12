@@ -47,7 +47,11 @@ class MiddlewareExecutor:
         ):
             try:
                 #  get instance of Middleware
-                instance = await NestipyContainer.get_instance().get(middleware)
+                try:
+                    instance = await NestipyContainer.get_instance().get(middleware)
+                except ValueError:
+                    # Allow class-based middleware without explicit DI registration
+                    instance = middleware()
                 # get use method if it is a middleware class
                 return getattr(instance, "use")
             except Exception as e:

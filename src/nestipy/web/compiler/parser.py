@@ -114,16 +114,22 @@ def _collect_functions(module: cst.Module) -> list[cst.FunctionDef]:
 def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent]:
     externals: dict[str, ExternalComponent] = {}
     for stmt in module.body:
-        if isinstance(stmt, cst.Assign):
-            if len(stmt.targets) != 1:
-                continue
-            target = stmt.targets[0].target
-            if not isinstance(target, cst.Name):
-                continue
-            value = stmt.value
-            if isinstance(value, cst.Call) and _call_name(value) == "external":
-                ext = _eval_external_call(value)
-                externals[target.value] = ext
+        statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            statements = list(stmt.body)
+        else:
+            statements = [stmt]
+        for inner in statements:
+            if isinstance(inner, cst.Assign):
+                if len(inner.targets) != 1:
+                    continue
+                target = inner.targets[0].target
+                if not isinstance(target, cst.Name):
+                    continue
+                value = inner.value
+                if isinstance(value, cst.Call) and _call_name(value) == "external":
+                    ext = _eval_external_call(value)
+                    externals[target.value] = ext
     return externals
 
 
@@ -131,33 +137,38 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
     imports: list[ImportSpec] = []
 
     for stmt in module.body:
-        if isinstance(stmt, cst.ImportFrom):
-            module_name = _module_name(stmt.module)
-            relative_level = _relative_level(stmt.relative)
-            base_dir = source_dir
-            if relative_level:
-                for _ in range(relative_level):
-                    base_dir = base_dir.parent
-            if stmt.names is None:
-                continue
-            if isinstance(stmt.names, cst.ImportStar):
-                continue
-            for import_alias in stmt.names:
-                name = import_alias.name.value
-                alias = import_alias.asname.name.value if import_alias.asname else name
+        statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            statements = list(stmt.body)
+        else:
+            statements = [stmt]
+        for inner in statements:
+            if isinstance(inner, cst.ImportFrom):
+                module_name = _module_name(inner.module)
+                relative_level = _relative_level(inner.relative)
+                base_dir = source_dir
+                if relative_level:
+                    for _ in range(relative_level):
+                        base_dir = base_dir.parent
+                if inner.names is None:
+                    continue
+                if isinstance(inner.names, cst.ImportStar):
+                    continue
+                for import_alias in inner.names:
+                    name = import_alias.name.value
+                    alias = import_alias.asname.name.value if import_alias.asname else name
 
-                path = None
-                if module_name:
-                    module_path = base_dir / Path(module_name.replace(".", "/"))
-                    path = _resolve_module_file(module_path, app_dir)
-                else:
-                    candidate = base_dir / name
-                    path = _resolve_module_file(candidate, app_dir)
+                    path = None
+                    if module_name:
+                        module_path = base_dir / Path(module_name.replace(".", "/"))
+                        path = _resolve_module_file(module_path, app_dir)
+                    else:
+                        candidate = base_dir / name
+                        path = _resolve_module_file(candidate, app_dir)
 
-                imports.append(ImportSpec(name=name, alias=alias, path=path))
-        elif isinstance(stmt, cst.Import):
-            # not supported yet for component resolution
-            continue
+                    imports.append(ImportSpec(name=name, alias=alias, path=path))
+            elif isinstance(inner, cst.Import):
+                continue
 
     return imports
 
@@ -200,6 +211,8 @@ def _module_name(module: cst.BaseExpression | None) -> str | None:
 def _relative_level(relative: cst.ImportRelative | None) -> int:
     if relative is None:
         return 0
+    if isinstance(relative, (tuple, list)):
+        return len(relative)
     return len(relative.dots)
 
 
@@ -213,7 +226,7 @@ def _collect_props(module: cst.Module) -> dict[str, PropsSpec]:
         fields: list[PropField] = []
         for item in stmt.body.body:
             if isinstance(item, cst.AnnAssign) and isinstance(item.target, cst.Name):
-                field_name = item.target.value
+                field_name = _normalize_prop_key(item.target.value)
                 ts_type = _annotation_to_ts(item.annotation.annotation)
                 optional = item.value is not None
                 fields.append(PropField(name=field_name, ts_type=ts_type, optional=optional))
@@ -278,18 +291,24 @@ def _extract_return_expr(fn: cst.FunctionDef) -> cst.BaseExpression | None:
     if not isinstance(body, cst.IndentedBlock):
         return None
     for stmt in body.body:
-        if isinstance(stmt, cst.Assign):
-            if len(stmt.targets) != 1:
-                continue
-            target = stmt.targets[0].target
-            if isinstance(target, cst.Name):
-                assignments[target.value] = stmt.value
-        if isinstance(stmt, cst.Return):
-            if stmt.value is None:
-                return None
-            if isinstance(stmt.value, cst.Name) and stmt.value.value in assignments:
-                return assignments[stmt.value.value]
-            return stmt.value
+        inner_statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            inner_statements = list(stmt.body)
+        else:
+            inner_statements = [stmt]
+        for inner in inner_statements:
+            if isinstance(inner, cst.Assign):
+                if len(inner.targets) != 1:
+                    continue
+                target = inner.targets[0].target
+                if isinstance(target, cst.Name):
+                    assignments[target.value] = inner.value
+            if isinstance(inner, cst.Return):
+                if inner.value is None:
+                    return None
+                if isinstance(inner.value, cst.Name) and inner.value.value in assignments:
+                    return assignments[inner.value.value]
+                return inner.value
     return None
 
 
