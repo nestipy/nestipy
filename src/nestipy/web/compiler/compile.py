@@ -154,6 +154,7 @@ def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = 
 def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
     """Ensure required Vite/Tailwind scaffold files exist."""
     out_dir = config.resolve_out_dir(root)
+    project_name = _sanitize_package_name(out_dir.parent.name) or "nestipy-web"
     index_html = out_dir / "index.html"
     if not index_html.exists():
         index_html.write_text(
@@ -181,7 +182,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         package_json.write_text(
             json.dumps(
                 {
-                    "name": "nestipy-web",
+                    "name": project_name,
                     "private": True,
                     "version": "0.0.0",
                     "type": "module",
@@ -210,6 +211,18 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             ),
             encoding="utf-8",
         )
+    else:
+        try:
+            data = json.loads(package_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = {}
+        if isinstance(data, dict):
+            name = data.get("name")
+            if isinstance(name, str):
+                cleaned = _sanitize_package_name(name)
+                if cleaned and cleaned != name:
+                    data["name"] = cleaned
+                    package_json.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     vite_config = out_dir / "vite.config.ts"
     if not vite_config.exists():
@@ -297,6 +310,13 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             "/// <reference types=\"vite/client\" />\n",
             encoding="utf-8",
         )
+
+
+def _sanitize_package_name(name: str) -> str:
+    """Normalize a package name for package.json."""
+    cleaned = name.strip().strip("'").strip('"').strip()
+    cleaned = cleaned.replace(" ", "-")
+    return cleaned
 
     actions_client = src_dir / "actions.ts"
     if not actions_client.exists():
@@ -637,7 +657,7 @@ def render_imports(
     if include_react_default:
         lines.append("import React from 'react';")
     if include_react_node:
-        lines.append("import type { ReactNode } from 'react';")
+        lines.append("import type { ReactNode, JSX } from 'react';")
     for module, spec in imports.items():
         default_name = next(iter(spec.get("default", [])), None)
         named = sorted(spec.get("named", set()))

@@ -168,9 +168,22 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | Exte
                     call_name = _call_name(value)
                     if call_name == "external":
                         ext = _eval_external_call(value)
+                        if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                            ext = ExternalComponent(
+                                module=ext.module,
+                                name=ext.name,
+                                default=ext.default,
+                                alias=None,
+                            )
                         externals[target.value] = ext
                     elif call_name == "external_fn":
                         ext = _eval_external_call(value, kind="function")
+                        if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                            ext = ExternalFunction(
+                                module=ext.module,
+                                name=ext.name,
+                                alias=None,
+                            )
                         externals[target.value] = ext
     return externals
 
@@ -1384,6 +1397,9 @@ def _eval_expr(
 
     if isinstance(expr, cst.FormattedString):
         return JSExpr(_format_fstring(expr, name_map))
+
+    if isinstance(expr, cst.Subscript):
+        return JSExpr(_expr_to_js(expr, name_map))
 
     raise CompilerError(f"Unsupported expression: {expr.__class__.__name__}")
 
