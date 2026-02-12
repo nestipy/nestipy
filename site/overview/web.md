@@ -118,6 +118,152 @@ If `web/` is empty, the build generates:
 
 Nestipy Web supports a Next.js-like RPC action flow using a single endpoint.
 
+## Full Working Example (Backend + Frontend)
+
+This walkthrough gives you a working backend that exposes:
+- HTTP routes (controllers)
+- Server actions (single RPC endpoint at `/_actions`)
+- Router spec (`/_router/spec`) for typed HTTP clients (optional)
+
+### Backend
+
+Example structure:
+
+```
+backend/
+  main.py
+  app_module.py
+  user_actions.py
+  user_controller.py
+```
+
+`backend/user_actions.py`:
+
+```py
+from nestipy.common import Injectable
+from nestipy.web import action
+
+
+@Injectable()
+class UserActions:
+    @action()
+    async def hello(self, name: str) -> str:
+        return f"Hello, {name}!"
+
+    # Cache the result for 30 seconds (key defaults to args/kwargs).
+    @action(cache=30)
+    async def get_server_time(self) -> str:
+        from datetime import datetime, timezone
+
+        return datetime.now(timezone.utc).isoformat()
+```
+
+`backend/user_controller.py`:
+
+```py
+from nestipy.common import Controller, Get
+
+
+@Controller("/api")
+class UserController:
+    @Get("/health")
+    async def health(self) -> dict:
+        return {"ok": True}
+```
+
+`backend/app_module.py`:
+
+```py
+from nestipy.common import Module
+from nestipy.web import ActionsModule, ActionsOption
+
+from user_actions import UserActions
+from user_controller import UserController
+
+
+@Module(
+    imports=[ActionsModule.for_root(ActionsOption(path="/_actions"))],
+    providers=[UserActions],
+    controllers=[UserController],
+)
+class AppModule:
+    pass
+```
+
+`backend/main.py`:
+
+```py
+from granian.constants import Interfaces
+
+from nestipy.core import NestipyFactory
+
+from app_module import AppModule
+
+app = NestipyFactory.create(AppModule)
+
+if __name__ == "__main__":
+    # Optional: enable RouterSpec (for `/_router/spec`) and protect it with a token.
+    # export NESTIPY_ROUTER_SPEC=1
+    # export NESTIPY_ROUTER_SPEC_TOKEN=secret
+    app.listen(
+        "main:app",
+        address="127.0.0.1",
+        port=8001,
+        interface=Interfaces.ASGI,
+        reload=True,
+    )
+```
+
+Run backend:
+
+```bash
+cd backend
+python main.py
+```
+
+Endpoints you now have:
+- `POST /_actions` (RPC)
+- `GET /_actions/schema` (schema for codegen)
+- `GET /api/health` (HTTP example)
+- `GET /_router/spec` (optional, enable with `NESTIPY_ROUTER_SPEC=1`; token via `NESTIPY_ROUTER_SPEC_TOKEN`)
+
+### Frontend
+
+Create/compile the frontend:
+
+```bash
+nestipy run web:init
+nestipy run web:dev --vite --install --proxy http://127.0.0.1:8001
+```
+
+Generate typed server-action wrappers (recommended):
+
+```bash
+nestipy run web:actions --spec http://127.0.0.1:8001/_actions/schema --output web/src/actions.client.ts
+```
+
+Optional: generate typed HTTP client from RouterSpec:
+
+```bash
+# If you configured a token, pass it via query or header:
+# - query:  /_router/spec?token=secret
+# - header: x-router-spec-token: secret
+nestipy run web:build --spec http://127.0.0.1:8001/_router/spec --lang ts --output web/src/api/client.ts
+```
+
+Now you can call actions from React/TS:
+
+```ts
+import { createActions } from './actions.client';
+
+const actions = createActions();
+
+const res = await actions.UserActions.hello({ name: 'Nestipy' });
+if (res.ok) {
+  console.log(res.data);
+}
+```
+
 ### Backend
 
 ```py
@@ -163,7 +309,7 @@ if (res2.ok) {
 Run both the Python compiler and Vite dev server:
 
 ```bash
-nestipy web:dev --vite
+nestipy run web:dev --vite
 ```
 
 This watches `app/**/*.py`, rebuilds TSX on change, and Vite handles HMR.
@@ -197,7 +343,7 @@ The actions endpoint exposes a schema:
 Generate `web/src/actions.client.ts` from a running app:
 
 ```bash
-nestipy web:actions --spec http://127.0.0.1:8001/_actions/schema --output web/src/actions.client.ts
+nestipy run web:actions --spec http://127.0.0.1:8001/_actions/schema --output web/src/actions.client.ts
 ```
 
 ## Notes
