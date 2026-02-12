@@ -199,10 +199,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "devDependencies": {
                         "@types/react": "^18.2.70",
                         "@types/react-dom": "^18.2.24",
+                        "@tailwindcss/vite": "^4.0.0",
                         "@vitejs/plugin-react": "^4.3.1",
-                        "autoprefixer": "^10.4.19",
-                        "postcss": "^8.4.41",
-                        "tailwindcss": "^3.4.10",
+                        "tailwindcss": "^4.0.0",
                         "typescript": "^5.6.2",
                         "vite": "^5.4.1",
                     },
@@ -217,12 +216,36 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         except json.JSONDecodeError:
             data = {}
         if isinstance(data, dict):
+            updated = False
             name = data.get("name")
             if isinstance(name, str):
                 cleaned = _sanitize_package_name(name)
                 if cleaned and cleaned != name:
                     data["name"] = cleaned
-                    package_json.write_text(json.dumps(data, indent=2), encoding="utf-8")
+                    updated = True
+            deps = data.get("dependencies")
+            dev_deps = data.get("devDependencies")
+            is_scaffold = (
+                data.get("private") is True
+                and data.get("version") == "0.0.0"
+                and isinstance(deps, dict)
+                and deps.get("react")
+                and deps.get("react-dom")
+                and deps.get("react-router-dom")
+            )
+            if is_scaffold:
+                if not isinstance(dev_deps, dict):
+                    dev_deps = {}
+                    data["devDependencies"] = dev_deps
+                tailwind_version = dev_deps.get("tailwindcss")
+                if not tailwind_version or str(tailwind_version).startswith("^3"):
+                    dev_deps["tailwindcss"] = "^4.0.0"
+                    updated = True
+                if "@tailwindcss/vite" not in dev_deps:
+                    dev_deps["@tailwindcss/vite"] = "^4.0.0"
+                    updated = True
+            if updated:
+                package_json.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     vite_config = out_dir / "vite.config.ts"
     if not vite_config.exists():
@@ -245,10 +268,11 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             "\n".join(
                 [
                     "import { defineConfig } from 'vite';",
+                    "import tailwind from '@tailwindcss/vite';",
                     "import react from '@vitejs/plugin-react';",
                     "",
                     "export default defineConfig({",
-                    "  plugins: [react()],",
+                    "  plugins: [react(), tailwind()],",
                     *proxy_lines,
                     "});",
                     "",
@@ -256,6 +280,26 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             ),
             encoding="utf-8",
         )
+    else:
+        try:
+            existing = vite_config.read_text(encoding="utf-8")
+        except OSError:
+            existing = ""
+        if "@tailwindcss/vite" not in existing and "plugins: [react()]" in existing:
+            lines = existing.splitlines()
+            new_lines: list[str] = []
+            inserted = False
+            for line in lines:
+                new_lines.append(line)
+                if "defineConfig" in line and "from 'vite'" in line:
+                    new_lines.append("import tailwind from '@tailwindcss/vite';")
+                    inserted = True
+            if not inserted and lines:
+                new_lines.insert(1, "import tailwind from '@tailwindcss/vite';")
+            updated = "\n".join(new_lines)
+            updated = updated.replace("plugins: [react()],", "plugins: [react(), tailwind()],")
+            if updated != existing:
+                vite_config.write_text(updated + ("\n" if not updated.endswith("\n") else ""), encoding="utf-8")
 
     tsconfig = out_dir / "tsconfig.json"
     if not tsconfig.exists():
@@ -375,49 +419,20 @@ def _sanitize_package_name(name: str) -> str:
         index_css.write_text(
             "\n".join(
                 [
-                    "@tailwind base;",
-                    "@tailwind components;",
-                    "@tailwind utilities;",
+                    "@import \"tailwindcss\";",
                     "",
                 ]
             ),
             encoding="utf-8",
         )
-
-    tailwind_config = out_dir / "tailwind.config.cjs"
-    if not tailwind_config.exists():
-        tailwind_config.write_text(
-            "\n".join(
-                [
-                    "module.exports = {",
-                    "  content: ['./index.html', './src/**/*.{ts,tsx}'],",
-                    "  theme: {",
-                    "    extend: {},",
-                    "  },",
-                    "  plugins: [],",
-                    "};",
-                    "",
-                ]
-            ),
-            encoding="utf-8",
-        )
-
-    postcss_config = out_dir / "postcss.config.cjs"
-    if not postcss_config.exists():
-        postcss_config.write_text(
-            "\n".join(
-                [
-                    "module.exports = {",
-                    "  plugins: {",
-                    "    tailwindcss: {},",
-                    "    autoprefixer: {},",
-                    "  },",
-                    "};",
-                    "",
-                ]
-            ),
-            encoding="utf-8",
-        )
+    else:
+        try:
+            existing_css = index_css.read_text(encoding="utf-8")
+        except OSError:
+            existing_css = ""
+        lines = [line.strip() for line in existing_css.splitlines() if line.strip()]
+        if lines == ["@tailwind base;", "@tailwind components;", "@tailwind utilities;"]:
+            index_css.write_text("@import \"tailwindcss\";\n", encoding="utf-8")
 
 
 def discover_routes(app_dir: Path, pages_dir: Path) -> list[RouteInfo]:

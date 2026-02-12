@@ -229,7 +229,7 @@ If `web/` is empty, the build generates:
 - `web/src/main.tsx`
 - `web/src/routes.tsx`
 - `web/src/actions.ts` (RPC action client helper)
-- `web/src/index.css` + Tailwind config
+- `web/src/index.css` (Tailwind v4 via `@tailwindcss/vite`, no config file)
 
 ## Server Actions (RPC)
 
