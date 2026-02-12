@@ -195,7 +195,6 @@ def test_compile_hooks_and_context(tmp_path: Path) -> None:
 from nestipy.web import (
     component,
     h,
-    js,
     use_state,
     use_effect,
     use_context,
@@ -220,7 +219,7 @@ def Page():
     handler = use_callback(bump, deps=[count])
     memo_label = use_memo(label, deps=[count])
     use_effect(bump, deps=[count])
-    return h.div(js("memo_label"))
+    return h.div(memo_label)
 """.strip(),
     )
 
@@ -240,3 +239,4 @@ def Page():
     assert "const handler = React.useCallback(bump, [count]);" in page_tsx
     assert "const memo_label = React.useMemo(label, [count]);" in page_tsx
     assert "React.useEffect(bump, [count]);" in page_tsx
+    assert "{memo_label}" in page_tsx

@@ -1112,9 +1112,43 @@ def render_prop(key: str, value: Any) -> str | None:
     if isinstance(value, (int, float)):
         return f"{key}={{{value}}}"
     if isinstance(value, (dict, list)):
-        return f"{key}={{{json.dumps(value)}}}"
+        return f"{key}={{{render_js_value(value)}}}"
     raise CompilerError(
         f"Unsupported prop type for '{key}': {type(value)}. Use js('...') for expressions."
+    )
+
+
+def render_js_value(value: Any) -> str:
+    """Render a nested JS value for prop objects/arrays."""
+    if isinstance(value, JSExpr):
+        return str(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(render_js_value(item) for item in value) + "]"
+    if isinstance(value, dict):
+        parts: list[str] = []
+        spreads = value.get("__spread__") if isinstance(value, dict) else None
+        if spreads:
+            for spread in spreads:
+                parts.append(f"...{spread}")
+        for key, item in value.items():
+            if key == "__spread__":
+                continue
+            parts.append(f"{json.dumps(key)}: {render_js_value(item)}")
+        return "{" + ", ".join(parts) + "}"
+    if isinstance(value, ExternalComponent):
+        return value.import_name
+    raise CompilerError(
+        f"Unsupported value in JS object/array: {type(value)}. Use js('...') for expressions."
     )
 
 
@@ -1124,11 +1158,11 @@ def render_child(child: Any, slot_token: str | None = None) -> str | None:
         return None
     if isinstance(child, Node):
         return render_node(child, slot_token=slot_token)
+    if isinstance(child, JSExpr):
+        return f"{{{child}}}"
     if isinstance(child, str):
         return escape_text(child)
     if isinstance(child, (int, float)):
-        return f"{{{child}}}"
-    if isinstance(child, JSExpr):
         return f"{{{child}}}"
     if isinstance(child, list):
         return "".join(filter(None, (render_child(c, slot_token=slot_token) for c in child)))

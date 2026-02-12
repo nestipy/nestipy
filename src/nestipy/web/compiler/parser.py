@@ -76,7 +76,7 @@ def parse_component_file(
         imports=imports,
         props=props_specs,
     )
-    module_prelude = _collect_module_prelude(module)
+    module_prelude, module_names = _collect_module_prelude(module)
     target = _select_component(parsed.functions, target_names)
     if target is None:
         raise CompilerError(f"No component found in {path}")
@@ -93,12 +93,13 @@ def parse_component_file(
     for fn in parsed.functions:
         if fn.name.value not in component_names:
             continue
+        locals_map = _collect_locals(fn, module_names)
         return_expr = _extract_return_expr(fn)
         if return_expr is None:
             raise CompilerError(
                 f"Component '{fn.name.value}' must return a Node (use h())"
             )
-        tree = _eval_expr(return_expr, parsed.externals, component_names)
+        tree = _eval_expr(return_expr, parsed.externals, component_names, locals_map)
         if not isinstance(tree, Node):
             raise CompilerError(
                 f"Component '{fn.name.value}' must return a Node (use h())"
@@ -289,9 +290,10 @@ def _collect_component_props(
     return mapping
 
 
-def _collect_module_prelude(module: cst.Module) -> list[str]:
+def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
     """Collect module-level declarations for generated TSX."""
     contexts: list[str] = []
+    names: set[str] = set()
     for stmt in module.body:
         statements = []
         if isinstance(stmt, cst.SimpleStatementLine):
@@ -315,6 +317,7 @@ def _collect_module_prelude(module: cst.Module) -> list[str]:
                 contexts.append(
                     f"export const {target.value} = React.createContext({default_js});"
                 )
+                names.add(target.value)
                 continue
             if call_name == "js":
                 js_expr = _get_call_arg(inner.value, 0, ("expr",))
@@ -323,7 +326,8 @@ def _collect_module_prelude(module: cst.Module) -> list[str]:
                 contexts.append(
                     f"const {target.value} = {_eval_string(js_expr)};"
                 )
-    return contexts
+                names.add(target.value)
+    return contexts, names
 
 
 def _collect_hook_statements(fn: cst.FunctionDef) -> list[str]:
@@ -354,13 +358,86 @@ def _collect_component_prelude(fn: cst.FunctionDef) -> list[str]:
         return []
     prelude: list[str] = []
     for stmt in body.body:
+        if isinstance(stmt, cst.Return):
+            return prelude
         if isinstance(stmt, cst.FunctionDef):
             prelude.extend(_render_function_def(stmt))
         elif isinstance(stmt, cst.SimpleStatementLine):
             for inner in stmt.body:
+                if isinstance(inner, cst.Return):
+                    return prelude
                 if isinstance(inner, cst.FunctionDef):
                     prelude.extend(_render_function_def(inner))
+                    continue
+                if isinstance(inner, cst.Assign):
+                    if _hook_from_assignment(inner):
+                        continue
+                    rendered = _render_assignment(inner)
+                    if rendered:
+                        prelude.append(rendered)
+                    continue
+                if isinstance(inner, cst.AnnAssign):
+                    if _hook_from_ann_assignment(inner):
+                        continue
+                    rendered = _render_assignment(inner)
+                    if rendered:
+                        prelude.append(rendered)
     return prelude
+
+
+def _collect_locals(fn: cst.FunctionDef, module_names: set[str]) -> set[str]:
+    """Collect local variable names available inside a component."""
+    names: set[str] = set(module_names)
+    params = (
+        list(fn.params.posonly_params)
+        + list(fn.params.params)
+        + list(fn.params.kwonly_params)
+    )
+    for param in params:
+        names.add(param.name.value)
+    if isinstance(fn.params.star_arg, cst.Param):
+        names.add(fn.params.star_arg.name.value)
+    if isinstance(fn.params.star_kwarg, cst.Param):
+        names.add(fn.params.star_kwarg.name.value)
+
+    body = fn.body
+    if not isinstance(body, cst.IndentedBlock):
+        return names
+    for stmt in body.body:
+        inner_statements: list[cst.CSTNode] = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            inner_statements = list(stmt.body)
+        else:
+            inner_statements = [stmt]
+        for inner in inner_statements:
+            if isinstance(inner, cst.Return):
+                return names
+            if isinstance(inner, cst.FunctionDef):
+                names.add(inner.name.value)
+                continue
+            if isinstance(inner, cst.Assign):
+                if len(inner.targets) != 1:
+                    continue
+                target = inner.targets[0].target
+                names.update(_collect_target_names(target))
+            if isinstance(inner, cst.AnnAssign):
+                names.update(_collect_target_names(inner.target))
+    return names
+
+
+def _collect_target_names(target: cst.BaseAssignTargetExpression) -> list[str]:
+    """Collect variable names from assignment targets."""
+    if isinstance(target, cst.Name):
+        return [target.value]
+    if isinstance(target, (cst.Tuple, cst.List)):
+        names: list[str] = []
+        for element in target.elements:
+            if isinstance(element, cst.Element) and isinstance(element.value, cst.Name):
+                names.append(element.value.value)
+            else:
+                return []
+        return names
+    return []
 
 
 def _hook_from_statement(stmt: cst.CSTNode) -> str | None:
@@ -473,6 +550,39 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
     if len(target_names) != 1:
         raise CompilerError(f"{name} must assign to a single name")
     return f"const {target_names[0]} = React.{hook_name}({args_str});"
+
+
+def _render_assignment(stmt: cst.Assign | cst.AnnAssign) -> str | None:
+    """Render a simple assignment into a JS const declaration."""
+    if isinstance(stmt, cst.Assign):
+        if len(stmt.targets) != 1:
+            return None
+        target = stmt.targets[0].target
+        value = stmt.value
+    else:
+        target = stmt.target
+        value = stmt.value
+    if value is None:
+        return None
+    target_js = _render_assignment_target(target)
+    if not target_js:
+        return None
+    return f"const {target_js} = {_expr_to_js(value)};"
+
+
+def _render_assignment_target(target: cst.BaseAssignTargetExpression) -> str | None:
+    """Render a JS-friendly assignment target."""
+    if isinstance(target, cst.Name):
+        return target.value
+    if isinstance(target, (cst.Tuple, cst.List)):
+        names: list[str] = []
+        for element in target.elements:
+            if isinstance(element, cst.Element) and isinstance(element.value, cst.Name):
+                names.append(element.value.value)
+            else:
+                return None
+        return "[" + ", ".join(names) + "]"
+    return None
 
 
 def _render_function_def(fn: cst.FunctionDef) -> list[str]:
@@ -644,11 +754,13 @@ def _eval_expr(
     expr: cst.BaseExpression,
     externals: dict[str, ExternalComponent],
     component_names: set[str],
+    locals: set[str] | None = None,
 ) -> Any:
     """Evaluate a CST expression into a Node/JSExpr/value."""
+    local_names = locals or set()
     if isinstance(expr, cst.Name):
         if expr.value in externals:
-            return externals[expr.value]
+            return JSExpr(expr.value)
         if expr.value in component_names:
             return LocalComponent(expr.value)
         if expr.value == "Fragment":
@@ -661,6 +773,8 @@ def _eval_expr(
             return False
         if expr.value == "None":
             return None
+        if expr.value in local_names:
+            return JSExpr(expr.value)
         raise CompilerError(
             f"Unsupported name '{expr.value}'. Use external() for components or js(...) for expressions."
         )
@@ -678,35 +792,55 @@ def _eval_expr(
         return float(expr.value)
 
     if isinstance(expr, cst.List):
-        return [_eval_expr(el.value, externals, component_names) for el in expr.elements]
+        return [
+            _eval_expr(el.value, externals, component_names, local_names)
+            for el in expr.elements
+        ]
 
     if isinstance(expr, cst.Tuple):
-        return [_eval_expr(el.value, externals, component_names) for el in expr.elements]
+        return [
+            _eval_expr(el.value, externals, component_names, local_names)
+            for el in expr.elements
+        ]
 
     if isinstance(expr, cst.Dict):
-        return _eval_dict(expr, externals, component_names)
+        return _eval_dict(expr, externals, component_names, local_names)
 
     if isinstance(expr, cst.Call):
         tag_name = _is_h_tag_call(expr)
         if tag_name is not None:
-            return _eval_tag_call(tag_name, expr.args, externals, component_names)
+            return _eval_tag_call(tag_name, expr.args, externals, component_names, local_names)
 
         call_name = _call_name(expr)
         if call_name == "h":
-            return _eval_h_call(expr, externals, component_names)
+            return _eval_h_call(expr, externals, component_names, local_names)
         if call_name == "js":
             if not expr.args:
                 raise CompilerError("js() requires a string")
             return JSExpr(_eval_string(expr.args[0].value))
         if call_name == "external":
             return _eval_external_call(expr)
+        if call_name == "new_":
+            return JSExpr(_expr_to_js(expr))
 
         if isinstance(expr.func, cst.Name):
             name = expr.func.value
             if name in component_names:
-                return _eval_component_call(LocalComponent(name), expr.args, externals, component_names)
+                return _eval_component_call(
+                    LocalComponent(name),
+                    expr.args,
+                    externals,
+                    component_names,
+                    local_names,
+                )
             if name in externals:
-                return _eval_component_call(externals[name], expr.args, externals, component_names)
+                return _eval_component_call(
+                    externals[name],
+                    expr.args,
+                    externals,
+                    component_names,
+                    local_names,
+                )
 
     if isinstance(expr, cst.IfExp):
         return JSExpr(_expr_to_js(expr))
@@ -730,19 +864,43 @@ def _eval_expr(
 
 
 def _eval_h_call(
-    call: cst.Call, externals: dict[str, ExternalComponent], component_names: set[str]
+    call: cst.Call,
+    externals: dict[str, ExternalComponent],
+    component_names: set[str],
+    locals: set[str] | None = None,
 ) -> Node:
     """Evaluate a call to h(...) into a Node."""
     args = call.args
     if not args:
         raise CompilerError("h() requires at least a tag argument")
 
-    tag = _eval_expr(args[0].value, externals, component_names)
-    props, children_args = _split_props(args[1:], externals, component_names)
+    tag = _eval_tag_expr(args[0].value, externals, component_names, locals)
+    props, children_args = _split_props(args[1:], externals, component_names, locals)
     children = [
-        _eval_expr(arg.value, externals, component_names) for arg in children_args
+        _eval_expr(arg.value, externals, component_names, locals) for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
+
+
+def _eval_tag_expr(
+    expr: cst.BaseExpression,
+    externals: dict[str, ExternalComponent],
+    component_names: set[str],
+    locals: set[str] | None = None,
+) -> Any:
+    """Evaluate the first argument to h(...) as a tag reference."""
+    if isinstance(expr, cst.Name):
+        if expr.value in externals:
+            return externals[expr.value]
+        if expr.value in component_names:
+            return LocalComponent(expr.value)
+        if expr.value == "Fragment":
+            return Fragment
+        if expr.value == "Slot":
+            return Slot
+    if isinstance(expr, cst.Attribute):
+        return JSExpr(_expr_to_js(expr))
+    return _eval_expr(expr, externals, component_names, locals)
 
 
 def _eval_tag_call(
@@ -750,11 +908,12 @@ def _eval_tag_call(
     args: list[cst.Arg],
     externals: dict[str, ExternalComponent],
     component_names: set[str],
+    locals: set[str] | None = None,
 ) -> Node:
     """Evaluate a call to h.tag(...) into a Node."""
-    props, children_args = _split_props(args, externals, component_names)
+    props, children_args = _split_props(args, externals, component_names, locals)
     children = [
-        _eval_expr(arg.value, externals, component_names) for arg in children_args
+        _eval_expr(arg.value, externals, component_names, locals) for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
 
@@ -764,11 +923,12 @@ def _eval_component_call(
     args: list[cst.Arg],
     externals: dict[str, ExternalComponent],
     component_names: set[str],
+    locals: set[str] | None = None,
 ) -> Node:
     """Evaluate a call to a component function into a Node."""
-    props, children_args = _split_props(args, externals, component_names)
+    props, children_args = _split_props(args, externals, component_names, locals)
     children = [
-        _eval_expr(arg.value, externals, component_names) for arg in children_args
+        _eval_expr(arg.value, externals, component_names, locals) for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
 
@@ -777,6 +937,7 @@ def _split_props(
     args: list[cst.Arg],
     externals: dict[str, ExternalComponent],
     component_names: set[str],
+    locals: set[str] | None = None,
 ) -> tuple[dict[str, Any], list[cst.Arg]]:
     """Split props keywords/spreads from positional children."""
     positional: list[cst.Arg] = []
@@ -786,10 +947,10 @@ def _split_props(
             positional.append(arg)
         else:
             key = _normalize_prop_key(arg.keyword.value)
-            props[key] = _eval_expr(arg.value, externals, component_names)
+            props[key] = _eval_expr(arg.value, externals, component_names, locals)
 
     if positional and isinstance(positional[0].value, cst.Dict):
-        base_props = _eval_dict(positional[0].value, externals, component_names)
+        base_props = _eval_dict(positional[0].value, externals, component_names, locals)
         if isinstance(base_props, dict):
             spread = base_props.get("__spread__")
             props = {**base_props, **props}
@@ -801,7 +962,10 @@ def _split_props(
 
 
 def _eval_dict(
-    expr: cst.Dict, externals: dict[str, ExternalComponent], component_names: set[str]
+    expr: cst.Dict,
+    externals: dict[str, ExternalComponent],
+    component_names: set[str],
+    locals: set[str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate a dict expression into a props mapping."""
     result: dict[str, Any] = {}
@@ -815,7 +979,7 @@ def _eval_dict(
         if element.key is None or element.value is None:
             continue
         key = _normalize_prop_key(_eval_key(element.key))
-        result[str(key)] = _eval_expr(element.value, externals, component_names)
+        result[str(key)] = _eval_expr(element.value, externals, component_names, locals)
     if spreads:
         result["__spread__"] = spreads
     return result
@@ -922,6 +1086,14 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
         name = _call_name(expr)
         if name == "js" and expr.args:
             return _eval_string(expr.args[0].value)
+        if name == "new_":
+            if not expr.args:
+                raise CompilerError("new_() requires a constructor argument.")
+            if any(arg.keyword is not None for arg in expr.args):
+                raise CompilerError("new_() does not support keyword arguments.")
+            target = _expr_to_js(expr.args[0].value)
+            args = [_expr_to_js(arg.value) for arg in expr.args[1:]]
+            return f"new {target}({', '.join(args)})"
     if isinstance(expr, cst.FormattedString):
         return _format_fstring(expr)
     if isinstance(expr, cst.Subscript):

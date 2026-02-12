@@ -248,6 +248,11 @@ def js(expr: str) -> JSExpr:
     return JSExpr(expr)
 
 
+def new_(constructor: Any, *args: Any) -> Any:
+    """Declare a JavaScript `new` expression (compile-time only)."""
+    raise RuntimeError("new_ is a compile-time helper and cannot run at runtime.")
+
+
 def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent:
     """Create a reference to an external component import."""
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
