@@ -1276,6 +1276,12 @@ def _eval_expr(
     """Evaluate a CST expression into a Node/JSExpr/value."""
     local_names = locals or set()
     bound_values = bindings or {}
+    if isinstance(expr, cst.ConcatenatedString):
+        parts = _flatten_concat_string(expr)
+        if all(isinstance(part, cst.SimpleString) for part in parts):
+            return "".join(_eval_string(part) for part in parts)
+        joined = " + ".join(_expr_to_js(part, name_map) for part in parts)
+        return JSExpr(f"({joined})")
     if isinstance(expr, cst.Name):
         if expr.value in bound_values:
             return bound_values[expr.value]
@@ -1628,6 +1634,12 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
         return name_map.get(expr.value, expr.value) if name_map else expr.value
     if isinstance(expr, cst.Attribute):
         return f"{_expr_to_js(expr.value, name_map)}.{expr.attr.value}"
+    if isinstance(expr, cst.ConcatenatedString):
+        parts = _flatten_concat_string(expr)
+        if all(isinstance(part, cst.SimpleString) for part in parts):
+            return json.dumps("".join(_eval_string(part) for part in parts))
+        joined = " + ".join(_expr_to_js(part, name_map) for part in parts)
+        return f"({joined})"
     if isinstance(expr, cst.SimpleString):
         return json.dumps(_eval_string(expr))
     if isinstance(expr, cst.List):
@@ -1735,6 +1747,21 @@ def _format_fstring(expr: cst.FormattedString, name_map: dict[str, str] | None =
         elif isinstance(part, cst.FormattedStringExpression):
             parts.append("${" + _expr_to_js(part.expression, name_map) + "}")
     return "`" + "".join(parts) + "`"
+
+
+def _flatten_concat_string(expr: cst.ConcatenatedString) -> list[cst.BaseExpression]:
+    """Flatten nested concatenated strings into a list of parts."""
+    parts: list[cst.BaseExpression] = []
+
+    def walk(node: cst.BaseExpression) -> None:
+        if isinstance(node, cst.ConcatenatedString):
+            walk(node.left)
+            walk(node.right)
+        else:
+            parts.append(node)
+
+    walk(expr)
+    return parts
 
 
 def _eval_string(expr: cst.BaseExpression) -> str:
