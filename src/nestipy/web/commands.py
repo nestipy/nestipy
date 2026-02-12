@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import shlex
 import subprocess
 from typing import Iterable, Type
 
@@ -12,6 +13,7 @@ from nestipy.web.actions_client import write_actions_client_file, codegen_action
 
 
 def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
+    """Parse Nestipy web CLI arguments into a simple dict."""
     parsed: dict[str, str | bool] = {}
     args_list = list(args)
     i = 0
@@ -31,6 +33,12 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             parsed["vite"] = True
         elif arg == "--install":
             parsed["install"] = True
+        elif arg == "--backend" and i + 1 < len(args_list):
+            parsed["backend"] = args_list[i + 1]
+            i += 1
+        elif arg == "--backend-cwd" and i + 1 < len(args_list):
+            parsed["backend_cwd"] = args_list[i + 1]
+            i += 1
         elif arg == "--proxy" and i + 1 < len(args_list):
             parsed["proxy"] = args_list[i + 1]
             i += 1
@@ -70,6 +78,7 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
 
 
 def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
+    """Build the frontend and optionally generate clients."""
     parsed = _parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
     proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
@@ -90,6 +99,7 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
 
 def init(args: Iterable[str]) -> None:
+    """Scaffold a minimal Nestipy Web app."""
     parsed = _parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
     proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
@@ -169,12 +179,15 @@ def init(args: Iterable[str]) -> None:
 
 
 def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
+    """Run the dev loop with optional Vite and backend processes."""
     parsed = _parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
     proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
     proxy_paths_list = (
         [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
     )
+    backend_cmd = parsed.get("backend") or os.getenv("NESTIPY_WEB_BACKEND")
+    backend_cwd = parsed.get("backend_cwd") or os.getenv("NESTIPY_WEB_BACKEND_CWD")
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
         out_dir=str(parsed.get("out_dir", "web")),
@@ -186,8 +199,10 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     app_dir = config.resolve_app_dir()
     last_state: dict[str, float] = {}
     vite_process: subprocess.Popen[str] | None = None
+    backend_process: subprocess.Popen[str] | None = None
 
     def snapshot() -> dict[str, float]:
+        """Capture modification times for app source files."""
         state: dict[str, float] = {}
         for path in app_dir.rglob("*.py"):
             try:
@@ -204,6 +219,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         if parsed.get("install"):
             _install_deps(config)
         vite_process = _start_vite(config)
+    if backend_cmd:
+        backend_process = _start_backend(
+            str(backend_cmd),
+            cwd=str(backend_cwd) if backend_cwd else None,
+        )
     try:
         while True:
             time.sleep(0.5)
@@ -216,10 +236,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     except KeyboardInterrupt:
         if vite_process is not None:
             vite_process.terminate()
+        if backend_process is not None:
+            backend_process.terminate()
         return
 
 
 def codegen(args: Iterable[str], modules: list[Type] | None = None) -> None:
+    """Generate an API client from a router spec or modules."""
     parsed = _parse_args(args)
     output = parsed.get("output")
     if not output:
@@ -241,6 +264,7 @@ def codegen(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
 
 def run_command(command_name: str, args: Iterable[str], modules: list[Type] | None = None) -> None:
+    """Dispatch the web subcommand by name."""
     if command_name == "web:init":
         init(args)
     elif command_name == "web:build":
@@ -256,6 +280,7 @@ def run_command(command_name: str, args: Iterable[str], modules: list[Type] | No
 
 
 def _maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> None:
+    """Generate a router client if a spec URL is configured."""
     spec_url = parsed.get("spec")
     if not spec_url:
         return
@@ -269,6 +294,7 @@ def _maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> N
 
 
 def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> None:
+    """Generate an actions client from modules or a schema URL."""
     parsed = _parse_args(args)
     spec_url = parsed.get("spec")
     if modules is None:
@@ -289,6 +315,7 @@ def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> N
 def _maybe_codegen_actions(
     parsed: dict[str, str | bool], config: WebConfig, modules: list[Type] | None
 ) -> None:
+    """Generate an actions client if requested via CLI flags."""
     if not parsed.get("actions"):
         return
     spec_url = parsed.get("spec")
@@ -305,6 +332,7 @@ def _maybe_codegen_actions(
 
 
 def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
+    """Start the Vite dev server using the detected package manager."""
     out_dir = config.resolve_out_dir()
     manager = _select_package_manager(out_dir)
     if manager == "pnpm":
@@ -316,7 +344,14 @@ def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
     return subprocess.Popen(cmd, cwd=str(out_dir))
 
 
+def _start_backend(command: str, cwd: str | None = None) -> subprocess.Popen[str]:
+    """Start the backend process from a shell command."""
+    cmd = shlex.split(command)
+    return subprocess.Popen(cmd, cwd=cwd)
+
+
 def _install_deps(config: WebConfig) -> None:
+    """Install frontend dependencies with the selected package manager."""
     out_dir = config.resolve_out_dir()
     manager = _select_package_manager(out_dir)
     if manager == "pnpm":
@@ -329,6 +364,7 @@ def _install_deps(config: WebConfig) -> None:
 
 
 def _select_package_manager(out_dir) -> str:
+    """Choose a package manager based on existing lockfiles."""
     if (out_dir / "pnpm-lock.yaml").exists():
         return "pnpm"
     if (out_dir / "yarn.lock").exists():

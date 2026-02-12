@@ -38,12 +38,14 @@ __all__ = [
 
 
 def codegen_client(*args, **kwargs):
+    """Proxy to the router client generator."""
     from .client import codegen_client as _codegen_client
 
     return _codegen_client(*args, **kwargs)
 
 
 def codegen_client_from_url(*args, **kwargs):
+    """Proxy to the router client generator using a spec URL."""
     from .client import codegen_client_from_url as _codegen_client_from_url
 
     return _codegen_client_from_url(*args, **kwargs)

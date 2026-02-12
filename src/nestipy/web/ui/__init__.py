@@ -9,6 +9,7 @@ PROPS_MARK_ATTR = "__nestipy_web_props__"
 
 
 class HTMLProps(TypedDict, total=False):
+    """Typed HTML/SVG props accepted by the `h` helper."""
     id: str
     class_name: str
     class_: str
@@ -181,6 +182,7 @@ class HTMLProps(TypedDict, total=False):
 
 @dataclass(frozen=True, slots=True)
 class ExternalComponent:
+    """Reference to a component imported from an external module."""
     module: str
     name: str
     default: bool = False
@@ -188,14 +190,17 @@ class ExternalComponent:
 
     @property
     def import_name(self) -> str:
+        """Return the name to use in import statements."""
         return self.alias or self.name
 
     def __call__(self, *children: Child, **props: HTMLProps) -> "Node":
+        """Create a Node that references this external component."""
         return Node(tag=self, props=_normalize_props(props), children=_flatten_children(children))
 
 
 @dataclass(slots=True)
 class Node:
+    """Render tree node that represents a JSX element."""
     tag: Any
     props: dict[str, Any] = field(default_factory=dict)
     children: list[Any] = field(default_factory=list)
@@ -207,17 +212,21 @@ class JSExpr(str):
 
 @dataclass(frozen=True, slots=True)
 class LocalComponent:
+    """Reference to a local component defined in the app."""
     name: str
 
     def __call__(self, *children: Child, **props: HTMLProps) -> "Node":
+        """Create a Node that references this local component."""
         return Node(tag=self, props=_normalize_props(props), children=_flatten_children(children))
 
 
 class _Fragment:
+    """Marker type for fragment rendering."""
     pass
 
 
 class _Slot:
+    """Marker type for layout slot rendering."""
     pass
 
 
@@ -230,29 +239,35 @@ Child = Node | str | int | float | bool | None | JSExpr
 
 class TagCallable(Protocol):
     def __call__(self, *children: Child, **props: HTMLProps) -> "Node":
+        """Render a Node for a concrete HTML tag."""
         ...
 
 
 def js(expr: str) -> JSExpr:
+    """Wrap a raw JavaScript expression for JSX output."""
     return JSExpr(expr)
 
 
 def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent:
+    """Create a reference to an external component import."""
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
 
 
 def component(fn: Callable) -> Callable:
+    """Mark a Python function as a component."""
     setattr(fn, COMPONENT_MARK_ATTR, True)
     setattr(fn, COMPONENT_NAME_ATTR, fn.__name__)
     return fn
 
 
 def props(cls: type) -> type:
+    """Mark a class as a props definition."""
     setattr(cls, PROPS_MARK_ATTR, True)
     return cls
 
 
 def _flatten_children(children: Iterable[Any]) -> list[Any]:
+    """Flatten nested children lists into a single list."""
     out: list[Any] = []
     for child in children:
         if child is None:
@@ -265,6 +280,7 @@ def _flatten_children(children: Iterable[Any]) -> list[Any]:
 
 
 class H:
+    """Factory for building Node trees with attribute access for tags."""
     def __call__(
         self,
         tag: Any,
@@ -272,6 +288,7 @@ class H:
         *children: Child,
         **kwargs: Any,
     ) -> Node:
+        """Create a Node with a dynamic tag and props."""
         actual_props: dict[str, Any] = {}
         if isinstance(props, dict):
             actual_props.update(props)
@@ -282,7 +299,9 @@ class H:
         return Node(tag=tag, props=actual_props, children=_flatten_children(children))
 
     def __getattr__(self, tag: str) -> TagCallable:
+        """Return a callable that builds a Node for the given tag."""
         def _tag(*children: Child, **kwargs: Any) -> Node:
+            """Build a Node for a specific HTML/SVG tag."""
             props: dict[str, Any] = {}
             if children and isinstance(children[0], dict):
                 props.update(children[0])
@@ -295,6 +314,7 @@ class H:
 
 
 def _normalize_props(props: dict[str, Any]) -> dict[str, Any]:
+    """Normalize prop keys and expand data_/aria_ maps."""
     normalized: dict[str, Any] = {}
     for key, value in props.items():
         if key in {"data_", "aria_"} and isinstance(value, dict):
@@ -307,6 +327,7 @@ def _normalize_props(props: dict[str, Any]) -> dict[str, Any]:
 
 
 def _normalize_prop_key(key: str) -> str:
+    """Normalize Pythonic prop keys to JSX-friendly names."""
     if key in {"class_name", "class_"}:
         return "className"
     if key == "for_":

@@ -22,6 +22,7 @@ from .errors import CompilerError
 
 @dataclass(slots=True)
 class RouteInfo:
+    """Represent a resolved route and its compiled output path."""
     route: str
     source: Path
     output: Path
@@ -31,11 +32,13 @@ class RouteInfo:
 
 @dataclass(slots=True)
 class ComponentImport:
+    """Describe a component import used in generated TSX."""
     import_path: str
     names: list[tuple[str, str]]
 
 
 def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
+    """Compile the web app sources into a Vite-ready project."""
     app_dir = config.resolve_app_dir(root)
     out_dir = config.resolve_out_dir(root)
     pages_dir = config.resolve_pages_dir(root)
@@ -99,6 +102,7 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
 
 
 def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = None) -> None:
+    """Generate router and entrypoint files from discovered routes."""
     src_dir = config.resolve_src_dir(root)
     src_dir.mkdir(parents=True, exist_ok=True)
 
@@ -145,6 +149,7 @@ def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = 
 
 
 def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
+    """Ensure required Vite/Tailwind scaffold files exist."""
     out_dir = config.resolve_out_dir(root)
     index_html = out_dir / "index.html"
     if not index_html.exists():
@@ -393,6 +398,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
 
 
 def discover_routes(app_dir: Path, pages_dir: Path) -> list[RouteInfo]:
+    """Discover page entrypoints under the app directory."""
     routes: list[RouteInfo] = []
     for source in app_dir.rglob("page.py"):
         rel = source.relative_to(app_dir)
@@ -413,6 +419,7 @@ def discover_routes(app_dir: Path, pages_dir: Path) -> list[RouteInfo]:
 
 
 def route_from_relative(rel: Path) -> str:
+    """Convert a page file path into a router path string."""
     parts = list(rel.parts[:-1])  # drop page.py
     if not parts:
         return "/"
@@ -430,6 +437,7 @@ def route_from_relative(rel: Path) -> str:
 
 
 def output_for_relative(rel: Path, pages_dir: Path) -> tuple[Path, str]:
+    """Map a page path to an output TSX file and import path."""
     parts = list(rel.parts[:-1])
     if not parts:
         out_path = pages_dir / "index.tsx"
@@ -452,6 +460,7 @@ def output_for_relative(rel: Path, pages_dir: Path) -> tuple[Path, str]:
 
 
 def load_layout(app_dir: Path, root: Path) -> ParsedFile | None:
+    """Load the root layout component if present."""
     layout_file = app_dir / "layout.py"
     if not layout_file.exists():
         return None
@@ -463,6 +472,7 @@ def render_page_tree(
     root: Path,
     target_names: tuple[str, ...] = ("Page", "page", "default"),
 ) -> ParsedFile:
+    """Parse a Python component file into a renderable tree."""
     return parse_component_file(source, target_names=target_names, app_dir=root)
 
 
@@ -473,6 +483,7 @@ def build_page_tsx(
     component_imports: list[ComponentImport],
     imported_props: dict[str, PropsSpec],
 ) -> str:
+    """Render a full page TSX module from parsed component trees."""
     layout_tsx = ""
     layout_wrap_start = ""
     layout_wrap_end = ""
@@ -550,6 +561,7 @@ def build_page_tsx(
 
 
 def build_layout_tsx(layout_tree: Node) -> str:
+    """Render the root layout wrapper TSX."""
     layout_body = render_node(layout_tree, slot_token="{children}")
     return "\n".join(
         [
@@ -566,6 +578,7 @@ def build_layout_tsx(layout_tree: Node) -> str:
 def render_imports(
     imports: dict[str, dict[str, set[str]]], *, include_react_node: bool = False
 ) -> str:
+    """Render import statements for external components."""
     lines: list[str] = []
     if include_react_node:
         lines.append("import type { ReactNode } from 'react';")
@@ -584,6 +597,7 @@ def render_imports(
 
 
 def render_props_interfaces(props: dict[str, PropsSpec]) -> str:
+    """Render TypeScript interfaces for component props."""
     if not props:
         return ""
     blocks: list[str] = []
@@ -598,6 +612,7 @@ def render_props_interfaces(props: dict[str, PropsSpec]) -> str:
 
 
 def render_component_imports(component_imports: list[ComponentImport]) -> str:
+    """Render import statements for local component modules."""
     lines: list[str] = []
     for comp in component_imports:
         parts: list[str] = []
@@ -612,6 +627,7 @@ def render_component_imports(component_imports: list[ComponentImport]) -> str:
 
 
 def merge_component_imports(imports: list[ComponentImport]) -> list[ComponentImport]:
+    """Merge duplicate component imports into a single entry per path."""
     merged: dict[str, dict[str, str]] = {}
     for item in imports:
         entry = merged.setdefault(item.import_path, {})
@@ -625,9 +641,11 @@ def merge_component_imports(imports: list[ComponentImport]) -> list[ComponentImp
 
 
 def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]]]:
+    """Collect external component imports referenced by rendered nodes."""
     imports: dict[str, dict[str, set[str]]] = {}
 
     def add_import(component: ExternalComponent):
+        """Register an external component import."""
         spec = imports.setdefault(component.module, {"named": set(), "default": set()})
         if component.default:
             spec["default"].add(component.import_name)
@@ -635,6 +653,7 @@ def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]
             spec["named"].add(component.import_name)
 
     def visit(node: Any):
+        """Walk nodes to discover external component usage."""
         if isinstance(node, Node):
             if isinstance(node.tag, ExternalComponent):
                 add_import(node.tag)
@@ -650,9 +669,11 @@ def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]
 
 
 def collect_used_components(nodes: Iterable[Node]) -> set[str]:
+    """Collect local component names referenced by node trees."""
     used: set[str] = set()
 
     def visit(node: Any) -> None:
+        """Walk nodes to discover local component usage."""
         if isinstance(node, Node):
             if isinstance(node.tag, LocalComponent):
                 used.add(node.tag.name)
@@ -678,6 +699,7 @@ def resolve_component_imports(
     cache: dict[Path, tuple[ParsedFile, Path]],
     visiting: set[Path],
 ) -> tuple[list[ComponentImport], dict[str, PropsSpec]]:
+    """Resolve component imports and their prop interfaces for a parsed file."""
     component_imports: list[ComponentImport] = []
     imported_props: dict[str, PropsSpec] = {}
 
@@ -730,6 +752,7 @@ def compile_component_module(
     cache: dict[Path, tuple[ParsedFile, Path]],
     visiting: set[Path],
 ) -> tuple[ParsedFile, Path]:
+    """Compile a component module into TSX and return parse output."""
     resolved = path.resolve()
     if resolved in cache:
         return cache[resolved]
@@ -772,6 +795,7 @@ def build_component_module_tsx(
     parsed: ParsedFile,
     component_imports: list[ComponentImport],
 ) -> str:
+    """Render a TSX module for reusable components."""
     imports = collect_imports(parsed.components)
     props_interfaces = render_props_interfaces(parsed.props)
     component_defs = build_component_exports(parsed.components, parsed.component_props)
@@ -795,6 +819,7 @@ def build_component_module_tsx(
 def build_component_exports(
     components: dict[str, Node], component_props: dict[str, str]
 ) -> str:
+    """Render exported component functions."""
     blocks: list[str] = []
     for name, tree in components.items():
         blocks.append(
@@ -806,12 +831,14 @@ def build_component_exports(
 
 
 def component_output_for_path(path: Path, app_dir: Path, src_dir: Path) -> Path:
+    """Compute the output TSX path for a component module."""
     rel = path.relative_to(app_dir)
     rel_no_suffix = rel.with_suffix("")
     return src_dir / "components" / rel_no_suffix.with_suffix(".tsx")
 
 
 def component_import_path(from_file: Path, to_file: Path) -> str:
+    """Compute the TSX import path between two generated files."""
     relative = Path(os.path.relpath(to_file, from_file.parent))
     relative_str = relative.as_posix()
     if not relative_str.startswith("."):
@@ -828,7 +855,9 @@ def validate_component_usage(
     props_specs: dict[str, PropsSpec],
     imported_props: dict[str, PropsSpec],
 ) -> None:
+    """Validate required props for component usage in node trees."""
     def visit(node: Node) -> None:
+        """Visit nodes and validate required props."""
         if isinstance(node.tag, LocalComponent):
             name = node.tag.name
             spec = None
@@ -868,6 +897,7 @@ def build_component_defs(
     page_primary: str,
     layout_primary: str | None = None,
 ) -> str:
+    """Render non-primary component helper functions."""
     blocks: list[str] = []
     seen: set[str] = set()
     for name, tree in page_components.items():
@@ -895,6 +925,7 @@ def _component_block(
     *,
     exported: bool = False,
 ) -> str:
+    """Render a component function block."""
     body = render_node(tree)
     signature = (
         f"function {name}(): JSX.Element"
@@ -916,6 +947,7 @@ def _component_block(
 
 
 def render_node(node: Node, slot_token: str | None = None) -> str:
+    """Render a node tree into JSX."""
     if node.tag is Slot:
         return slot_token or ""
 
@@ -942,6 +974,7 @@ def render_node(node: Node, slot_token: str | None = None) -> str:
 
 
 def render_tag(tag: Any) -> str:
+    """Render a tag or component reference for JSX."""
     if isinstance(tag, ExternalComponent):
         return tag.import_name
     if isinstance(tag, LocalComponent):
@@ -954,6 +987,7 @@ def render_tag(tag: Any) -> str:
 
 
 def render_props(props: dict[str, Any]) -> str:
+    """Render JSX props from a props mapping."""
     rendered = []
     spreads = props.get("__spread__") if isinstance(props, dict) else None
     if spreads:
@@ -969,6 +1003,7 @@ def render_props(props: dict[str, Any]) -> str:
 
 
 def render_prop(key: str, value: Any) -> str | None:
+    """Render a single JSX prop key/value pair."""
     if value is None or value is False:
         return None
     if value is True:
@@ -987,6 +1022,7 @@ def render_prop(key: str, value: Any) -> str | None:
 
 
 def render_child(child: Any, slot_token: str | None = None) -> str | None:
+    """Render a child node into JSX."""
     if child is None:
         return None
     if isinstance(child, Node):
@@ -1003,6 +1039,7 @@ def render_child(child: Any, slot_token: str | None = None) -> str | None:
 
 
 def escape_text(text: str) -> str:
+    """Escape JSX text nodes."""
     return (
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
@@ -1011,5 +1048,6 @@ def escape_text(text: str) -> str:
 
 
 def indent(value: str, spaces: int) -> str:
+    """Indent a multi-line string by a fixed number of spaces."""
     pad = " " * spaces
     return "\n".join(pad + line if line else line for line in value.split("\n"))

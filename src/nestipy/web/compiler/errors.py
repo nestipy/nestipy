@@ -1,2 +1,2 @@
 class CompilerError(RuntimeError):
-    pass
+    """Raised when the Nestipy Web compiler encounters invalid input."""

@@ -8,6 +8,7 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class WebConfig:
+    """Configuration values for Nestipy Web compilation and dev tooling."""
     app_dir: str = "app"
     out_dir: str = "web"
     target: str = "vite"
@@ -20,17 +21,21 @@ class WebConfig:
     )
 
     def resolve_app_dir(self, root: str | None = None) -> Path:
+        """Resolve the absolute app directory path."""
         base = Path(root or os.getcwd())
         return (base / self.app_dir).resolve()
 
     def resolve_out_dir(self, root: str | None = None) -> Path:
+        """Resolve the absolute output (web) directory path."""
         base = Path(root or os.getcwd())
         return (base / self.out_dir).resolve()
 
     def resolve_src_dir(self, root: str | None = None) -> Path:
+        """Resolve the absolute source directory inside the output directory."""
         return self.resolve_out_dir(root) / self.src_dir
 
     def resolve_pages_dir(self, root: str | None = None) -> Path:
+        """Resolve the absolute pages directory inside the output source directory."""
         return self.resolve_src_dir(root) / self.pages_dir
 
 

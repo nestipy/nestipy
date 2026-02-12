@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    depends_on:
+      - prometheus
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    command: [ "nestipy", "start", "--dev" ]

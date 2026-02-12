@@ -14,6 +14,7 @@ from .errors import CompilerError
 
 @dataclass(slots=True)
 class ImportSpec:
+    """Describe a component import and its resolved file path."""
     name: str
     alias: str
     path: Path | None
@@ -21,6 +22,7 @@ class ImportSpec:
 
 @dataclass(slots=True)
 class PropField:
+    """Describe a typed prop field for a component props class."""
     name: str
     ts_type: str
     optional: bool
@@ -28,12 +30,14 @@ class PropField:
 
 @dataclass(slots=True)
 class PropsSpec:
+    """Describe a component props interface."""
     name: str
     fields: list[PropField]
 
 
 @dataclass(slots=True)
 class ParsedModule:
+    """Intermediate parse data for a module file."""
     externals: dict[str, ExternalComponent]
     functions: list[cst.FunctionDef]
     imports: list[ImportSpec]
@@ -42,6 +46,7 @@ class ParsedModule:
 
 @dataclass(slots=True)
 class ParsedFile:
+    """Parsed component file with resolved nodes and metadata."""
     primary: str
     components: dict[str, Node]
     imports: list[ImportSpec]
@@ -55,6 +60,7 @@ def parse_component_file(
     target_names: Iterable[str],
     app_dir: Path | None = None,
 ) -> ParsedFile:
+    """Parse a Python component file into renderable nodes and metadata."""
     code = path.read_text(encoding="utf-8")
     module = cst.parse_module(code)
     app_root = app_dir.resolve() if app_dir else path.parent.resolve()
@@ -104,6 +110,7 @@ def parse_component_file(
 
 
 def _collect_functions(module: cst.Module) -> list[cst.FunctionDef]:
+    """Collect top-level function definitions from a CST module."""
     funcs: list[cst.FunctionDef] = []
     for stmt in module.body:
         if isinstance(stmt, cst.FunctionDef):
@@ -112,6 +119,7 @@ def _collect_functions(module: cst.Module) -> list[cst.FunctionDef]:
 
 
 def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent]:
+    """Collect external component declarations from assignments."""
     externals: dict[str, ExternalComponent] = {}
     for stmt in module.body:
         statements = []
@@ -134,6 +142,7 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent]:
 
 
 def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> list[ImportSpec]:
+    """Collect import specifications for local component modules."""
     imports: list[ImportSpec] = []
 
     for stmt in module.body:
@@ -174,6 +183,7 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
 
 
 def _resolve_module_file(module_path: Path, app_dir: Path) -> Path | None:
+    """Resolve a module path to a Python file if it is within app_dir."""
     py_file = module_path.with_suffix(".py")
     init_file = module_path / "__init__.py"
     if py_file.exists() and _is_within(py_file, app_dir):
@@ -184,6 +194,7 @@ def _resolve_module_file(module_path: Path, app_dir: Path) -> Path | None:
 
 
 def _is_within(path: Path, root: Path) -> bool:
+    """Return True if a path is contained within root."""
     try:
         path.resolve().relative_to(root.resolve())
         return True
@@ -192,6 +203,7 @@ def _is_within(path: Path, root: Path) -> bool:
 
 
 def _module_name(module: cst.BaseExpression | None) -> str | None:
+    """Return a dotted module name for an import expression."""
     if module is None:
         return None
     if isinstance(module, cst.Name):
@@ -209,6 +221,7 @@ def _module_name(module: cst.BaseExpression | None) -> str | None:
 
 
 def _relative_level(relative: cst.ImportRelative | None) -> int:
+    """Return the number of relative import dots."""
     if relative is None:
         return 0
     if isinstance(relative, (tuple, list)):
@@ -217,6 +230,7 @@ def _relative_level(relative: cst.ImportRelative | None) -> int:
 
 
 def _collect_props(module: cst.Module) -> dict[str, PropsSpec]:
+    """Collect @props classes into a props specification map."""
     specs: dict[str, PropsSpec] = {}
     for stmt in module.body:
         if not isinstance(stmt, cst.ClassDef):
@@ -235,6 +249,7 @@ def _collect_props(module: cst.Module) -> dict[str, PropsSpec]:
 
 
 def _has_props_decorator(cls: cst.ClassDef) -> bool:
+    """Check whether a class has the @props decorator."""
     for deco in cls.decorators:
         expr = deco.decorator
         if isinstance(expr, cst.Name) and expr.value == "props":
@@ -247,6 +262,7 @@ def _has_props_decorator(cls: cst.ClassDef) -> bool:
 def _collect_component_props(
     funcs: list[cst.FunctionDef], props_specs: dict[str, PropsSpec]
 ) -> dict[str, str]:
+    """Map component names to props class names based on annotations."""
     mapping: dict[str, str] = {}
     for fn in funcs:
         if not fn.params.params:
@@ -263,6 +279,7 @@ def _collect_component_props(
 def _select_component(
     funcs: list[cst.FunctionDef], target_names: Iterable[str]
 ) -> cst.FunctionDef | None:
+    """Choose the primary component based on target names or decorators."""
     target_set = {name for name in target_names}
     for fn in funcs:
         if fn.name.value in target_set:
@@ -276,6 +293,7 @@ def _select_component(
 
 
 def _has_component_decorator(fn: cst.FunctionDef) -> bool:
+    """Check whether a function has the @component decorator."""
     for deco in fn.decorators:
         expr = deco.decorator
         if isinstance(expr, cst.Name) and expr.value == "component":
@@ -286,6 +304,7 @@ def _has_component_decorator(fn: cst.FunctionDef) -> bool:
 
 
 def _extract_return_expr(fn: cst.FunctionDef) -> cst.BaseExpression | None:
+    """Extract the return expression from a function body."""
     assignments: dict[str, cst.BaseExpression] = {}
     body = fn.body
     if not isinstance(body, cst.IndentedBlock):
@@ -313,6 +332,7 @@ def _extract_return_expr(fn: cst.FunctionDef) -> cst.BaseExpression | None:
 
 
 def _eval_external_call(call: cst.Call) -> ExternalComponent:
+    """Evaluate an external() call into an ExternalComponent."""
     args = call.args
     if len(args) < 2:
         raise CompilerError("external() requires module and name")
@@ -331,6 +351,7 @@ def _eval_external_call(call: cst.Call) -> ExternalComponent:
 
 
 def _call_name(call: cst.Call) -> str | None:
+    """Return the called function name for a call expression."""
     func = call.func
     if isinstance(func, cst.Name):
         return func.value
@@ -340,6 +361,7 @@ def _call_name(call: cst.Call) -> str | None:
 
 
 def _is_h_tag_call(call: cst.Call) -> str | None:
+    """Return the tag name if this is an h.tag(...) call."""
     func = call.func
     if isinstance(func, cst.Attribute) and isinstance(func.value, cst.Name):
         if func.value.value == "h":
@@ -352,6 +374,7 @@ def _eval_expr(
     externals: dict[str, ExternalComponent],
     component_names: set[str],
 ) -> Any:
+    """Evaluate a CST expression into a Node/JSExpr/value."""
     if isinstance(expr, cst.Name):
         if expr.value in externals:
             return externals[expr.value]
@@ -438,6 +461,7 @@ def _eval_expr(
 def _eval_h_call(
     call: cst.Call, externals: dict[str, ExternalComponent], component_names: set[str]
 ) -> Node:
+    """Evaluate a call to h(...) into a Node."""
     args = call.args
     if not args:
         raise CompilerError("h() requires at least a tag argument")
@@ -456,6 +480,7 @@ def _eval_tag_call(
     externals: dict[str, ExternalComponent],
     component_names: set[str],
 ) -> Node:
+    """Evaluate a call to h.tag(...) into a Node."""
     props, children_args = _split_props(args, externals, component_names)
     children = [
         _eval_expr(arg.value, externals, component_names) for arg in children_args
@@ -469,6 +494,7 @@ def _eval_component_call(
     externals: dict[str, ExternalComponent],
     component_names: set[str],
 ) -> Node:
+    """Evaluate a call to a component function into a Node."""
     props, children_args = _split_props(args, externals, component_names)
     children = [
         _eval_expr(arg.value, externals, component_names) for arg in children_args
@@ -481,6 +507,7 @@ def _split_props(
     externals: dict[str, ExternalComponent],
     component_names: set[str],
 ) -> tuple[dict[str, Any], list[cst.Arg]]:
+    """Split props keywords/spreads from positional children."""
     positional: list[cst.Arg] = []
     props: dict[str, Any] = {}
     for arg in args:
@@ -505,6 +532,7 @@ def _split_props(
 def _eval_dict(
     expr: cst.Dict, externals: dict[str, ExternalComponent], component_names: set[str]
 ) -> dict[str, Any]:
+    """Evaluate a dict expression into a props mapping."""
     result: dict[str, Any] = {}
     spreads: list[JSExpr] = []
     for element in expr.elements:
@@ -523,6 +551,7 @@ def _eval_dict(
 
 
 def _normalize_prop_key(key: str) -> str:
+    """Normalize Pythonic prop keys to JSX-friendly names."""
     if key in {"class_name", "class_"}:
         return "className"
     if key == "for_":
@@ -544,6 +573,7 @@ def _normalize_prop_key(key: str) -> str:
 
 
 def _expr_to_js(expr: cst.BaseExpression) -> str:
+    """Convert a CST expression into a JS expression string."""
     if isinstance(expr, cst.Name):
         return expr.value
     if isinstance(expr, cst.Attribute):
@@ -602,6 +632,7 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
 
 
 def _format_fstring(expr: cst.FormattedString) -> str:
+    """Convert f-strings into JS template literals."""
     parts: list[str] = []
     for part in expr.parts:
         if isinstance(part, cst.FormattedStringText):
@@ -612,12 +643,14 @@ def _format_fstring(expr: cst.FormattedString) -> str:
 
 
 def _eval_string(expr: cst.BaseExpression) -> str:
+    """Evaluate a CST string literal."""
     if isinstance(expr, cst.SimpleString):
         return ast.literal_eval(expr.value)
     raise CompilerError("Expected string literal")
 
 
 def _eval_bool(expr: cst.BaseExpression) -> bool:
+    """Evaluate a CST boolean literal."""
     if isinstance(expr, cst.Name):
         if expr.value == "True":
             return True
@@ -627,6 +660,7 @@ def _eval_bool(expr: cst.BaseExpression) -> bool:
 
 
 def _eval_key(expr: cst.BaseExpression) -> str:
+    """Evaluate a CST dict key into a string."""
     if isinstance(expr, cst.SimpleString):
         return _eval_string(expr)
     if isinstance(expr, cst.Name):
@@ -635,6 +669,7 @@ def _eval_key(expr: cst.BaseExpression) -> str:
 
 
 def _annotation_name(expr: cst.BaseExpression) -> str | None:
+    """Extract a type name from a type annotation expression."""
     if isinstance(expr, cst.Name):
         return expr.value
     if isinstance(expr, cst.Attribute):
@@ -645,6 +680,7 @@ def _annotation_name(expr: cst.BaseExpression) -> str | None:
 
 
 def _annotation_to_ts(expr: cst.BaseExpression) -> str:
+    """Convert a type annotation expression to a TS type."""
     if isinstance(expr, cst.Name):
         return _name_to_ts(expr.value)
     if isinstance(expr, cst.Attribute):
@@ -670,11 +706,13 @@ def _annotation_to_ts(expr: cst.BaseExpression) -> str:
 
 
 def _union_to_ts(expr: cst.Subscript) -> str:
+    """Convert a Union or Optional subscript into a TS union."""
     types = [_annotation_to_ts(item.slice.value) for item in expr.slice]
     return " | ".join(types)
 
 
 def _name_to_ts(name: str) -> str:
+    """Map basic Python type names to TS equivalents."""
     mapping = {
         "str": "string",
         "int": "number",

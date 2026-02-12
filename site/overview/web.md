@@ -4,6 +4,35 @@ Nestipy Web lets you write frontend components in Python and compile them to TSX
 
 ## Folder Structure
 
+Nestipy Web is designed to live *inside the same repo as your backend* (monorepo-style). If your Python backend lives under `src/`, a typical layout looks like this:
+
+```
+main.py
+cli.py
+uv.lock
+pyproject.toml
+README.md
+src/
+  __init__.py
+app_module.py
+app_controller.py
+app_service.py
+web/                  # Vite project (generated / managed by Nestipy Web)
+app/                  # Python UI sources (compiled to TSX)
+  page.py
+  layout.py
+  components/
+    card.py
+```
+
+The compiler reads Python UI from `app/` by default and writes the Vite project into `web/` by default.
+
+If your UI code also lives under `src/` (e.g. `src/app/`), you can:
+- run `nestipy run web:init --app-dir src/app`
+- run `nestipy run web:dev --app-dir src/app --vite ...`
+
+### UI-Only View
+
 ```
 app/
   page.py              # /
@@ -97,10 +126,19 @@ def Card(props: CardProps):
 - `nestipy run web:dev --vite` — also start Vite dev server (HMR)
 - `nestipy run web:dev --vite --install` — install frontend deps before starting Vite
 - `nestipy run web:dev --vite --proxy http://127.0.0.1:8001` — start Vite with backend proxy
+- `nestipy run web:dev --vite --backend "python main.py"` — start backend + frontend together
+- `nestipy run web:dev --vite --backend "python main.py" --backend-cwd ./backend` — backend in another folder
 - `nestipy run web:codegen --output web/src/api/client.ts --lang ts` — generate typed clients
 - `nestipy run web:build --spec http://localhost:8001/_router/spec --lang ts` — build + generate client into `web/src/api/client.ts`
 - `nestipy run web:actions --output web/src/actions.client.ts` — generate typed action wrappers
 - `nestipy run web:build --actions` — build and generate `web/src/actions.client.ts`
+
+### Defaults via Environment Variables
+
+If you don’t want to pass backend flags every time, set:
+
+- `NESTIPY_WEB_BACKEND` — default backend command for `web:dev`
+- `NESTIPY_WEB_BACKEND_CWD` — default working directory for the backend command
 
 ## Vite Scaffold
 
@@ -127,17 +165,20 @@ This walkthrough gives you a working backend that exposes:
 
 ### Backend
 
-Example structure:
+Example structure (backend under `src/`, frontend under `web/`):
 
 ```
-backend/
-  main.py
+main.py
+cli.py
+pyproject.toml
+src/
+  __init__.py
   app_module.py
   user_actions.py
   user_controller.py
 ```
 
-`backend/user_actions.py`:
+`src/user_actions.py`:
 
 ```py
 from nestipy.common import Injectable
@@ -158,7 +199,7 @@ class UserActions:
         return datetime.now(timezone.utc).isoformat()
 ```
 
-`backend/user_controller.py`:
+`src/user_controller.py`:
 
 ```py
 from nestipy.common import Controller, Get
@@ -171,7 +212,7 @@ class UserController:
         return {"ok": True}
 ```
 
-`backend/app_module.py`:
+`src/app_module.py`:
 
 ```py
 from nestipy.common import Module
@@ -190,14 +231,14 @@ class AppModule:
     pass
 ```
 
-`backend/main.py`:
+`main.py`:
 
 ```py
 from granian.constants import Interfaces
 
 from nestipy.core import NestipyFactory
 
-from app_module import AppModule
+from src.app_module import AppModule
 
 app = NestipyFactory.create(AppModule)
 
@@ -217,7 +258,6 @@ if __name__ == "__main__":
 Run backend:
 
 ```bash
-cd backend
 python main.py
 ```
 
@@ -262,6 +302,47 @@ const res = await actions.UserActions.hello({ name: 'Nestipy' });
 if (res.ok) {
   console.log(res.data);
 }
+```
+
+You can also wire a React component that calls actions and mount it from `app/page.py`:
+
+`web/src/components/HelloAction.tsx`:
+
+```ts
+import React from 'react';
+import { createActions } from '../actions.client';
+
+const actions = createActions();
+
+export function HelloAction() {
+  const [value, setValue] = React.useState<string>('');
+
+  React.useEffect(() => {
+    actions.UserActions.hello({ name: 'Nestipy' }).then((res) => {
+      if (res.ok) {
+        setValue(res.data);
+      }
+    });
+  }, []);
+
+  return <div className="text-sm text-slate-300">Action says: {value}</div>;
+}
+```
+
+`app/page.py`:
+
+```py
+from nestipy.web import component, h, external
+
+HelloAction = external("../components/HelloAction", "HelloAction")
+
+@component
+def Page():
+    return h.div(
+        h.h1("Nestipy Web"),
+        h(HelloAction),
+        class_name="p-8 space-y-3",
+    )
 ```
 
 ### Backend
@@ -313,6 +394,20 @@ nestipy run web:dev --vite
 ```
 
 This watches `app/**/*.py`, rebuilds TSX on change, and Vite handles HMR.
+
+## One Command (Backend + Frontend)
+
+You can start both the backend and the frontend from a single Nestipy-CLI command:
+
+```bash
+nestipy run web:dev --vite --install --proxy http://127.0.0.1:8001 --backend "python main.py"
+```
+
+If your backend entrypoint is not at the repo root, pass a working directory:
+
+```bash
+nestipy run web:dev --vite --backend "python main.py" --backend-cwd ./backend
+```
 
 ## Vite Proxy
 

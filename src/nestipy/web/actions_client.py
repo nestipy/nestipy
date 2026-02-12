@@ -19,6 +19,7 @@ from nestipy.web.actions import ACTION_METADATA
 
 @dataclass(slots=True)
 class ActionParam:
+    """Describe a single action parameter for client generation."""
     name: str
     ts_type: str
     optional: bool
@@ -26,6 +27,7 @@ class ActionParam:
 
 @dataclass(slots=True)
 class ActionSpec:
+    """Describe a web action for client and schema generation."""
     name: str
     params: list[ActionParam]
     return_type: str
@@ -33,6 +35,7 @@ class ActionSpec:
 
 
 def build_action_specs(modules: Iterable[type]) -> list[ActionSpec]:
+    """Build action specifications by inspecting module providers/controllers."""
     specs: dict[str, ActionSpec] = {}
     for module in modules:
         if isinstance(module, DynamicModule):
@@ -56,6 +59,7 @@ def build_action_specs(modules: Iterable[type]) -> list[ActionSpec]:
 def build_action_specs_from_registry(
     actions: dict[str, Callable[..., Any]],
 ) -> list[ActionSpec]:
+    """Build action specs directly from a registry mapping."""
     specs: dict[str, ActionSpec] = {}
     for name, fn in actions.items():
         spec = _build_action_spec(name, fn)
@@ -64,6 +68,7 @@ def build_action_specs_from_registry(
 
 
 def _build_action_spec(name: str, fn: Any) -> ActionSpec:
+    """Build a single action spec from a callable signature."""
     sig = inspect.signature(fn)
     params: list[ActionParam] = []
     model_types: list[type] = []
@@ -90,11 +95,13 @@ def _build_action_spec(name: str, fn: Any) -> ActionSpec:
 
 
 def _is_injected_param(annotation: Any) -> bool:
+    """Return True for annotations that represent DI/context injections."""
     _, dep_key = ContainerHelper.get_type_from_annotation(annotation)
     return dep_key.metadata.key != "instance"
 
 
 def _is_optional(annotation: Any) -> bool:
+    """Return True if the annotation includes None in a union."""
     origin = get_origin(annotation)
     if origin is None:
         return False
@@ -107,6 +114,7 @@ def _is_optional(annotation: Any) -> bool:
 
 
 def _union_type() -> Any:
+    """Return typing.Union in a version-safe way."""
     try:
         from typing import Union
     except Exception:
@@ -115,6 +123,7 @@ def _union_type() -> Any:
 
 
 def _unwrap_annotated(annotation: Any) -> Any:
+    """Strip typing.Annotated wrappers when present."""
     origin = get_origin(annotation)
     if origin is Annotated:
         args = get_args(annotation)
@@ -124,6 +133,7 @@ def _unwrap_annotated(annotation: Any) -> Any:
 
 
 def _py_to_ts(annotation: Any) -> str:
+    """Convert a Python type annotation to a TypeScript type string."""
     annotation = _unwrap_annotated(annotation)
     origin = get_origin(annotation)
     if origin is not None:
@@ -159,6 +169,7 @@ def _py_to_ts(annotation: Any) -> str:
 
 
 def _is_model_type(tp: Any) -> bool:
+    """Determine whether a type should be emitted as a TS interface."""
     if inspect.isclass(tp) and is_dataclass(tp):
         return True
     if inspect.isclass(tp) and issubclass(tp, BaseModel):
@@ -169,6 +180,7 @@ def _is_model_type(tp: Any) -> bool:
 
 
 def _collect_model_types(annotation: Any, out: list[type]) -> None:
+    """Collect nested model types referenced by an annotation."""
     annotation = _unwrap_annotated(annotation)
     origin = get_origin(annotation)
     if origin in {list, tuple, dict, set}:
@@ -188,6 +200,7 @@ def _collect_model_types(annotation: Any, out: list[type]) -> None:
 
 
 def _collect_models(specs: Iterable[ActionSpec]) -> list[type]:
+    """Deduplicate model types referenced across action specs."""
     models: dict[str, type] = {}
     for spec in specs:
         for model in spec.model_types:
@@ -196,6 +209,7 @@ def _collect_models(specs: Iterable[ActionSpec]) -> list[type]:
 
 
 def _render_model_interfaces(models: Iterable[type]) -> str:
+    """Render TypeScript interfaces for Python model types."""
     blocks: list[str] = []
     for model in models:
         annotations = getattr(model, "__annotations__", {})
@@ -212,6 +226,7 @@ def _render_model_interfaces(models: Iterable[type]) -> str:
 
 
 def _render_model_interfaces_from_schema(models: list[dict[str, Any]]) -> str:
+    """Render TypeScript interfaces from a schema model list."""
     blocks: list[str] = []
     for model in models:
         name = model.get("name")
@@ -231,6 +246,7 @@ def _render_model_interfaces_from_schema(models: list[dict[str, Any]]) -> str:
 
 
 def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]:
+    """Build the JSON schema representation from action specs."""
     actions_schema: list[dict[str, Any]] = []
     for spec in specs:
         actions_schema.append(
@@ -268,16 +284,19 @@ def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]
 
 
 def build_actions_schema(modules: Iterable[type], *, endpoint: str = "/_actions") -> dict[str, Any]:
+    """Build the actions schema from module metadata."""
     return _schema_from_specs(build_action_specs(modules), endpoint)
 
 
 def build_actions_schema_from_registry(
     actions: dict[str, Callable[..., Any]], *, endpoint: str = "/_actions"
 ) -> dict[str, Any]:
+    """Build the actions schema from an in-memory registry."""
     return _schema_from_specs(build_action_specs_from_registry(actions), endpoint)
 
 
 def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
+    """Generate a TypeScript actions client from schema JSON."""
     actions = schema.get("actions") or []
     endpoint = schema.get("endpoint", "/_actions")
     if not actions:
@@ -361,11 +380,13 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
 def generate_actions_client_code(
     modules: Iterable[type], *, endpoint: str = "/_actions"
 ) -> str:
+    """Generate a TypeScript actions client from module metadata."""
     schema = build_actions_schema(modules, endpoint=endpoint)
     return generate_actions_client_code_from_schema(schema)
 
 
 def codegen_actions_from_url(url: str, output: str) -> None:
+    """Write a TypeScript actions client from a schema URL."""
     with urllib.request.urlopen(url) as response:
         schema = json.loads(response.read().decode("utf-8"))
     _ensure_parent(output)
@@ -380,6 +401,7 @@ def write_actions_client_file(
     *,
     endpoint: str = "/_actions",
 ) -> None:
+    """Write a TypeScript actions client file from module metadata."""
     _ensure_parent(output)
     code = generate_actions_client_code(modules, endpoint=endpoint)
     with open(output, "w", encoding="utf-8") as f:
@@ -387,6 +409,7 @@ def write_actions_client_file(
 
 
 def _ensure_parent(output: str) -> None:
+    """Ensure the output directory exists."""
     path = os.path.abspath(output)
     parent = os.path.dirname(path)
     if parent:
