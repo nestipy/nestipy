@@ -3,6 +3,12 @@
 from .config import WebConfig
 from .compiler import compile_app, build_routes, CompilerError
 from .ui import component, h, external, js, props, Fragment, Slot
+from .actions import ActionsModule, ActionsOption, action
+from .actions_client import (
+    build_action_specs,
+    generate_actions_client_code,
+    write_actions_client_file,
+)
 
 __all__ = [
     "WebConfig",
@@ -16,6 +22,12 @@ __all__ = [
     "props",
     "Fragment",
     "Slot",
+    "ActionsModule",
+    "ActionsOption",
+    "action",
+    "build_action_specs",
+    "generate_actions_client_code",
+    "write_actions_client_file",
 ]
 
 

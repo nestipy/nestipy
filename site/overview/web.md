@@ -8,6 +8,7 @@ Nestipy Web lets you write frontend components in Python and compile them to TSX
 app/
   page.py              # /
   layout.py            # root layout
+  actions.py           # RPC actions (optional)
   users/
     page.py            # /users
     [id]/
@@ -89,10 +90,16 @@ def Card(props: CardProps):
 
 ## Commands (nestipy-cli)
 
+- `nestipy web:init` — create `app/` scaffold and initial Vite output
+- `nestipy web:init --no-build` — scaffold `app/` without generating `web/`
 - `nestipy web:build` — compile Python UI into `web/`
 - `nestipy web:dev` — watch `app/` and rebuild on changes
+- `nestipy web:dev --vite` — also start Vite dev server (HMR)
+- `nestipy web:dev --vite --install` — install frontend deps before starting Vite
 - `nestipy web:codegen --output web/src/api/client.ts --lang ts` — generate typed clients
 - `nestipy web:build --spec http://localhost:8001/_router/spec --lang ts` — build + generate client into `web/src/api/client.ts`
+- `nestipy web:actions --output web/src/actions.client.ts` — generate typed action wrappers
+- `nestipy web:build --actions` — build and generate `web/src/actions.client.ts`
 
 ## Vite Scaffold
 
@@ -103,6 +110,62 @@ If `web/` is empty, the build generates:
 - `web/tsconfig.json`
 - `web/src/main.tsx`
 - `web/src/routes.tsx`
+- `web/src/actions.ts` (RPC action client helper)
+- `web/src/index.css` + Tailwind config
+
+## Server Actions (RPC)
+
+Nestipy Web supports a Next.js-like RPC action flow using a single endpoint.
+
+### Backend
+
+```py
+from nestipy.common import Module, Injectable
+from nestipy.web import ActionsModule, ActionsOption, action
+
+@Injectable()
+class UserActions:
+    @action()
+    async def hello(self, name: str) -> str:
+        return f"Hello, {name}!"
+
+@Module(
+    imports=[ActionsModule.for_root(ActionsOption(path="/_actions"))],
+    providers=[UserActions],
+)
+class AppModule:
+    pass
+```
+
+### Frontend (Vite)
+
+```ts
+import { createActionClient } from './actions';
+import { createActions } from './actions.client';
+
+const callAction = createActionClient();
+
+const res = await callAction<string>('UserActions.hello', ['Nestipy']);
+if (res.ok) {
+  console.log(res.data);
+}
+
+const actions = createActions();
+const res2 = await actions.UserActions.hello('Nestipy');
+if (res2.ok) {
+  console.log(res2.data);
+}
+```
+
+## Hot Reload
+
+Run both the Python compiler and Vite dev server:
+
+```bash
+nestipy web:dev --vite
+```
+
+This watches `app/**/*.py`, rebuilds TSX on change, and Vite handles HMR.
 
 ## Notes
 

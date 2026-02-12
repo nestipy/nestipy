@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 import time
+import subprocess
 from typing import Iterable, Type
 
 from nestipy.web.config import WebConfig
 from nestipy.web.compiler import compile_app
 from nestipy.web.client import codegen_client, codegen_client_from_url
+from nestipy.web.actions_client import write_actions_client_file
 
 
 def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
@@ -25,6 +27,20 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             parsed["clean"] = True
         elif arg == "--watch":
             parsed["watch"] = True
+        elif arg == "--vite":
+            parsed["vite"] = True
+        elif arg == "--install":
+            parsed["install"] = True
+        elif arg == "--no-build":
+            parsed["no_build"] = True
+        elif arg == "--actions":
+            parsed["actions"] = True
+        elif arg == "--actions-output" and i + 1 < len(args_list):
+            parsed["actions_output"] = args_list[i + 1]
+            i += 1
+        elif arg == "--actions-endpoint" and i + 1 < len(args_list):
+            parsed["actions_endpoint"] = args_list[i + 1]
+            i += 1
         elif arg == "--target" and i + 1 < len(args_list):
             parsed["target"] = args_list[i + 1]
             i += 1
@@ -47,7 +63,7 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
     return parsed
 
 
-def build(args: Iterable[str]) -> None:
+def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
     parsed = _parse_args(args)
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
@@ -57,9 +73,82 @@ def build(args: Iterable[str]) -> None:
     )
     compile_app(config)
     _maybe_codegen_client(parsed, config)
+    _maybe_codegen_actions(parsed, config, modules)
 
 
-def dev(args: Iterable[str]) -> None:
+def init(args: Iterable[str]) -> None:
+    parsed = _parse_args(args)
+    config = WebConfig(
+        app_dir=str(parsed.get("app_dir", "app")),
+        out_dir=str(parsed.get("out_dir", "web")),
+        target=str(parsed.get("target", "vite")),
+        clean=bool(parsed.get("clean", False)),
+    )
+    app_dir = config.resolve_app_dir()
+    app_dir.mkdir(parents=True, exist_ok=True)
+
+    page_file = app_dir / "page.py"
+    if not page_file.exists():
+        page_file.write_text(
+            "\n".join(
+                [
+                    "from nestipy.web import component, h",
+                    "",
+                    "@component",
+                    "def Page():",
+                    "    return h.div(",
+                    "        h.h1(\"Nestipy Web\"),",
+                    "        h.p(\"Edit app/page.py to get started.\"),",
+                    "        class_name=\"p-8 space-y-2\",",
+                    "    )",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    layout_file = app_dir / "layout.py"
+    if not layout_file.exists():
+        layout_file.write_text(
+            "\n".join(
+                [
+                    "from nestipy.web import component, h, Slot",
+                    "",
+                    "@component",
+                    "def Layout():",
+                    "    return h.div(",
+                    "        h.header(\"Nestipy Web\", class_name=\"text-xl font-semibold\"),",
+                    "        h(Slot),",
+                    "        class_name=\"min-h-screen bg-slate-950 text-white p-8 space-y-6\",",
+                    "    )",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    actions_file = app_dir / "actions.py"
+    if not actions_file.exists():
+        actions_file.write_text(
+            "\n".join(
+                [
+                    "from nestipy.web import action",
+                    "",
+                    "class DemoActions:",
+                    "    @action()",
+                    "    async def hello(self, name: str = \"world\") -> str:",
+                    "        return f\"Hello, {name}!\"",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    if not parsed.get("no_build"):
+        compile_app(config)
+
+
+def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     parsed = _parse_args(args)
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
@@ -69,6 +158,7 @@ def dev(args: Iterable[str]) -> None:
     )
     app_dir = config.resolve_app_dir()
     last_state: dict[str, float] = {}
+    vite_process: subprocess.Popen[str] | None = None
 
     def snapshot() -> dict[str, float]:
         state: dict[str, float] = {}
@@ -82,6 +172,11 @@ def dev(args: Iterable[str]) -> None:
     last_state = snapshot()
     compile_app(config)
     _maybe_codegen_client(parsed, config)
+    _maybe_codegen_actions(parsed, config, modules)
+    if parsed.get("vite"):
+        if parsed.get("install"):
+            _install_deps(config)
+        vite_process = _start_vite(config)
     try:
         while True:
             time.sleep(0.5)
@@ -89,8 +184,11 @@ def dev(args: Iterable[str]) -> None:
             if current != last_state:
                 compile_app(config)
                 _maybe_codegen_client(parsed, config)
+                _maybe_codegen_actions(parsed, config, modules)
                 last_state = current
     except KeyboardInterrupt:
+        if vite_process is not None:
+            vite_process.terminate()
         return
 
 
@@ -116,12 +214,16 @@ def codegen(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
 
 def run_command(command_name: str, args: Iterable[str], modules: list[Type] | None = None) -> None:
-    if command_name == "web:build":
-        build(args)
+    if command_name == "web:init":
+        init(args)
+    elif command_name == "web:build":
+        build(args, modules=modules)
     elif command_name == "web:dev":
-        dev(args)
+        dev(args, modules=modules)
     elif command_name == "web:codegen":
         codegen(args, modules=modules)
+    elif command_name == "web:actions":
+        codegen_actions(args, modules=modules)
     else:
         raise RuntimeError(f"Unknown web command: {command_name}")
 
@@ -137,3 +239,60 @@ def _maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> N
         output = str(default_path)
     class_name = str(parsed.get("class_name", "ApiClient"))
     codegen_client_from_url(str(spec_url), str(output), language=language, class_name=class_name)
+
+
+def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> None:
+    parsed = _parse_args(args)
+    if modules is None:
+        raise RuntimeError("Modules are required to generate actions client")
+    output = parsed.get("actions_output") or parsed.get("output")
+    if not output:
+        output = "web/src/actions.client.ts"
+    endpoint = str(parsed.get("actions_endpoint", "/_actions"))
+    write_actions_client_file(modules, str(output), endpoint=endpoint)
+
+
+def _maybe_codegen_actions(
+    parsed: dict[str, str | bool], config: WebConfig, modules: list[Type] | None
+) -> None:
+    if not parsed.get("actions"):
+        return
+    if modules is None:
+        raise RuntimeError("Modules are required to generate actions client")
+    output = parsed.get("actions_output")
+    if not output:
+        output = str(config.resolve_src_dir() / "actions.client.ts")
+    endpoint = str(parsed.get("actions_endpoint", "/_actions"))
+    write_actions_client_file(modules, str(output), endpoint=endpoint)
+
+
+def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
+    out_dir = config.resolve_out_dir()
+    manager = _select_package_manager(out_dir)
+    if manager == "pnpm":
+        cmd = ["pnpm", "dev"]
+    elif manager == "yarn":
+        cmd = ["yarn", "dev"]
+    else:
+        cmd = ["npm", "run", "dev"]
+    return subprocess.Popen(cmd, cwd=str(out_dir))
+
+
+def _install_deps(config: WebConfig) -> None:
+    out_dir = config.resolve_out_dir()
+    manager = _select_package_manager(out_dir)
+    if manager == "pnpm":
+        cmd = ["pnpm", "install"]
+    elif manager == "yarn":
+        cmd = ["yarn", "install"]
+    else:
+        cmd = ["npm", "install"]
+    subprocess.run(cmd, cwd=str(out_dir), check=False)
+
+
+def _select_package_manager(out_dir) -> str:
+    if (out_dir / "pnpm-lock.yaml").exists():
+        return "pnpm"
+    if (out_dir / "yarn.lock").exists():
+        return "yarn"
+    return "npm"

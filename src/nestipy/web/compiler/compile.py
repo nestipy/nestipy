@@ -130,6 +130,7 @@ def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = 
             "import ReactDOM from 'react-dom/client';",
             "import { RouterProvider } from 'react-router-dom';",
             "import { router } from './routes';",
+            "import './index.css';",
             "",
             "ReactDOM.createRoot(document.getElementById('root')!).render(",
             "  <React.StrictMode>",
@@ -190,6 +191,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                         "@types/react": "^18.2.70",
                         "@types/react-dom": "^18.2.24",
                         "@vitejs/plugin-react": "^4.3.1",
+                        "autoprefixer": "^10.4.19",
+                        "postcss": "^8.4.41",
+                        "tailwindcss": "^3.4.10",
                         "typescript": "^5.6.2",
                         "vite": "^5.4.1",
                     },
@@ -267,6 +271,107 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
     if not vite_env.exists():
         vite_env.write_text(
             "/// <reference types=\"vite/client\" />\n",
+            encoding="utf-8",
+        )
+
+    actions_client = src_dir / "actions.ts"
+    if not actions_client.exists():
+        actions_client.write_text(
+            "\n".join(
+                [
+                    "export type ActionPayload = {",
+                    "  action: string;",
+                    "  args?: unknown[];",
+                    "  kwargs?: Record<string, unknown>;",
+                    "};",
+                    "",
+                    "export type ActionError = {",
+                    "  message: string;",
+                    "  type: string;",
+                    "};",
+                    "",
+                    "export type ActionResponse<T> =",
+                    "  | { ok: true; data: T }",
+                    "  | { ok: false; error: ActionError };",
+                    "",
+                    "export type ActionClientOptions = {",
+                    "  endpoint?: string;",
+                    "  baseUrl?: string;",
+                    "  fetcher?: typeof fetch;",
+                    "};",
+                    "",
+                    "export function createActionClient(options: ActionClientOptions = {}) {",
+                    "  const endpoint = options.endpoint ?? '/_actions';",
+                    "  const baseUrl = options.baseUrl ?? '';",
+                    "  const fetcher = options.fetcher ?? fetch;",
+                    "  return async function callAction<T>(",
+                    "    action: string,",
+                    "    args: unknown[] = [],",
+                    "    kwargs: Record<string, unknown> = {},",
+                    "    init?: RequestInit,",
+                    "  ): Promise<ActionResponse<T>> {",
+                    "    const payload: ActionPayload = { action, args, kwargs };",
+                    "    const response = await fetcher(baseUrl + endpoint, {",
+                    "      method: 'POST',",
+                    "      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },",
+                    "      body: JSON.stringify(payload),",
+                    "      ...init,",
+                    "    });",
+                    "    return (await response.json()) as ActionResponse<T>;",
+                    "  };",
+                    "}",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    index_css = src_dir / "index.css"
+    if not index_css.exists():
+        index_css.write_text(
+            "\n".join(
+                [
+                    "@tailwind base;",
+                    "@tailwind components;",
+                    "@tailwind utilities;",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    tailwind_config = out_dir / "tailwind.config.cjs"
+    if not tailwind_config.exists():
+        tailwind_config.write_text(
+            "\n".join(
+                [
+                    "module.exports = {",
+                    "  content: ['./index.html', './src/**/*.{ts,tsx}'],",
+                    "  theme: {",
+                    "    extend: {},",
+                    "  },",
+                    "  plugins: [],",
+                    "};",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    postcss_config = out_dir / "postcss.config.cjs"
+    if not postcss_config.exists():
+        postcss_config.write_text(
+            "\n".join(
+                [
+                    "module.exports = {",
+                    "  plugins: {",
+                    "    tailwindcss: {},",
+                    "    autoprefixer: {},",
+                    "  },",
+                    "};",
+                    "",
+                ]
+            ),
             encoding="utf-8",
         )
 
