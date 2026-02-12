@@ -34,8 +34,10 @@ from nestipy.web import component, h
 
 @component
 def Page():
-    return h("div", {"className": "p-6"}, "Hello from Nestipy Web")
+    return h.div("Hello from Nestipy Web", class_name="p-6")
 ```
+
+You can use any HTML tag as `h.tag`, and `class_name` is converted to `className`.
 
 ## Root Layout
 
@@ -46,9 +48,10 @@ from nestipy.web import component, h, Slot
 
 @component
 def Layout():
-    return h("div", {"className": "min-h-screen bg-slate-950 text-white"},
-        h("header", {}, "My App"),
+    return h.div(
+        h.header("My App"),
         h(Slot),
+        class_name="min-h-screen bg-slate-950 text-white",
     )
 ```
 
@@ -63,9 +66,25 @@ Button = external("shadcn/ui/button", "Button")
 
 @component
 def Page():
-    return h("div", {"className": "p-6"},
-        Button({"variant": "outline"}, "Save")
+    return h.div(
+        Button("Save", variant="outline"),
+        class_name="p-6",
     )
+```
+
+## Props (Typed)
+
+```py
+from nestipy.web import component, props, h, js
+
+@props
+class CardProps:
+    title: str
+    active: bool = False
+
+@component
+def Card(props: CardProps):
+    return h.div(h.h2(js("props.title")), class_name="card")
 ```
 
 ## Commands (nestipy-cli)

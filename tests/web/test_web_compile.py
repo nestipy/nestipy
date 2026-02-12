@@ -22,7 +22,7 @@ from nestipy.web import component, h
 
 @component
 def Page():
-    return h("div", {"className": "p-4"}, "Hello")
+    return h.div("Hello", class_name="p-4")
 """.strip(),
     )
 
@@ -51,8 +51,9 @@ from nestipy.web import component, h, Slot
 
 @component
 def Layout():
-    return h("div", {"className": "layout"},
-        h("main", {}, h(Slot)),
+    return h.div(
+        h.main(h(Slot)),
+        class_name="layout",
     )
 """.strip(),
     )
@@ -64,7 +65,7 @@ from nestipy.web import component, h
 
 @component
 def Page():
-    return h("section", {}, "Content")
+    return h.section("Content")
 """.strip(),
     )
 
@@ -84,24 +85,67 @@ def test_compile_with_nested_component(tmp_path: Path) -> None:
 
     _write(
         app_dir / "page.py",
-        \"\"\"
+        """
 from nestipy.web import component, h
 
 @component
 def Header():
-    return h(\"h1\", {\"className\": \"text-lg\"}, \"Title\")
+    return h.h1("Title", class_name="text-lg")
 
 @component
 def Page():
-    return h(\"div\", {}, h(Header))
-\"\"\".strip(),
+    return h.div(h(Header))
+""".strip(),
     )
 
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / \"src\" / \"pages\" / \"index.tsx\").read_text(
-        encoding=\"utf-8\"
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
     )
-    assert \"function Header\" in page_tsx
-    assert \"<Header\" in page_tsx
+    assert "function Header" in page_tsx
+    assert "<Header" in page_tsx
+
+
+def test_compile_with_props_and_import(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "components" / "card.py",
+        """
+from nestipy.web import component, props, h, js
+
+@props
+class CardProps:
+    title: str
+    active: bool = False
+
+@component
+def Card(props: CardProps):
+    return h.div(h.h2(js("props.title")), class_name="card")
+""".strip(),
+    )
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+from components.card import Card
+
+@component
+def Page():
+    return h.div(Card(title="Hello"))
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "interface CardProps" in page_tsx
+    assert "function Card(props: CardProps)" in page_tsx
+    assert "<Card" in page_tsx

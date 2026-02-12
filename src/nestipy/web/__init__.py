@@ -3,7 +3,7 @@
 from .config import WebConfig
 from .compiler import compile_app, build_routes, CompilerError
 from .client import codegen_client, codegen_client_from_url
-from .ui import component, h, external, js, Fragment, Slot
+from .ui import component, h, external, js, props, Fragment, Slot
 
 __all__ = [
     "WebConfig",
@@ -16,6 +16,7 @@ __all__ = [
     "h",
     "external",
     "js",
+    "props",
     "Fragment",
     "Slot",
 ]

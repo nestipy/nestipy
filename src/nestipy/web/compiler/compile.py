@@ -6,8 +6,16 @@ from pathlib import Path
 from typing import Any
 
 from nestipy.web.config import WebConfig
-from nestipy.web.ui import ExternalComponent, JSExpr, Node, Fragment, Slot, LocalComponent, COMPONENT_NAME_ATTR
-from .parser import parse_component_file, ParsedFile
+from nestipy.web.ui import (
+    ExternalComponent,
+    JSExpr,
+    Node,
+    Fragment,
+    Slot,
+    LocalComponent,
+    COMPONENT_NAME_ATTR,
+)
+from .parser import parse_component_file, ParsedFile, PropsSpec
 from .errors import CompilerError
 
 
@@ -37,11 +45,11 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     pages_dir.mkdir(parents=True, exist_ok=True)
 
     routes = discover_routes(app_dir, pages_dir)
-    root_layout = load_layout(app_dir)
+    root_layout = load_layout(app_dir, app_dir)
 
     for info in routes:
-        parsed_page = render_page_tree(info.source)
-        tsx = build_page_tsx(parsed_page, root_layout=root_layout)
+        parsed_page = render_page_tree(info.source, app_dir)
+        tsx = build_page_tsx(parsed_page, root_layout=root_layout, app_dir=app_dir)
         info.output.parent.mkdir(parents=True, exist_ok=True)
         info.output.write_text(tsx, encoding="utf-8")
 
@@ -282,44 +290,69 @@ def output_for_relative(rel: Path, pages_dir: Path) -> tuple[Path, str]:
     return out_path, import_path
 
 
-def load_layout(app_dir: Path) -> ParsedFile | None:
+def load_layout(app_dir: Path, root: Path) -> ParsedFile | None:
     layout_file = app_dir / "layout.py"
     if not layout_file.exists():
         return None
-    return render_page_tree(layout_file, target_names=("Layout", "layout"))
+    return render_page_tree(layout_file, root, target_names=("Layout", "layout"))
 
 
 def render_page_tree(
-    source: Path, target_names: tuple[str, ...] = ("Page", "page", "default")
+    source: Path,
+    root: Path,
+    target_names: tuple[str, ...] = ("Page", "page", "default"),
 ) -> ParsedFile:
-    return parse_component_file(source, target_names=target_names)
+    return parse_component_file(source, target_names=target_names, app_dir=root)
 
 
-def build_page_tsx(page: ParsedFile, root_layout: ParsedFile | None = None) -> str:
+def build_page_tsx(
+    page: ParsedFile, root_layout: ParsedFile | None = None, app_dir: Path | None = None
+) -> str:
     layout_tsx = ""
     layout_wrap_start = ""
     layout_wrap_end = ""
-    layout_components: dict[str, Node] = {}
+
+    seen_files: set[Path] = set()
+    page_data = collect_dependencies(page, app_dir=app_dir, seen=seen_files)
+    layout_data = None
+
     if root_layout is not None:
-        layout_components = root_layout.components
-        layout_tree = layout_components.get(root_layout.primary)
+        layout_data = collect_dependencies(root_layout, app_dir=app_dir, seen=seen_files)
+        layout_tree = layout_data["components"].get(root_layout.primary)
         if layout_tree is None:
             raise CompilerError("Root layout component not found")
         layout_tsx = build_layout_tsx(layout_tree)
         layout_wrap_start = "<RootLayout>"
         layout_wrap_end = "</RootLayout>"
 
-    page_tree = page.components.get(page.primary)
+    all_components = dict(page_data["components"])
+    all_props = dict(page_data["props"])
+    all_component_props = dict(page_data["component_props"])
+    aliases = list(page_data["aliases"])
+
+    if layout_data is not None:
+        for name, tree in layout_data["components"].items():
+            all_components.setdefault(name, tree)
+        for name, spec in layout_data["props"].items():
+            all_props.setdefault(name, spec)
+        for name, prop_name in layout_data["component_props"].items():
+            all_component_props.setdefault(name, prop_name)
+        aliases.extend(layout_data["aliases"])
+
+    page_tree = all_components.get(page.primary)
     if page_tree is None:
         raise CompilerError("Page component not found")
 
-    imports = collect_imports(page.components, layout_components)
+    imports = collect_imports(all_components)
+    props_interfaces = render_props_interfaces(all_props)
     component_defs = build_component_defs(
-        page.components,
-        root_layout=layout_components,
+        all_components,
+        component_props=all_component_props,
+        root_layout=layout_data["components"] if layout_data else None,
         page_primary=page.primary,
         layout_primary=root_layout.primary if root_layout else None,
     )
+    alias_defs = render_aliases(aliases, all_components, all_component_props)
 
     body = render_node(page_tree)
     if root_layout is not None:
@@ -340,8 +373,10 @@ def build_page_tsx(page: ParsedFile, root_layout: ParsedFile | None = None) -> s
             [
                 imports_block,
                 "",
+                props_interfaces,
                 layout_tsx,
                 component_defs,
+                alias_defs,
                 "\n".join(component),
             ]
         )
@@ -384,9 +419,41 @@ def render_imports(
     return "\n".join(lines)
 
 
-def collect_imports(
-    page_components: dict[str, Node], layout_components: dict[str, Node] | None = None
-) -> dict[str, dict[str, set[str]]]:
+def render_props_interfaces(props: dict[str, PropsSpec]) -> str:
+    if not props:
+        return ""
+    blocks: list[str] = []
+    for spec in props.values():
+        blocks.append(f"export interface {spec.name} {{")
+        for field in spec.fields:
+            optional = "?" if field.optional else ""
+            blocks.append(f"  {field.name}{optional}: {field.ts_type};")
+        blocks.append("}")
+        blocks.append("")
+    return "\n".join(blocks)
+
+
+def render_aliases(
+    aliases: list[tuple[str, str]],
+    components: dict[str, Node],
+    component_props: dict[str, str],
+) -> str:
+    lines: list[str] = []
+    for alias, original in aliases:
+        if alias == original:
+            continue
+        if original not in components:
+            continue
+        if component_props.get(original):
+            lines.append(f"const {alias} = {original};")
+        else:
+            lines.append(f"const {alias} = {original};")
+    if lines:
+        lines.append("")
+    return "\n".join(lines)
+
+
+def collect_imports(components: dict[str, Node]) -> dict[str, dict[str, set[str]]]:
     imports: dict[str, dict[str, set[str]]] = {}
 
     def add_import(component: ExternalComponent):
@@ -406,17 +473,55 @@ def collect_imports(
             for child in node:
                 visit(child)
 
-    for tree in page_components.values():
+    for tree in components.values():
         visit(tree)
-    if layout_components:
-        for tree in layout_components.values():
-            visit(tree)
     return imports
+
+
+def collect_dependencies(
+    parsed: ParsedFile,
+    *,
+    app_dir: Path | None,
+    seen: set[Path],
+) -> dict[str, Any]:
+    components = dict(parsed.components)
+    props = dict(parsed.props)
+    component_props = dict(parsed.component_props)
+    aliases: list[tuple[str, str]] = []
+
+    for imp in parsed.imports:
+        if not imp.path:
+            continue
+        dep_path = imp.path.resolve()
+        if dep_path in seen:
+            if imp.alias != imp.name:
+                aliases.append((imp.alias, imp.name))
+            continue
+        seen.add(dep_path)
+        dep = parse_component_file(dep_path, target_names=(), app_dir=app_dir or dep_path.parent)
+        dep_data = collect_dependencies(dep, app_dir=app_dir, seen=seen)
+        for name, tree in dep_data["components"].items():
+            components.setdefault(name, tree)
+        for name, spec in dep_data["props"].items():
+            props.setdefault(name, spec)
+        for name, spec in dep_data["component_props"].items():
+            component_props.setdefault(name, spec)
+        aliases.extend(dep_data["aliases"])
+        if imp.alias != imp.name:
+            aliases.append((imp.alias, imp.name))
+
+    return {
+        "components": components,
+        "props": props,
+        "component_props": component_props,
+        "aliases": aliases,
+    }
 
 
 def build_component_defs(
     page_components: dict[str, Node],
     *,
+    component_props: dict[str, str],
     root_layout: dict[str, Node] | None = None,
     page_primary: str,
     layout_primary: str | None = None,
@@ -429,7 +534,7 @@ def build_component_defs(
         if name in seen:
             continue
         seen.add(name)
-        blocks.append(_component_block(name, tree))
+        blocks.append(_component_block(name, tree, component_props.get(name)))
     if root_layout:
         for name, tree in root_layout.items():
             if layout_primary and name == layout_primary:
@@ -437,15 +542,18 @@ def build_component_defs(
             if name in seen:
                 continue
             seen.add(name)
-            blocks.append(_component_block(name, tree))
+            blocks.append(_component_block(name, tree, component_props.get(name)))
     return "\n".join(blocks) + ("\n" if blocks else "")
 
 
-def _component_block(name: str, tree: Node) -> str:
+def _component_block(name: str, tree: Node, props_type: str | None = None) -> str:
     body = render_node(tree)
+    signature = (
+        f"function {name}()" if not props_type else f"function {name}(props: {props_type})"
+    )
     return "\n".join(
         [
-            f"function {name}() {{",
+            f"{signature} {{",
             "  return (",
             indent(body, 4),
             "  );",
@@ -495,7 +603,13 @@ def render_tag(tag: Any) -> str:
 
 def render_props(props: dict[str, Any]) -> str:
     rendered = []
+    spreads = props.get("__spread__") if isinstance(props, dict) else None
+    if spreads:
+        for spread in spreads:
+            rendered.append(f"{{...{spread}}}")
     for key, value in props.items():
+        if key == "__spread__":
+            continue
         result = render_prop(key, value)
         if result:
             rendered.append(result)
