@@ -47,6 +47,10 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             i += 1
         elif arg == "--no-build":
             parsed["no_build"] = True
+        elif arg in {"--dev", "-D"}:
+            parsed["dev"] = True
+        elif arg == "--peer":
+            parsed["peer"] = True
         elif arg == "--actions":
             parsed["actions"] = True
         elif arg == "--actions-output" and i + 1 < len(args_list):
@@ -75,6 +79,55 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             i += 1
         i += 1
     return parsed
+
+
+def _collect_packages(args: Iterable[str]) -> list[str]:
+    """Extract non-flag arguments as package specs."""
+    args_list = list(args)
+    packages: list[str] = []
+    skip_next = False
+    flags_with_values = {
+        "--app",
+        "--app-dir",
+        "--out",
+        "--out-dir",
+        "--backend",
+        "--backend-cwd",
+        "--proxy",
+        "--proxy-paths",
+        "--actions-output",
+        "--actions-endpoint",
+        "--target",
+        "--spec",
+        "--output",
+        "--lang",
+        "--class",
+        "--prefix",
+    }
+    flags_bool = {
+        "--clean",
+        "--watch",
+        "--vite",
+        "--install",
+        "--no-build",
+        "--actions",
+        "--dev",
+        "-D",
+        "--peer",
+    }
+    for arg in args_list:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg in flags_with_values:
+            skip_next = True
+            continue
+        if arg in flags_bool:
+            continue
+        if arg.startswith("--"):
+            continue
+        packages.append(arg)
+    return packages
 
 
 def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
@@ -271,6 +324,10 @@ def run_command(command_name: str, args: Iterable[str], modules: list[Type] | No
         build(args, modules=modules)
     elif command_name == "web:dev":
         dev(args, modules=modules)
+    elif command_name == "web:install":
+        install(args)
+    elif command_name == "web:add":
+        add(args)
     elif command_name == "web:codegen":
         codegen(args, modules=modules)
     elif command_name == "web:actions":
@@ -350,6 +407,61 @@ def _start_backend(command: str, cwd: str | None = None) -> subprocess.Popen[str
     return subprocess.Popen(cmd, cwd=cwd)
 
 
+def install(args: Iterable[str]) -> None:
+    """Install frontend dependencies using the detected package manager."""
+    parsed = _parse_args(args)
+    config = WebConfig(
+        app_dir=str(parsed.get("app_dir", "app")),
+        out_dir=str(parsed.get("out_dir", "web")),
+        target=str(parsed.get("target", "vite")),
+        clean=bool(parsed.get("clean", False)),
+    )
+    if not (config.resolve_out_dir() / "package.json").exists():
+        from nestipy.web.compiler import ensure_vite_files
+
+        ensure_vite_files(config)
+    _install_deps(config)
+
+
+def add(args: Iterable[str]) -> None:
+    """Add frontend dependencies to the Vite project."""
+    parsed = _parse_args(args)
+    packages = _collect_packages(args)
+    if not packages:
+        raise RuntimeError("Provide at least one package to add.")
+    config = WebConfig(
+        app_dir=str(parsed.get("app_dir", "app")),
+        out_dir=str(parsed.get("out_dir", "web")),
+        target=str(parsed.get("target", "vite")),
+        clean=bool(parsed.get("clean", False)),
+    )
+    out_dir = config.resolve_out_dir()
+    if not (out_dir / "package.json").exists():
+        from nestipy.web.compiler import ensure_vite_files
+
+        ensure_vite_files(config)
+    if parsed.get("peer"):
+        _add_peer_dependencies(out_dir, packages)
+        _install_deps(config)
+        return
+
+    manager = _select_package_manager(out_dir)
+    if manager == "pnpm":
+        cmd = ["pnpm", "add"]
+        if parsed.get("dev"):
+            cmd.append("-D")
+    elif manager == "yarn":
+        cmd = ["yarn", "add"]
+        if parsed.get("dev"):
+            cmd.append("--dev")
+    else:
+        cmd = ["npm", "install"]
+        if parsed.get("dev"):
+            cmd.append("-D")
+    cmd.extend(packages)
+    subprocess.run(cmd, cwd=str(out_dir), check=False)
+
+
 def _install_deps(config: WebConfig) -> None:
     """Install frontend dependencies with the selected package manager."""
     out_dir = config.resolve_out_dir()
@@ -370,3 +482,29 @@ def _select_package_manager(out_dir) -> str:
     if (out_dir / "yarn.lock").exists():
         return "yarn"
     return "npm"
+
+
+def _add_peer_dependencies(out_dir, packages: list[str]) -> None:
+    """Add peerDependencies entries to the package.json."""
+    package_json = out_dir / "package.json"
+    if not package_json.exists():
+        raise RuntimeError("package.json not found in web output directory.")
+    data = json.loads(package_json.read_text(encoding="utf-8"))
+    peers = data.setdefault("peerDependencies", {})
+    for spec in packages:
+        name, version = _split_package_spec(spec)
+        peers[name] = version
+    package_json.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _split_package_spec(spec: str) -> tuple[str, str]:
+    """Split a package spec into name and version (defaults to latest)."""
+    if spec.startswith("@"):
+        if "@" in spec[1:]:
+            name, version = spec.rsplit("@", 1)
+            return name, version or "latest"
+        return spec, "latest"
+    if "@" in spec:
+        name, version = spec.split("@", 1)
+        return name, version or "latest"
+    return spec, "latest"

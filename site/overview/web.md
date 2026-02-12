@@ -128,6 +128,10 @@ def Card(props: CardProps):
 - `nestipy run web:dev --vite --proxy http://127.0.0.1:8001` — start Vite with backend proxy
 - `nestipy run web:dev --vite --backend "python main.py"` — start backend + frontend together
 - `nestipy run web:dev --vite --backend "python main.py" --backend-cwd ./backend` — backend in another folder
+- `nestipy run web:install` — install frontend dependencies
+- `nestipy run web:add react` — add a frontend dependency
+- `nestipy run web:add -D tailwindcss` — add a dev dependency
+- `nestipy run web:add --peer react-dom` — add a peer dependency
 - `nestipy run web:codegen --output web/src/api/client.ts --lang ts` — generate typed clients
 - `nestipy run web:build --spec http://localhost:8001/_router/spec --lang ts` — build + generate client into `web/src/api/client.ts`
 - `nestipy run web:actions --output web/src/actions.client.ts` — generate typed action wrappers
