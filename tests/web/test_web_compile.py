@@ -240,3 +240,33 @@ def Page():
     assert "const memo_label = React.useMemo(label, [count]);" in page_tsx
     assert "React.useEffect(bump, [count]);" in page_tsx
     assert "{memo_label}" in page_tsx
+
+
+def test_compile_list_comprehension_and_conditional(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+
+@component
+def Page():
+    items = [\"A\", \"B\"]
+    show = True
+    return h.div(
+        h.ul([h.li(item) for item in items]),
+        h.p(\"Shown\") if show else h.p(\"Hidden\"),
+    )
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "items.map" in page_tsx
+    assert "show ? " in page_tsx

@@ -198,6 +198,23 @@ class ExternalComponent:
         return Node(tag=self, props=_normalize_props(props), children=_flatten_children(children))
 
 
+@dataclass(frozen=True, slots=True)
+class ExternalFunction:
+    """Reference to a callable imported from an external module."""
+    module: str
+    name: str
+    alias: str | None = None
+
+    @property
+    def import_name(self) -> str:
+        """Return the name to use in import statements."""
+        return self.alias or self.name
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Disallow runtime execution (compile-time only)."""
+        raise RuntimeError("external_fn is compile-time only and cannot run at runtime.")
+
+
 @dataclass(slots=True)
 class Node:
     """Render tree node that represents a JSX element."""
@@ -208,6 +225,23 @@ class Node:
 
 class JSExpr(str):
     """Raw JS expression marker for props."""
+
+
+@dataclass(frozen=True, slots=True)
+class ConditionalExpr:
+    """Represent a conditional JSX expression."""
+    test: JSExpr
+    consequent: Any
+    alternate: Any
+
+
+@dataclass(frozen=True, slots=True)
+class ForExpr:
+    """Represent a list comprehension compiled to JS map/filter."""
+    target: str
+    iterable: JSExpr
+    body: Any
+    condition: JSExpr | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,6 +290,11 @@ def new_(constructor: Any, *args: Any) -> Any:
 def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent:
     """Create a reference to an external component import."""
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
+
+
+def external_fn(module: str, name: str, *, alias: str | None = None) -> ExternalFunction:
+    """Create a reference to an external function import."""
+    return ExternalFunction(module=module, name=name, alias=alias)
 
 
 def component(fn: Callable) -> Callable:

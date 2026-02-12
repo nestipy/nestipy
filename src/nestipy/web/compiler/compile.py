@@ -9,12 +9,15 @@ from typing import Any, Iterable
 from nestipy.web.config import WebConfig
 from nestipy.web.ui import (
     ExternalComponent,
+    ExternalFunction,
     JSExpr,
     Node,
     Fragment,
     Slot,
     LocalComponent,
     COMPONENT_NAME_ATTR,
+    ConditionalExpr,
+    ForExpr,
 )
 from .parser import parse_component_file, ParsedFile, PropsSpec, ImportSpec
 from .errors import CompilerError
@@ -688,15 +691,15 @@ def merge_component_imports(imports: list[ComponentImport]) -> list[ComponentImp
 def collect_imports(
     components: dict[str, Node],
     *,
-    extra_externals: dict[str, ExternalComponent] | None = None,
+    extra_externals: dict[str, ExternalComponent | ExternalFunction] | None = None,
 ) -> dict[str, dict[str, set[str]]]:
     """Collect external component imports referenced by rendered nodes."""
     imports: dict[str, dict[str, set[str]]] = {}
 
-    def add_import(component: ExternalComponent):
+    def add_import(component: ExternalComponent | ExternalFunction):
         """Register an external component import."""
         spec = imports.setdefault(component.module, {"named": set(), "default": set()})
-        if component.default:
+        if isinstance(component, ExternalComponent) and component.default:
             spec["default"].add(component.import_name)
         else:
             spec["named"].add(component.import_name)
@@ -1105,6 +1108,10 @@ def render_prop(key: str, value: Any) -> str | None:
         return None
     if value is True:
         return key
+    if isinstance(value, ConditionalExpr):
+        return f"{key}={{{render_conditional_expr(value)}}}"
+    if isinstance(value, ForExpr):
+        return f"{key}={{{render_for_expr(value)}}}"
     if isinstance(value, JSExpr):
         return f"{key}={{{value}}}"
     if isinstance(value, str):
@@ -1160,6 +1167,10 @@ def render_child(child: Any, slot_token: str | None = None) -> str | None:
         return render_node(child, slot_token=slot_token)
     if isinstance(child, JSExpr):
         return f"{{{child}}}"
+    if isinstance(child, ConditionalExpr):
+        return f"{{{render_conditional_expr(child)}}}"
+    if isinstance(child, ForExpr):
+        return f"{{{render_for_expr(child)}}}"
     if isinstance(child, str):
         return escape_text(child)
     if isinstance(child, (int, float)):
@@ -1175,6 +1186,51 @@ def escape_text(text: str) -> str:
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
+    )
+
+
+def render_conditional_expr(expr: ConditionalExpr) -> str:
+    """Render a conditional expression into a JS ternary."""
+    return f"{expr.test} ? {render_jsx_value(expr.consequent)} : {render_jsx_value(expr.alternate)}"
+
+
+def render_for_expr(expr: ForExpr) -> str:
+    """Render a list comprehension into a JS map/filter chain."""
+    iterable = str(expr.iterable)
+    target = expr.target
+    body = render_jsx_value(expr.body)
+    if expr.condition is not None:
+        condition = str(expr.condition)
+        return f"{iterable}.filter(({target}) => {condition}).map(({target}) => {body})"
+    return f"{iterable}.map(({target}) => {body})"
+
+
+def render_jsx_value(value: Any) -> str:
+    """Render a value for use inside JS expressions."""
+    if isinstance(value, Node):
+        return f"({render_node(value)})"
+    if isinstance(value, ConditionalExpr):
+        return f"({render_conditional_expr(value)})"
+    if isinstance(value, ForExpr):
+        return f"({render_for_expr(value)})"
+    if isinstance(value, JSExpr):
+        return str(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(render_jsx_value(item) for item in value) + "]"
+    if isinstance(value, dict):
+        return render_js_value(value)
+    raise CompilerError(
+        f"Unsupported value in JSX expression: {type(value)}. Use js('...') for expressions."
     )
 
 

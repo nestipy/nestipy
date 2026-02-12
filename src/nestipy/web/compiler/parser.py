@@ -8,7 +8,17 @@ from typing import Any, Iterable
 
 import libcst as cst
 
-from nestipy.web.ui import ExternalComponent, JSExpr, Node, Fragment, Slot, LocalComponent
+from nestipy.web.ui import (
+    ExternalComponent,
+    ExternalFunction,
+    JSExpr,
+    Node,
+    Fragment,
+    Slot,
+    LocalComponent,
+    ConditionalExpr,
+    ForExpr,
+)
 from .errors import CompilerError
 
 
@@ -132,9 +142,9 @@ def _collect_functions(module: cst.Module) -> list[cst.FunctionDef]:
     return funcs
 
 
-def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent]:
+def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | ExternalFunction]:
     """Collect external component declarations from assignments."""
-    externals: dict[str, ExternalComponent] = {}
+    externals: dict[str, ExternalComponent | ExternalFunction] = {}
     for stmt in module.body:
         statements = []
         if isinstance(stmt, cst.SimpleStatementLine):
@@ -149,9 +159,14 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent]:
                 if not isinstance(target, cst.Name):
                     continue
                 value = inner.value
-                if isinstance(value, cst.Call) and _call_name(value) == "external":
-                    ext = _eval_external_call(value)
-                    externals[target.value] = ext
+                if isinstance(value, cst.Call):
+                    call_name = _call_name(value)
+                    if call_name == "external":
+                        ext = _eval_external_call(value)
+                        externals[target.value] = ext
+                    elif call_name == "external_fn":
+                        ext = _eval_external_call(value, kind="function")
+                        externals[target.value] = ext
     return externals
 
 
@@ -712,7 +727,7 @@ def _extract_return_expr(fn: cst.FunctionDef) -> cst.BaseExpression | None:
     return None
 
 
-def _eval_external_call(call: cst.Call) -> ExternalComponent:
+def _eval_external_call(call: cst.Call, *, kind: str = "component") -> ExternalComponent | ExternalFunction:
     """Evaluate an external() call into an ExternalComponent."""
     args = call.args
     if len(args) < 2:
@@ -728,6 +743,8 @@ def _eval_external_call(call: cst.Call) -> ExternalComponent:
             default = _eval_bool(arg.value)
         elif arg.keyword.value == "alias":
             alias = _eval_string(arg.value)
+    if kind == "function":
+        return ExternalFunction(module=module, name=name, alias=alias)
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
 
 
@@ -752,7 +769,7 @@ def _is_h_tag_call(call: cst.Call) -> str | None:
 
 def _eval_expr(
     expr: cst.BaseExpression,
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> Any:
@@ -797,6 +814,9 @@ def _eval_expr(
             for el in expr.elements
         ]
 
+    if isinstance(expr, cst.ListComp):
+        return _eval_list_comp(expr, externals, component_names, local_names)
+
     if isinstance(expr, cst.Tuple):
         return [
             _eval_expr(el.value, externals, component_names, local_names)
@@ -820,6 +840,8 @@ def _eval_expr(
             return JSExpr(_eval_string(expr.args[0].value))
         if call_name == "external":
             return _eval_external_call(expr)
+        if call_name == "external_fn":
+            return _eval_external_call(expr, kind="function")
         if call_name == "new_":
             return JSExpr(_expr_to_js(expr))
 
@@ -834,16 +856,22 @@ def _eval_expr(
                     local_names,
                 )
             if name in externals:
-                return _eval_component_call(
-                    externals[name],
-                    expr.args,
-                    externals,
-                    component_names,
-                    local_names,
-                )
+                ext = externals[name]
+                if isinstance(ext, ExternalComponent):
+                    return _eval_component_call(
+                        ext,
+                        expr.args,
+                        externals,
+                        component_names,
+                        local_names,
+                    )
+                return JSExpr(_expr_to_js(expr))
 
     if isinstance(expr, cst.IfExp):
-        return JSExpr(_expr_to_js(expr))
+        test_expr = JSExpr(_expr_to_js(expr.test))
+        consequent = _eval_expr(expr.body, externals, component_names, local_names)
+        alternate = _eval_expr(expr.orelse, externals, component_names, local_names)
+        return ConditionalExpr(test=test_expr, consequent=consequent, alternate=alternate)
 
     if isinstance(expr, cst.BooleanOperation):
         return JSExpr(_expr_to_js(expr))
@@ -865,7 +893,7 @@ def _eval_expr(
 
 def _eval_h_call(
     call: cst.Call,
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> Node:
@@ -884,14 +912,16 @@ def _eval_h_call(
 
 def _eval_tag_expr(
     expr: cst.BaseExpression,
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> Any:
     """Evaluate the first argument to h(...) as a tag reference."""
     if isinstance(expr, cst.Name):
         if expr.value in externals:
-            return externals[expr.value]
+            ext = externals[expr.value]
+            if isinstance(ext, ExternalComponent):
+                return ext
         if expr.value in component_names:
             return LocalComponent(expr.value)
         if expr.value == "Fragment":
@@ -906,7 +936,7 @@ def _eval_tag_expr(
 def _eval_tag_call(
     tag: str,
     args: list[cst.Arg],
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> Node:
@@ -918,10 +948,43 @@ def _eval_tag_call(
     return Node(tag=tag, props=props, children=children)
 
 
+def _eval_list_comp(
+    expr: cst.ListComp,
+    externals: dict[str, ExternalComponent | ExternalFunction],
+    component_names: set[str],
+    locals: set[str],
+) -> ForExpr:
+    """Evaluate a list comprehension into a ForExpr."""
+    comp = expr.for_in
+    if comp is None:
+        raise CompilerError("List comprehension is missing a for clause.")
+    if comp.inner_for_in is not None:
+        raise CompilerError("Nested comprehensions are not supported yet.")
+    target_name = _comp_target_name(comp.target)
+    if target_name is None:
+        raise CompilerError("List comprehension target must be a simple name.")
+    iterable = JSExpr(_expr_to_js(comp.iter))
+    condition = None
+    if comp.ifs:
+        tests = [_expr_to_js(cond.test) for cond in comp.ifs]
+        condition = JSExpr(" && ".join(f"({t})" for t in tests))
+    body = _eval_expr(expr.elt, externals, component_names, locals | {target_name})
+    return ForExpr(target=target_name, iterable=iterable, body=body, condition=condition)
+
+
+def _comp_target_name(target: cst.BaseExpression) -> str | None:
+    """Extract the target name from a comprehension target."""
+    if isinstance(target, cst.Name):
+        return target.value
+    if isinstance(target, cst.AssignTarget) and isinstance(target.target, cst.Name):
+        return target.target.value
+    return None
+
+
 def _eval_component_call(
     tag: ExternalComponent | LocalComponent,
     args: list[cst.Arg],
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> Node:
@@ -935,7 +998,7 @@ def _eval_component_call(
 
 def _split_props(
     args: list[cst.Arg],
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> tuple[dict[str, Any], list[cst.Arg]]:
@@ -963,7 +1026,7 @@ def _split_props(
 
 def _eval_dict(
     expr: cst.Dict,
-    externals: dict[str, ExternalComponent],
+    externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str] | None = None,
 ) -> dict[str, Any]:
