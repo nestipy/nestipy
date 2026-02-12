@@ -270,3 +270,37 @@ def Page():
     )
     assert "items.map" in page_tsx
     assert "show ? " in page_tsx
+
+
+def test_compile_statement_if_and_for(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+
+@component
+def Page():
+    items = [\"A\", \"B\"]
+    show = True
+    labels = []
+    for item in items:
+        labels.append(h.li(item))
+    if show:
+        message = h.p(\"Shown\")
+    else:
+        message = h.p(\"Hidden\")
+    return h.div(h.ul(labels), message)
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "items.map" in page_tsx
+    assert "show ? " in page_tsx

@@ -547,9 +547,11 @@ def build_page_tsx(
         layout_primary=root_layout.primary if root_layout else None,
     )
 
-    body = render_node(page_tree)
+    body = render_root_value(page_tree)
     if root_layout is not None:
-        body = f"{layout_wrap_start}{body}{layout_wrap_end}"
+        child = render_child(page_tree)
+        child = child or ""
+        body = f"{layout_wrap_start}{child}{layout_wrap_end}"
 
     page_hooks = inline_hooks.get(page.primary, [])
     page_prelude = inline_prelude.get(page.primary, [])
@@ -595,13 +597,13 @@ def build_page_tsx(
 
 
 def build_layout_tsx(
-    layout_tree: Node,
+    layout_tree: Any,
     *,
     hooks: list[str] | None = None,
     prelude: list[str] | None = None,
 ) -> str:
     """Render the root layout wrapper TSX."""
-    layout_body = render_node(layout_tree, slot_token="{children}")
+    layout_body = render_root_value(layout_tree, slot_token="{children}")
     prelude_lines = [f"  {line}" for line in (prelude or [])]
     hook_lines = [f"  {line}" for line in (hooks or [])]
     return "\n".join(
@@ -711,6 +713,11 @@ def collect_imports(
                 add_import(node.tag)
             for child in node.children:
                 visit(child)
+        elif isinstance(node, ConditionalExpr):
+            visit(node.consequent)
+            visit(node.alternate)
+        elif isinstance(node, ForExpr):
+            visit(node.body)
         elif isinstance(node, list):
             for child in node:
                 visit(child)
@@ -1012,7 +1019,7 @@ def build_component_defs(
 
 def _component_block(
     name: str,
-    tree: Node,
+    tree: Any,
     props_type: str | None = None,
     *,
     hooks: list[str] | None = None,
@@ -1020,7 +1027,7 @@ def _component_block(
     exported: bool = False,
 ) -> str:
     """Render a component function block."""
-    body = render_node(tree)
+    body = render_root_value(tree)
     signature = (
         f"function {name}(): JSX.Element"
         if not props_type
@@ -1069,6 +1076,19 @@ def render_node(node: Node, slot_token: str | None = None) -> str:
     if props:
         return f"<{tag} {props}>{inner}</{tag}>"
     return f"<{tag}>{inner}</{tag}>"
+
+
+def render_root_value(value: Any, slot_token: str | None = None) -> str:
+    """Render a root-level component return value."""
+    if isinstance(value, Node):
+        return render_node(value, slot_token=slot_token)
+    if isinstance(value, ConditionalExpr):
+        return render_conditional_expr(value)
+    if isinstance(value, ForExpr):
+        return render_for_expr(value)
+    if isinstance(value, JSExpr):
+        return str(value)
+    return render_jsx_value(value)
 
 
 def render_tag(tag: Any) -> str:
@@ -1129,6 +1149,10 @@ def render_js_value(value: Any) -> str:
     """Render a nested JS value for prop objects/arrays."""
     if isinstance(value, JSExpr):
         return str(value)
+    if isinstance(value, ConditionalExpr):
+        return render_conditional_expr(value)
+    if isinstance(value, ForExpr):
+        return render_for_expr(value)
     if isinstance(value, str):
         return json.dumps(value)
     if value is True:
