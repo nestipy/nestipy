@@ -90,16 +90,17 @@ def Card(props: CardProps):
 
 ## Commands (nestipy-cli)
 
-- `nestipy web:init` — create `app/` scaffold and initial Vite output
-- `nestipy web:init --no-build` — scaffold `app/` without generating `web/`
-- `nestipy web:build` — compile Python UI into `web/`
-- `nestipy web:dev` — watch `app/` and rebuild on changes
-- `nestipy web:dev --vite` — also start Vite dev server (HMR)
-- `nestipy web:dev --vite --install` — install frontend deps before starting Vite
-- `nestipy web:codegen --output web/src/api/client.ts --lang ts` — generate typed clients
-- `nestipy web:build --spec http://localhost:8001/_router/spec --lang ts` — build + generate client into `web/src/api/client.ts`
-- `nestipy web:actions --output web/src/actions.client.ts` — generate typed action wrappers
-- `nestipy web:build --actions` — build and generate `web/src/actions.client.ts`
+- `nestipy run web:init` — create `app/` scaffold and initial Vite output
+- `nestipy run web:init --no-build` — scaffold `app/` without generating `web/`
+- `nestipy run web:build` — compile Python UI into `web/`
+- `nestipy run web:dev` — watch `app/` and rebuild on changes
+- `nestipy run web:dev --vite` — also start Vite dev server (HMR)
+- `nestipy run web:dev --vite --install` — install frontend deps before starting Vite
+- `nestipy run web:dev --vite --proxy http://127.0.0.1:8001` — start Vite with backend proxy
+- `nestipy run web:codegen --output web/src/api/client.ts --lang ts` — generate typed clients
+- `nestipy run web:build --spec http://localhost:8001/_router/spec --lang ts` — build + generate client into `web/src/api/client.ts`
+- `nestipy run web:actions --output web/src/actions.client.ts` — generate typed action wrappers
+- `nestipy run web:build --actions` — build and generate `web/src/actions.client.ts`
 
 ## Vite Scaffold
 
@@ -151,7 +152,7 @@ if (res.ok) {
 }
 
 const actions = createActions();
-const res2 = await actions.UserActions.hello('Nestipy');
+const res2 = await actions.UserActions.hello({ name: 'Nestipy' });
 if (res2.ok) {
   console.log(res2.data);
 }
@@ -166,6 +167,38 @@ nestipy web:dev --vite
 ```
 
 This watches `app/**/*.py`, rebuilds TSX on change, and Vite handles HMR.
+
+## Vite Proxy
+
+If your Nestipy backend runs on another port, you can configure a Vite proxy so the frontend can call:
+- `/_actions` (server actions)
+- `/_router/spec` (router spec)
+- `/_devtools/*` (optional)
+
+```bash
+nestipy run web:dev --vite --proxy http://127.0.0.1:8001
+```
+
+Customize proxied paths:
+
+```bash
+nestipy run web:dev --vite --proxy http://127.0.0.1:8001 --proxy-paths /_actions,/_router
+```
+
+Env vars:
+- `NESTIPY_WEB_PROXY`
+- `NESTIPY_WEB_PROXY_PATHS` (comma-separated)
+
+## Actions Schema (For Codegen)
+
+The actions endpoint exposes a schema:
+- `GET /_actions/schema`
+
+Generate `web/src/actions.client.ts` from a running app:
+
+```bash
+nestipy web:actions --spec http://127.0.0.1:8001/_actions/schema --output web/src/actions.client.ts
+```
 
 ## Notes
 

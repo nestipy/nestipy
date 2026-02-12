@@ -153,4 +153,33 @@ def Page():
         out_dir / "src" / "components" / "components" / "card.tsx"
     ).read_text(encoding="utf-8")
     assert "interface CardProps" in card_tsx
-    assert "export function Card(props: CardProps)" in card_tsx
+    assert "export function Card(props: CardProps): JSX.Element" in card_tsx
+
+
+def test_vite_proxy_config(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+
+@component
+def Page():
+    return h.div("Proxy")
+""".strip(),
+    )
+
+    config = WebConfig(
+        app_dir=str(app_dir),
+        out_dir=str(out_dir),
+        proxy="http://127.0.0.1:8001",
+        proxy_paths=["/_actions", "/_router"],
+    )
+    compile_app(config, root=str(tmp_path))
+
+    vite_config = (out_dir / "vite.config.ts").read_text(encoding="utf-8")
+    assert "server" in vite_config
+    assert "/_actions" in vite_config
+    assert "127.0.0.1:8001" in vite_config

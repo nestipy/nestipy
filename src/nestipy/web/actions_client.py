@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import inspect
+import json
+import os
 import types
+import urllib.request
 from dataclasses import dataclass
 from dataclasses import is_dataclass
-from typing import Any, Iterable, Annotated, get_args, get_origin
+from typing import Any, Iterable, Annotated, get_args, get_origin, Callable
 
 from pydantic import BaseModel
 
@@ -50,6 +53,16 @@ def build_action_specs(modules: Iterable[type]) -> list[ActionSpec]:
     return list(specs.values())
 
 
+def build_action_specs_from_registry(
+    actions: dict[str, Callable[..., Any]],
+) -> list[ActionSpec]:
+    specs: dict[str, ActionSpec] = {}
+    for name, fn in actions.items():
+        spec = _build_action_spec(name, fn)
+        specs[name] = spec
+    return list(specs.values())
+
+
 def _build_action_spec(name: str, fn: Any) -> ActionSpec:
     sig = inspect.signature(fn)
     params: list[ActionParam] = []
@@ -78,7 +91,7 @@ def _build_action_spec(name: str, fn: Any) -> ActionSpec:
 
 def _is_injected_param(annotation: Any) -> bool:
     _, dep_key = ContainerHelper.get_type_from_annotation(annotation)
-    return dep_key.metadata.key != CtxDepKey.Service
+    return dep_key.metadata.key != "instance"
 
 
 def _is_optional(annotation: Any) -> bool:
@@ -198,11 +211,76 @@ def _render_model_interfaces(models: Iterable[type]) -> str:
     return "\n".join(blocks)
 
 
-def generate_actions_client_code(
-    modules: Iterable[type], *, endpoint: str = "/_actions"
-) -> str:
-    specs = build_action_specs(modules)
-    if not specs:
+def _render_model_interfaces_from_schema(models: list[dict[str, Any]]) -> str:
+    blocks: list[str] = []
+    for model in models:
+        name = model.get("name")
+        fields = model.get("fields", [])
+        if not name or not fields:
+            continue
+        blocks.append(f"export interface {name} {{")
+        for field in fields:
+            field_name = field.get("name")
+            field_type = field.get("type", "unknown")
+            optional = "?" if field.get("optional") else ""
+            if field_name:
+                blocks.append(f"  {field_name}{optional}: {field_type};")
+        blocks.append("}")
+        blocks.append("")
+    return "\n".join(blocks)
+
+
+def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]:
+    actions_schema: list[dict[str, Any]] = []
+    for spec in specs:
+        actions_schema.append(
+            {
+                "name": spec.name,
+                "params": [
+                    {
+                        "name": param.name,
+                        "type": param.ts_type,
+                        "optional": param.optional,
+                    }
+                    for param in spec.params
+                ],
+                "return_type": spec.return_type,
+            }
+        )
+
+    models_schema: list[dict[str, Any]] = []
+    for model in _collect_models(specs):
+        annotations = getattr(model, "__annotations__", {})
+        if not annotations:
+            continue
+        fields = []
+        for field_name, field_type in annotations.items():
+            fields.append(
+                {
+                    "name": field_name,
+                    "type": _py_to_ts(field_type),
+                    "optional": _is_optional(field_type),
+                }
+            )
+        models_schema.append({"name": model.__name__, "fields": fields})
+
+    return {"endpoint": endpoint, "actions": actions_schema, "models": models_schema}
+
+
+def build_actions_schema(modules: Iterable[type], *, endpoint: str = "/_actions") -> dict[str, Any]:
+    return _schema_from_specs(build_action_specs(modules), endpoint)
+
+
+def build_actions_schema_from_registry(
+    actions: dict[str, Callable[..., Any]], *, endpoint: str = "/_actions"
+) -> dict[str, Any]:
+    return _schema_from_specs(build_action_specs_from_registry(actions), endpoint)
+
+
+def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
+    actions = schema.get("actions") or []
+    endpoint = schema.get("endpoint", "/_actions")
+    if not actions:
         return "\n".join(
             [
                 "import { createActionClient, ActionResponse, ActionClientOptions } from './actions';",
@@ -219,21 +297,33 @@ def generate_actions_client_code(
         )
 
     grouped: dict[str, list[ActionSpec]] = {}
-    for spec in specs:
-        if "." in spec.name:
-            group, method = spec.name.split(".", 1)
+    for action in actions:
+        action_name = action.get("name")
+        if not action_name:
+            continue
+        params = [
+            ActionParam(
+                name=param.get("name", "arg"),
+                ts_type=param.get("type", "unknown"),
+                optional=bool(param.get("optional")),
+            )
+            for param in (action.get("params") or [])
+        ]
+        return_type = action.get("return_type", "unknown")
+        if "." in action_name:
+            group, method = action_name.split(".", 1)
         else:
-            group, method = "actions", spec.name
+            group, method = "actions", action_name
         grouped.setdefault(group, []).append(
             ActionSpec(
                 name=method,
-                params=spec.params,
-                return_type=spec.return_type,
-                model_types=spec.model_types,
+                params=params,
+                return_type=return_type,
+                model_types=[],
             )
         )
 
-    interfaces = _render_model_interfaces(_collect_models(specs))
+    interfaces = _render_model_interfaces_from_schema(schema.get("models", []))
 
     lines: list[str] = [
         "import { createActionClient, ActionResponse, ActionClientOptions } from './actions';",
@@ -247,16 +337,18 @@ def generate_actions_client_code(
     for group, actions in grouped.items():
         lines.append(f"    {group}: {{")
         for spec in actions:
-            params = []
-            args = []
+            if not spec.params:
+                lines.append(
+                    f"      {spec.name}: () => call<{spec.return_type}>(\"{group}.{spec.name}\"),"
+                )
+                continue
+            shape_fields: list[str] = []
             for param in spec.params:
-                optional = "?" if param.optional else ""
-                params.append(f"{param.name}{optional}: {param.ts_type}")
-                args.append(param.name)
-            param_list = ", ".join(params)
-            args_list = ", ".join(args)
+                opt = "?" if param.optional else ""
+                shape_fields.append(f"{param.name}{opt}: {param.ts_type}")
+            shape = "{ " + "; ".join(shape_fields) + " }"
             lines.append(
-                f"      {spec.name}: ({param_list}) => call<{spec.return_type}>(\"{group}.{spec.name}\", [{args_list}]),"
+                f"      {spec.name}: (params: {shape}) => call<{spec.return_type}>(\"{group}.{spec.name}\", [], params as Record<string, unknown>),"
             )
         lines.append("    },")
     lines.append("    call,")
@@ -266,15 +358,48 @@ def generate_actions_client_code(
     return "\n".join(lines)
 
 
+def generate_actions_client_code(
+    modules: Iterable[type], *, endpoint: str = "/_actions"
+) -> str:
+    schema = build_actions_schema(modules, endpoint=endpoint)
+    return generate_actions_client_code_from_schema(schema)
+
+
+def codegen_actions_from_url(url: str, output: str) -> None:
+    with urllib.request.urlopen(url) as response:
+        schema = json.loads(response.read().decode("utf-8"))
+    _ensure_parent(output)
+    code = generate_actions_client_code_from_schema(schema)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+
+
 def write_actions_client_file(
     modules: Iterable[type],
     output: str,
     *,
     endpoint: str = "/_actions",
 ) -> None:
+    _ensure_parent(output)
     code = generate_actions_client_code(modules, endpoint=endpoint)
     with open(output, "w", encoding="utf-8") as f:
         f.write(code)
 
 
-__all__ = ["build_action_specs", "generate_actions_client_code", "write_actions_client_file"]
+def _ensure_parent(output: str) -> None:
+    path = os.path.abspath(output)
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+__all__ = [
+    "build_action_specs",
+    "build_action_specs_from_registry",
+    "build_actions_schema",
+    "build_actions_schema_from_registry",
+    "generate_actions_client_code",
+    "generate_actions_client_code_from_schema",
+    "codegen_actions_from_url",
+    "write_actions_client_file",
+]

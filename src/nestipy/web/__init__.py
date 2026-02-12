@@ -6,7 +6,10 @@ from .ui import component, h, external, js, props, Fragment, Slot
 from .actions import ActionsModule, ActionsOption, action
 from .actions_client import (
     build_action_specs,
+    build_actions_schema,
     generate_actions_client_code,
+    generate_actions_client_code_from_schema,
+    codegen_actions_from_url,
     write_actions_client_file,
 )
 
@@ -26,7 +29,10 @@ __all__ = [
     "ActionsOption",
     "action",
     "build_action_specs",
+    "build_actions_schema",
     "generate_actions_client_code",
+    "generate_actions_client_code_from_schema",
+    "codegen_actions_from_url",
     "write_actions_client_file",
 ]
 

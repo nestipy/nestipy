@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 import os
 from pathlib import Path
 
@@ -13,6 +14,10 @@ class WebConfig:
     src_dir: str = "src"
     pages_dir: str = "pages"
     clean: bool = False
+    proxy: str | None = None
+    proxy_paths: list[str] = field(
+        default_factory=lambda: ["/_actions", "/_router", "/_devtools"]
+    )
 
     def resolve_app_dir(self, root: str | None = None) -> Path:
         base = Path(root or os.getcwd())

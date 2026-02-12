@@ -205,6 +205,21 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
 
     vite_config = out_dir / "vite.config.ts"
     if not vite_config.exists():
+        proxy_lines: list[str] = []
+        if config.proxy:
+            paths = [p for p in (config.proxy_paths or []) if isinstance(p, str) and p]
+            if not paths:
+                paths = ["/_actions", "/_router", "/_devtools"]
+            proxy_lines = [
+                "  server: {",
+                "    proxy: {",
+                *[
+                    f"      '{path}': {{ target: '{config.proxy}', changeOrigin: true }},"
+                    for path in paths
+                ],
+                "    },",
+                "  },",
+            ]
         vite_config.write_text(
             "\n".join(
                 [
@@ -213,6 +228,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "",
                     "export default defineConfig({",
                     "  plugins: [react()],",
+                    *proxy_lines,
                     "});",
                     "",
                 ]
@@ -506,7 +522,7 @@ def build_page_tsx(
         body = f"{layout_wrap_start}{body}{layout_wrap_end}"
 
     component = [
-        "export default function Page() {",
+        "export default function Page(): JSX.Element {",
         "  return (",
         indent(body, 4),
         "  );",
@@ -537,7 +553,7 @@ def build_layout_tsx(layout_tree: Node) -> str:
     layout_body = render_node(layout_tree, slot_token="{children}")
     return "\n".join(
         [
-            "export function RootLayout({ children }: { children: ReactNode }) {",
+            "export function RootLayout({ children }: { children: ReactNode }): JSX.Element {",
             "  return (",
             indent(layout_body, 4),
             "  );",
@@ -881,7 +897,9 @@ def _component_block(
 ) -> str:
     body = render_node(tree)
     signature = (
-        f"function {name}()" if not props_type else f"function {name}(props: {props_type})"
+        f"function {name}(): JSX.Element"
+        if not props_type
+        else f"function {name}(props: {props_type}): JSX.Element"
     )
     if exported:
         signature = f"export {signature}"

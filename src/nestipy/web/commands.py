@@ -8,7 +8,7 @@ from typing import Iterable, Type
 from nestipy.web.config import WebConfig
 from nestipy.web.compiler import compile_app
 from nestipy.web.client import codegen_client, codegen_client_from_url
-from nestipy.web.actions_client import write_actions_client_file
+from nestipy.web.actions_client import write_actions_client_file, codegen_actions_from_url
 
 
 def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
@@ -31,6 +31,12 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             parsed["vite"] = True
         elif arg == "--install":
             parsed["install"] = True
+        elif arg == "--proxy" and i + 1 < len(args_list):
+            parsed["proxy"] = args_list[i + 1]
+            i += 1
+        elif arg == "--proxy-paths" and i + 1 < len(args_list):
+            parsed["proxy_paths"] = args_list[i + 1]
+            i += 1
         elif arg == "--no-build":
             parsed["no_build"] = True
         elif arg == "--actions":
@@ -65,11 +71,18 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
 
 def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
     parsed = _parse_args(args)
+    proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
+    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths_list = (
+        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+    )
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
         out_dir=str(parsed.get("out_dir", "web")),
         target=str(parsed.get("target", "vite")),
         clean=bool(parsed.get("clean", False)),
+        proxy=proxy,
+        proxy_paths=proxy_paths_list or WebConfig().proxy_paths,
     )
     compile_app(config)
     _maybe_codegen_client(parsed, config)
@@ -78,11 +91,18 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
 def init(args: Iterable[str]) -> None:
     parsed = _parse_args(args)
+    proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
+    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths_list = (
+        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+    )
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
         out_dir=str(parsed.get("out_dir", "web")),
         target=str(parsed.get("target", "vite")),
         clean=bool(parsed.get("clean", False)),
+        proxy=proxy,
+        proxy_paths=proxy_paths_list or WebConfig().proxy_paths,
     )
     app_dir = config.resolve_app_dir()
     app_dir.mkdir(parents=True, exist_ok=True)
@@ -150,11 +170,18 @@ def init(args: Iterable[str]) -> None:
 
 def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     parsed = _parse_args(args)
+    proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
+    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths_list = (
+        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+    )
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
         out_dir=str(parsed.get("out_dir", "web")),
         target=str(parsed.get("target", "vite")),
         clean=bool(parsed.get("clean", False)),
+        proxy=proxy,
+        proxy_paths=proxy_paths_list or WebConfig().proxy_paths,
     )
     app_dir = config.resolve_app_dir()
     last_state: dict[str, float] = {}
@@ -243,7 +270,14 @@ def _maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> N
 
 def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> None:
     parsed = _parse_args(args)
+    spec_url = parsed.get("spec")
     if modules is None:
+        if spec_url:
+            output = parsed.get("actions_output") or parsed.get("output")
+            if not output:
+                output = "web/src/actions.client.ts"
+            codegen_actions_from_url(str(spec_url), str(output))
+            return
         raise RuntimeError("Modules are required to generate actions client")
     output = parsed.get("actions_output") or parsed.get("output")
     if not output:
@@ -257,11 +291,15 @@ def _maybe_codegen_actions(
 ) -> None:
     if not parsed.get("actions"):
         return
-    if modules is None:
-        raise RuntimeError("Modules are required to generate actions client")
+    spec_url = parsed.get("spec")
     output = parsed.get("actions_output")
     if not output:
         output = str(config.resolve_src_dir() / "actions.client.ts")
+    if modules is None:
+        if spec_url:
+            codegen_actions_from_url(str(spec_url), str(output))
+            return
+        raise RuntimeError("Modules are required to generate actions client")
     endpoint = str(parsed.get("actions_endpoint", "/_actions"))
     write_actions_client_file(modules, str(output), endpoint=endpoint)
 
