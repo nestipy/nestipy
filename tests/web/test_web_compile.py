@@ -231,15 +231,15 @@ def Page():
     )
     assert "import React from 'react';" in page_tsx
     assert "export const AppContext = React.createContext(\"default\");" in page_tsx
-    assert "const [count, set_count] = React.useState(0);" in page_tsx
+    assert "const [count, setCount] = React.useState(0);" in page_tsx
     assert "const value = React.useContext(AppContext);" in page_tsx
     assert "const bump = () =>" in page_tsx
-    assert "set_count(" in page_tsx
+    assert "setCount(" in page_tsx
     assert "const label = () =>" in page_tsx
     assert "const handler = React.useCallback(bump, [count]);" in page_tsx
-    assert "const memo_label = React.useMemo(label, [count]);" in page_tsx
+    assert "const memoLabel = React.useMemo(label, [count]);" in page_tsx
     assert "React.useEffect(bump, [count]);" in page_tsx
-    assert "{memo_label}" in page_tsx
+    assert "{memoLabel}" in page_tsx
 
 
 def test_compile_list_comprehension_and_conditional(tmp_path: Path) -> None:
@@ -304,3 +304,63 @@ def Page():
     )
     assert "items.map" in page_tsx
     assert "show ? " in page_tsx
+
+
+def test_compile_if_multi_statement_branch(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+
+@component
+def Page():
+    show = True
+    if show:
+        label = "Shown"
+        message = h.p(label)
+    else:
+        label = "Hidden"
+        message = h.p(label)
+    return h.div(message)
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "show ? " in page_tsx
+
+
+def test_compile_nested_for_loop(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+
+@component
+def Page():
+    groups = [{\"items\": [\"A\", \"B\"]}]
+    rows = []
+    for group in groups:
+        for item in group[\"items\"]:
+            rows.append(h.li(item))
+    return h.ul(rows)
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "groups.map" in page_tsx

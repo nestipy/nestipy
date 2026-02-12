@@ -102,10 +102,25 @@ def Page():
     )
 ```
 
+Use `external_fn()` for utility functions like `clsx`/`twMerge`:
+
+```py
+from nestipy.web import component, h, external_fn
+
+clsx = external_fn("clsx", "clsx")
+
+@component
+def Page():
+    return h.div(
+        "Hello",
+        class_name=clsx("base", True and "active"),
+    )
+```
+
 ## Props (Typed)
 
 ```py
-from nestipy.web import component, props, h, js
+from nestipy.web import component, props, h
 
 @props
 class CardProps:
@@ -114,8 +129,68 @@ class CardProps:
 
 @component
 def Card(props: CardProps):
-    return h.div(h.h2(js("props.title")), class_name="card")
+    return h.div(h.h2(props.title), class_name="card")
 ```
+
+## Control Flow (Pure Python)
+
+Nestipy Web supports Python control flow in components (compiled to JS):
+
+```py
+from nestipy.web import component, h
+
+@component
+def Page():
+    items = ["A", "B"]
+    rows = []
+    for item in items:
+        rows.append(h.li(item))
+
+    if items:
+        message = h.p("Items found")
+    else:
+        message = h.p("No items")
+
+    return h.div(h.ul(rows), message)
+```
+
+Multiple statements per branch are supported as long as each branch assigns the same variables:
+
+```py
+if show:
+    label = "Shown"
+    message = h.p(label)
+else:
+    label = "Hidden"
+    message = h.p(label)
+```
+
+Nested loops are supported as long as each loop body appends to a list:
+
+```py
+rows = []
+for group in groups:
+    rows.append(h.h3(group["name"]))
+    for item in group["items"]:
+        rows.append(h.li(item))
+```
+
+You can also use list comprehensions and ternary expressions:
+
+```py
+return h.div(
+    h.ul([h.li(item) for item in items if item]),
+    h.p("Shown") if show else h.p("Hidden"),
+)
+```
+
+### Control Flow Limits
+
+- `for` loops must build UI by calling `list.append(...)`
+- `if/elif/else` must either:
+  - return in every branch, or
+  - assign the same variable(s) in every branch
+- `while`, `break`, `continue`, and `for/else` are not supported
 
 ## Commands (nestipy-cli)
 
@@ -448,6 +523,6 @@ nestipy run web:actions --spec http://127.0.0.1:8001/_actions/schema --output we
 ## Notes
 
 - Output is plain React + Vite and can be integrated with Tailwind or any React UI kit.
-- Use `js("...")` for raw JS expressions inside props.
+- Use `js("...")` only for raw JS snippets; most rendering can stay pure Python.
 - Components must return a `h(...)` tree (no arbitrary Python execution in render).
 - Nested components in the same file should be decorated with `@component` so the compiler emits them.

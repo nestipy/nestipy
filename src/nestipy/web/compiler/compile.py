@@ -555,10 +555,13 @@ def build_page_tsx(
 
     page_hooks = inline_hooks.get(page.primary, [])
     page_prelude = inline_prelude.get(page.primary, [])
+    state_hooks, other_hooks = _split_hook_lines(page_hooks)
+    state_lines = [f"  {line}" for line in state_hooks]
     prelude_lines = [f"  {line}" for line in page_prelude]
-    hook_lines = [f"  {line}" for line in page_hooks]
+    hook_lines = [f"  {line}" for line in other_hooks]
     component = [
         "export default function Page(): JSX.Element {",
+        *state_lines,
         *prelude_lines,
         *hook_lines,
         "  return (",
@@ -604,11 +607,14 @@ def build_layout_tsx(
 ) -> str:
     """Render the root layout wrapper TSX."""
     layout_body = render_root_value(layout_tree, slot_token="{children}")
+    state_hooks, other_hooks = _split_hook_lines(hooks or [])
     prelude_lines = [f"  {line}" for line in (prelude or [])]
-    hook_lines = [f"  {line}" for line in (hooks or [])]
+    state_lines = [f"  {line}" for line in state_hooks]
+    hook_lines = [f"  {line}" for line in other_hooks]
     return "\n".join(
         [
             "export function RootLayout({ children }: { children: ReactNode }): JSX.Element {",
+            *state_lines,
             *prelude_lines,
             *hook_lines,
             "  return (",
@@ -730,7 +736,7 @@ def collect_imports(
     return imports
 
 
-def collect_used_components(nodes: Iterable[Node]) -> set[str]:
+def collect_used_components(nodes: Iterable[Any]) -> set[str]:
     """Collect local component names referenced by node trees."""
     used: set[str] = set()
 
@@ -741,6 +747,11 @@ def collect_used_components(nodes: Iterable[Node]) -> set[str]:
                 used.add(node.tag.name)
             for child in node.children:
                 visit(child)
+        elif isinstance(node, ConditionalExpr):
+            visit(node.consequent)
+            visit(node.alternate)
+        elif isinstance(node, ForExpr):
+            visit(node.body)
         elif isinstance(node, list):
             for child in node:
                 visit(child)
@@ -1035,11 +1046,14 @@ def _component_block(
     )
     if exported:
         signature = f"export {signature}"
+    state_hooks, other_hooks = _split_hook_lines(hooks or [])
+    state_lines = [f"  {line}" for line in state_hooks]
     prelude_lines = [f"  {line}" for line in (prelude or [])]
-    hook_lines = [f"  {line}" for line in (hooks or [])]
+    hook_lines = [f"  {line}" for line in other_hooks]
     return "\n".join(
         [
             f"{signature} {{",
+            *state_lines,
             *prelude_lines,
             *hook_lines,
             "  return (",
@@ -1048,6 +1062,31 @@ def _component_block(
             "}",
             "",
         ]
+    )
+
+
+def _split_hook_lines(hooks: list[str]) -> tuple[list[str], list[str]]:
+    """Split hook statements into stateful hooks and everything else."""
+    state_hooks: list[str] = []
+    other_hooks: list[str] = []
+    for line in hooks:
+        if _is_state_hook_line(line):
+            state_hooks.append(line)
+        else:
+            other_hooks.append(line)
+    return state_hooks, other_hooks
+
+
+def _is_state_hook_line(line: str) -> bool:
+    """Return True if the hook line should appear before prelude helpers."""
+    return any(
+        token in line
+        for token in (
+            "React.useState",
+            "React.useContext",
+            "React.useRef",
+            "React.useReducer",
+        )
     )
 
 

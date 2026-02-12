@@ -58,7 +58,7 @@ class ParsedModule:
 class ParsedFile:
     """Parsed component file with resolved nodes and metadata."""
     primary: str
-    components: dict[str, Node]
+    components: dict[str, Any]
     imports: list[ImportSpec]
     props: dict[str, PropsSpec]
     component_props: dict[str, str]
@@ -104,8 +104,9 @@ def parse_component_file(
         if fn.name.value not in component_names:
             continue
         locals_map = _collect_locals(fn, module_names)
+        name_map = _build_name_map(locals_map, parsed.externals)
         return_value = _extract_return_value(
-            fn, parsed.externals, component_names, locals_map
+            fn, parsed.externals, component_names, locals_map, name_map
         )
         if return_value is None:
             raise CompilerError(
@@ -119,8 +120,8 @@ def parse_component_file(
                 f"Component '{fn.name.value}' must return a Node (use h())"
             )
         components[fn.name.value] = return_value
-        hooks[fn.name.value] = _collect_hook_statements(fn)
-        component_prelude[fn.name.value] = _collect_component_prelude(fn)
+        hooks[fn.name.value] = _collect_hook_statements(fn, name_map)
+        component_prelude[fn.name.value] = _collect_component_prelude(fn, name_map)
 
     component_props = _collect_component_props(parsed.functions, props_specs)
 
@@ -349,7 +350,9 @@ def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
     return contexts, names
 
 
-def _collect_hook_statements(fn: cst.FunctionDef) -> list[str]:
+def _collect_hook_statements(
+    fn: cst.FunctionDef, name_map: dict[str, str]
+) -> list[str]:
     """Collect React hook statements from a component body."""
     body = fn.body
     if not isinstance(body, cst.IndentedBlock):
@@ -364,13 +367,15 @@ def _collect_hook_statements(fn: cst.FunctionDef) -> list[str]:
         for inner in inner_statements:
             if isinstance(inner, cst.Return):
                 return hooks
-            hook_line = _hook_from_statement(inner)
+            hook_line = _hook_from_statement(inner, name_map)
             if hook_line:
                 hooks.append(hook_line)
     return hooks
 
 
-def _collect_component_prelude(fn: cst.FunctionDef) -> list[str]:
+def _collect_component_prelude(
+    fn: cst.FunctionDef, name_map: dict[str, str]
+) -> list[str]:
     """Collect helper function declarations inside a component."""
     body = fn.body
     if not isinstance(body, cst.IndentedBlock):
@@ -380,25 +385,25 @@ def _collect_component_prelude(fn: cst.FunctionDef) -> list[str]:
         if isinstance(stmt, cst.Return):
             return prelude
         if isinstance(stmt, cst.FunctionDef):
-            prelude.extend(_render_function_def(stmt))
+            prelude.extend(_render_function_def(stmt, name_map))
         elif isinstance(stmt, cst.SimpleStatementLine):
             for inner in stmt.body:
                 if isinstance(inner, cst.Return):
                     return prelude
                 if isinstance(inner, cst.FunctionDef):
-                    prelude.extend(_render_function_def(inner))
+                    prelude.extend(_render_function_def(inner, name_map))
                     continue
                 if isinstance(inner, cst.Assign):
-                    if _hook_from_assignment(inner):
+                    if _hook_from_assignment(inner, name_map):
                         continue
-                    rendered = _render_assignment(inner)
+                    rendered = _render_assignment(inner, name_map)
                     if rendered:
                         prelude.append(rendered)
                     continue
                 if isinstance(inner, cst.AnnAssign):
-                    if _hook_from_ann_assignment(inner):
+                    if _hook_from_ann_assignment(inner, name_map):
                         continue
-                    rendered = _render_assignment(inner)
+                    rendered = _render_assignment(inner, name_map)
                     if rendered:
                         prelude.append(rendered)
     return prelude
@@ -424,6 +429,52 @@ def _collect_locals(fn: cst.FunctionDef, module_names: set[str]) -> set[str]:
         return names
     _collect_locals_from_statements(body.body, names)
     return names
+
+
+def _camelize_identifier(name: str) -> str:
+    """Convert snake_case identifiers to camelCase."""
+    if "_" not in name:
+        return name
+    prefix = ""
+    while name.startswith("_"):
+        prefix += "_"
+        name = name[1:]
+    if not name:
+        return prefix
+    parts = name.split("_")
+    if not parts:
+        return prefix + name
+    head = parts[0]
+    tail = "".join(part.capitalize() for part in parts[1:] if part)
+    return f"{prefix}{head}{tail}"
+
+
+def _build_name_map(
+    local_names: set[str],
+    externals: dict[str, ExternalComponent | ExternalFunction],
+) -> dict[str, str]:
+    """Build a stable mapping of Python identifiers to JS-friendly names."""
+    name_map: dict[str, str] = {}
+    used: set[str] = set()
+
+    for name, ext in externals.items():
+        name_map[name] = ext.import_name
+        used.add(ext.import_name)
+
+    for name in sorted(local_names):
+        if name in name_map:
+            continue
+        candidate = _camelize_identifier(name)
+        if candidate in used and candidate != name:
+            candidate = name
+        name_map[name] = candidate
+        used.add(candidate)
+    return name_map
+
+
+def _map_target_names(names: list[str], name_map: dict[str, str]) -> list[str]:
+    """Map assignment target names using the provided mapping."""
+    return [name_map.get(name, name) for name in names]
 
 
 def _collect_locals_from_statements(
@@ -481,34 +532,40 @@ def _collect_target_names(target: cst.BaseAssignTargetExpression) -> list[str]:
     return []
 
 
-def _hook_from_statement(stmt: cst.CSTNode) -> str | None:
+def _hook_from_statement(stmt: cst.CSTNode, name_map: dict[str, str]) -> str | None:
     """Convert a hook assignment/expression into a JS statement."""
     if isinstance(stmt, cst.Assign):
-        return _hook_from_assignment(stmt)
+        return _hook_from_assignment(stmt, name_map)
     if isinstance(stmt, cst.AnnAssign):
-        return _hook_from_ann_assignment(stmt)
+        return _hook_from_ann_assignment(stmt, name_map)
     if isinstance(stmt, cst.Expr) and isinstance(stmt.value, cst.Call):
-        return _hook_from_call(stmt.value, target_names=None)
+        return _hook_from_call(stmt.value, target_names=None, name_map=name_map)
     if isinstance(stmt, cst.FunctionDef):
         return None
     return None
 
 
-def _hook_from_assignment(stmt: cst.Assign) -> str | None:
+def _hook_from_assignment(stmt: cst.Assign, name_map: dict[str, str]) -> str | None:
     """Handle hook calls in assignment statements."""
     if len(stmt.targets) != 1:
         return None
     target = stmt.targets[0].target
     if not isinstance(stmt.value, cst.Call):
         return None
-    return _hook_from_call(stmt.value, target_names=_target_names(target))
+    return _hook_from_call(
+        stmt.value, target_names=_target_names(target), name_map=name_map
+    )
 
 
-def _hook_from_ann_assignment(stmt: cst.AnnAssign) -> str | None:
+def _hook_from_ann_assignment(
+    stmt: cst.AnnAssign, name_map: dict[str, str]
+) -> str | None:
     """Handle hook calls in annotated assignments."""
     if not isinstance(stmt.value, cst.Call):
         return None
-    return _hook_from_call(stmt.value, target_names=_target_names(stmt.target))
+    return _hook_from_call(
+        stmt.value, target_names=_target_names(stmt.target), name_map=name_map
+    )
 
 
 def _target_names(target: cst.BaseAssignTargetExpression) -> list[str] | None:
@@ -526,7 +583,9 @@ def _target_names(target: cst.BaseAssignTargetExpression) -> list[str] | None:
     return None
 
 
-def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | None:
+def _hook_from_call(
+    call: cst.Call, target_names: list[str] | None, name_map: dict[str, str]
+) -> str | None:
     """Render hook calls into React hook statements."""
     name = _call_name(call)
     if name is None:
@@ -538,10 +597,10 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
         if effect is None:
             raise CompilerError("use_effect requires an effect callback")
         deps = _get_call_arg(call, 1, ("deps", "dependencies"))
-        effect_js = _expr_to_js(effect)
+        effect_js = _expr_to_js(effect, name_map)
         if deps is None:
             return f"React.useEffect({effect_js});"
-        return f"React.useEffect({effect_js}, {_expr_to_js(deps)});"
+        return f"React.useEffect({effect_js}, {_expr_to_js(deps, name_map)});"
 
     hook_map = {
         "use_state": "useState",
@@ -558,26 +617,27 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
     hook_name = hook_map[name]
     if name == "use_state":
         initial = _get_call_arg(call, 0, ("initial", "value"))
-        args = [_expr_to_js(initial)] if initial is not None else []
+        args = [_expr_to_js(initial, name_map)] if initial is not None else []
     elif name == "use_ref":
         initial = _get_call_arg(call, 0, ("initial", "value"))
-        args = [_expr_to_js(initial)] if initial is not None else []
+        args = [_expr_to_js(initial, name_map)] if initial is not None else []
     elif name == "use_context":
         ctx = _get_call_arg(call, 0, ("context",))
         if ctx is None:
             raise CompilerError("use_context requires a context argument")
-        args = [_expr_to_js(ctx)]
+        args = [_expr_to_js(ctx, name_map)]
     elif name in {"use_memo", "use_callback"}:
         fn_arg = _get_call_arg(call, 0, ("fn", "callback", "factory"))
         if fn_arg is None:
             raise CompilerError(f"{name} requires a callback argument")
-        args = [_expr_to_js(fn_arg)]
+        args = [_expr_to_js(fn_arg, name_map)]
         deps = _get_call_arg(call, 1, ("deps", "dependencies"))
         if deps is not None:
-            args.append(_expr_to_js(deps))
+            args.append(_expr_to_js(deps, name_map))
     else:
-        args = _call_args_to_js(call)
+        args = _call_args_to_js(call, name_map)
     args_str = ", ".join(args) if args else ""
+    target_names = _map_target_names(target_names, name_map)
 
     if name == "use_state":
         if len(target_names) == 2:
@@ -593,7 +653,9 @@ def _hook_from_call(call: cst.Call, target_names: list[str] | None) -> str | Non
     return f"const {target_names[0]} = React.{hook_name}({args_str});"
 
 
-def _render_assignment(stmt: cst.Assign | cst.AnnAssign) -> str | None:
+def _render_assignment(
+    stmt: cst.Assign | cst.AnnAssign, name_map: dict[str, str]
+) -> str | None:
     """Render a simple assignment into a JS const declaration."""
     if isinstance(stmt, cst.Assign):
         if len(stmt.targets) != 1:
@@ -605,28 +667,30 @@ def _render_assignment(stmt: cst.Assign | cst.AnnAssign) -> str | None:
         value = stmt.value
     if value is None:
         return None
-    target_js = _render_assignment_target(target)
+    target_js = _render_assignment_target(target, name_map)
     if not target_js:
         return None
-    return f"const {target_js} = {_expr_to_js(value)};"
+    return f"const {target_js} = {_expr_to_js(value, name_map)};"
 
 
-def _render_assignment_target(target: cst.BaseAssignTargetExpression) -> str | None:
+def _render_assignment_target(
+    target: cst.BaseAssignTargetExpression, name_map: dict[str, str]
+) -> str | None:
     """Render a JS-friendly assignment target."""
     if isinstance(target, cst.Name):
-        return target.value
+        return name_map.get(target.value, target.value)
     if isinstance(target, (cst.Tuple, cst.List)):
         names: list[str] = []
         for element in target.elements:
             if isinstance(element, cst.Element) and isinstance(element.value, cst.Name):
-                names.append(element.value.value)
+                names.append(name_map.get(element.value.value, element.value.value))
             else:
                 return None
         return "[" + ", ".join(names) + "]"
     return None
 
 
-def _render_function_def(fn: cst.FunctionDef) -> list[str]:
+def _render_function_def(fn: cst.FunctionDef, name_map: dict[str, str]) -> list[str]:
     """Render a nested Python function as a JS function expression."""
     if isinstance(fn.params.star_arg, cst.Param) or isinstance(
         fn.params.star_kwarg, cst.Param
@@ -634,22 +698,23 @@ def _render_function_def(fn: cst.FunctionDef) -> list[str]:
         raise CompilerError("Hook functions do not support *args or **kwargs.")
     params: list[str] = []
     for param in fn.params.params:
-        name = param.name.value
+        name = name_map.get(param.name.value, param.name.value)
         if param.default is not None:
-            default_value = _expr_to_js(param.default)
+            default_value = _expr_to_js(param.default, name_map)
             params.append(f"{name} = {default_value}")
         else:
             params.append(name)
     async_prefix = "async " if fn.asynchronous else ""
-    body_lines = _render_function_body(fn)
-    lines = [f"const {fn.name.value} = {async_prefix}({', '.join(params)}) => {{"]
+    body_lines = _render_function_body(fn, name_map)
+    fn_name = name_map.get(fn.name.value, fn.name.value)
+    lines = [f"const {fn_name} = {async_prefix}({', '.join(params)}) => {{"]
     if body_lines:
         lines.extend(["  " + line for line in body_lines])
     lines.append("};")
     return lines
 
 
-def _render_function_body(fn: cst.FunctionDef) -> list[str]:
+def _render_function_body(fn: cst.FunctionDef, name_map: dict[str, str]) -> list[str]:
     """Render a function body into JS statements."""
     body = fn.body
     if not isinstance(body, cst.IndentedBlock):
@@ -666,11 +731,11 @@ def _render_function_body(fn: cst.FunctionDef) -> list[str]:
                 if inner.value is None:
                     lines.append("return;")
                 else:
-                    lines.append(f"return {_expr_to_js(inner.value)};")
+                    lines.append(f"return {_expr_to_js(inner.value, name_map)};")
                 continue
             if isinstance(inner, cst.Expr):
                 if isinstance(inner.value, (cst.Call, cst.Attribute, cst.Await)):
-                    lines.append(f"{_expr_to_js(inner.value)};")
+                    lines.append(f"{_expr_to_js(inner.value, name_map)};")
                     continue
             if isinstance(inner, cst.Pass):
                 continue
@@ -680,9 +745,11 @@ def _render_function_body(fn: cst.FunctionDef) -> list[str]:
     return lines
 
 
-def _call_args_to_js(call: cst.Call) -> list[str]:
+def _call_args_to_js(call: cst.Call, name_map: dict[str, str]) -> list[str]:
     """Convert call arguments into JS strings."""
-    return [_expr_to_js(arg.value) for arg in call.args if arg.keyword is None]
+    return [
+        _expr_to_js(arg.value, name_map) for arg in call.args if arg.keyword is None
+    ]
 
 
 def _get_call_arg(
@@ -730,15 +797,19 @@ def _extract_return_value(
     externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str],
+    name_map: dict[str, str],
 ) -> Any | None:
     """Extract the returned value from a component body with statement support."""
     body = fn.body
     if not isinstance(body, cst.IndentedBlock):
         return None
     bindings: dict[str, Any] = {}
-    return _return_from_statements(
-        body.body, externals, component_names, locals, bindings
+    has_return, value = _return_from_statements(
+        body.body, externals, component_names, locals, bindings, name_map
     )
+    if not has_return:
+        return None
+    return value
 
 
 def _return_from_statements(
@@ -747,7 +818,8 @@ def _return_from_statements(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
-) -> Any | None:
+    name_map: dict[str, str] | None = None,
+) -> tuple[bool, Any | None]:
     for stmt in statements:
         inner_statements: list[cst.CSTNode] = []
         if isinstance(stmt, cst.SimpleStatementLine):
@@ -757,29 +829,29 @@ def _return_from_statements(
         for inner in inner_statements:
             if isinstance(inner, cst.Return):
                 if inner.value is None:
-                    return None
-                return _eval_return_expr(
-                    inner.value, externals, component_names, locals, bindings
+                    return True, None
+                return True, _eval_return_expr(
+                    inner.value, externals, component_names, locals, bindings, name_map
                 )
             if isinstance(inner, cst.Assign):
-                _handle_assignment(inner, externals, component_names, locals, bindings)
+                _handle_assignment(inner, externals, component_names, locals, bindings, name_map)
                 continue
             if isinstance(inner, cst.AnnAssign):
-                _handle_assignment(inner, externals, component_names, locals, bindings)
+                _handle_assignment(inner, externals, component_names, locals, bindings, name_map)
                 continue
             if isinstance(inner, cst.If):
                 result = _handle_if_statement(
-                    inner, externals, component_names, locals, bindings
+                    inner, externals, component_names, locals, bindings, name_map
                 )
                 if result is not None:
-                    return result
+                    return True, result
                 continue
             if isinstance(inner, cst.For):
                 _handle_for_statement(
-                    inner, externals, component_names, locals, bindings
+                    inner, externals, component_names, locals, bindings, name_map
                 )
                 continue
-    return None
+    return False, None
 
 
 def _eval_return_expr(
@@ -788,10 +860,11 @@ def _eval_return_expr(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> Any:
     if isinstance(expr, cst.Name) and expr.value in bindings:
         return bindings[expr.value]
-    return _eval_expr(expr, externals, component_names, locals, bindings)
+    return _eval_expr(expr, externals, component_names, locals, bindings, name_map)
 
 
 def _handle_assignment(
@@ -800,24 +873,25 @@ def _handle_assignment(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> None:
     if isinstance(stmt, cst.Assign):
         if len(stmt.targets) != 1:
             return
         target = stmt.targets[0].target
         value = stmt.value
-        if _hook_from_assignment(stmt):
+        if _hook_from_assignment(stmt, name_map or {}):
             return
     else:
         target = stmt.target
         value = stmt.value
-        if _hook_from_ann_assignment(stmt):
+        if _hook_from_ann_assignment(stmt, name_map or {}):
             return
     if value is None:
         return
     if not isinstance(target, cst.Name):
         return
-    evaluated = _eval_expr(value, externals, component_names, locals, bindings)
+    evaluated = _eval_expr(value, externals, component_names, locals, bindings, name_map)
     bindings[target.value] = evaluated
 
 
@@ -827,49 +901,55 @@ def _handle_if_statement(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> Any | None:
     branches, else_body = _flatten_if(stmt)
+    branch_results = [
+        _evaluate_branch(body, externals, component_names, locals, bindings, name_map)
+        for _, body in branches
+    ]
+    else_result = (
+        _evaluate_branch(else_body, externals, component_names, locals, bindings, name_map)
+        if else_body is not None
+        else None
+    )
+    tests = [test for test, _ in branches]
 
-    return_branches: list[tuple[cst.BaseExpression, Any]] = []
-    for test, body in branches:
-        expr = _extract_branch_return(body)
-        if expr is None:
-            return_branches = []
-            break
-        return_branches.append(
-            (test, _eval_expr(expr, externals, component_names, locals, bindings))
+    if all(result.has_return for result in branch_results) and (
+        else_result is None or else_result.has_return
+    ):
+        alternate = else_result.return_value if else_result else None
+        return _build_conditional(
+            list(zip(tests, [result.return_value for result in branch_results])),
+            alternate,
+            name_map,
         )
-    if return_branches:
-        else_expr = _extract_branch_return(else_body) if else_body else None
-        alternate = (
-            _eval_expr(else_expr, externals, component_names, locals, bindings)
-            if else_expr is not None
-            else None
-        )
-        return _build_conditional(return_branches, alternate)
+    if any(result.has_return for result in branch_results) or (
+        else_result and else_result.has_return
+    ):
+        raise CompilerError("If/elif must return in all branches or none.")
 
-    assign_branches: list[tuple[cst.BaseExpression, tuple[str, Any]]] = []
-    for test, body in branches:
-        assignment = _extract_branch_assignment(body, externals, component_names, locals, bindings)
-        if assignment is None:
-            assign_branches = []
-            break
-        assign_branches.append((test, assignment))
-    if assign_branches:
-        else_assignment = (
-            _extract_branch_assignment(else_body, externals, component_names, locals, bindings)
-            if else_body
-            else None
-        )
-        name = assign_branches[0][1][0]
-        if any(branch[1][0] != name for branch in assign_branches):
-            raise CompilerError("If/elif assignment targets must match.")
-        if else_body is not None and else_assignment is None:
-            raise CompilerError("If/elif assignment requires an else branch assignment.")
-        else_value = else_assignment[1] if else_assignment else None
-        bindings[name] = _build_conditional(
-            [(test, value) for test, (_, value) in assign_branches],
-            else_value,
+    if else_body is None:
+        if any(result.assignments for result in branch_results):
+            raise CompilerError("If/elif assignment requires an else branch.")
+        return None
+
+    if else_result is None:
+        return None
+
+    keys = set(branch_results[0].assignments.keys())
+    if not keys:
+        return None
+    if any(set(result.assignments.keys()) != keys for result in branch_results):
+        raise CompilerError("If/elif assignment targets must match.")
+    if set(else_result.assignments.keys()) != keys:
+        raise CompilerError("If/elif assignment targets must match.")
+
+    for key in keys:
+        bindings[key] = _build_conditional(
+            list(zip(tests, [result.assignments[key] for result in branch_results])),
+            else_result.assignments[key],
+            name_map,
         )
     return None
 
@@ -894,51 +974,33 @@ def _flatten_if(
     return branches, else_body
 
 
-def _extract_branch_return(body: cst.BaseSuite | None) -> cst.BaseExpression | None:
-    if body is None:
-        return None
-    statements = _suite_statements(body)
-    if not statements:
-        return None
-    if len(statements) != 1:
-        return None
-    stmt = statements[0]
-    if isinstance(stmt, cst.Return):
-        return stmt.value
-    return None
+@dataclass(frozen=True, slots=True)
+class _BranchResult:
+    has_return: bool
+    return_value: Any | None
+    assignments: dict[str, Any]
 
 
-def _extract_branch_assignment(
+def _evaluate_branch(
     body: cst.BaseSuite | None,
     externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
-) -> tuple[str, Any] | None:
+    name_map: dict[str, str] | None = None,
+) -> _BranchResult:
     if body is None:
-        return None
+        return _BranchResult(False, None, {})
     statements = _suite_statements(body)
-    if not statements or len(statements) != 1:
-        return None
-    stmt = statements[0]
-    if isinstance(stmt, cst.Assign):
-        if len(stmt.targets) != 1:
-            return None
-        target = stmt.targets[0].target
-        if not isinstance(target, cst.Name):
-            return None
-        if _hook_from_assignment(stmt):
-            return None
-        value = _eval_expr(stmt.value, externals, component_names, locals, bindings)
-        return target.value, value
-    if isinstance(stmt, cst.AnnAssign):
-        if not isinstance(stmt.target, cst.Name) or stmt.value is None:
-            return None
-        if _hook_from_ann_assignment(stmt):
-            return None
-        value = _eval_expr(stmt.value, externals, component_names, locals, bindings)
-        return stmt.target.value, value
-    return None
+    branch_bindings = dict(bindings)
+    has_return, return_value = _return_from_statements(
+        statements, externals, component_names, locals, branch_bindings, name_map
+    )
+    assignments: dict[str, Any] = {}
+    for key, value in branch_bindings.items():
+        if key not in bindings or bindings[key] != value:
+            assignments[key] = value
+    return _BranchResult(has_return, return_value, assignments)
 
 
 def _suite_statements(body: cst.BaseSuite) -> list[cst.CSTNode]:
@@ -961,47 +1023,155 @@ def _handle_for_statement(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> None:
     target_name = _comp_target_name(stmt.target)
     if target_name is None:
         raise CompilerError("For loop target must be a simple name.")
-    iterable = JSExpr(_expr_to_js(stmt.iter))
+    if stmt.orelse is not None:
+        raise CompilerError("For/else is not supported in components.")
+    iterable = JSExpr(_expr_to_js(stmt.iter, name_map))
 
-    append_target, append_expr, condition = _extract_for_append(
-        stmt.body, externals, component_names, locals | {target_name}, bindings
+    append_target, append_expr = _extract_loop_body(
+        stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
     )
     if append_target is None or append_expr is None:
         raise CompilerError(
-            "For loops must append a single JSX expression (e.g., items.append(h.li(x)))."
+            "For loops must append JSX expressions (e.g., items.append(h.li(x)))."
         )
+    target = name_map.get(target_name, target_name) if name_map else target_name
     bindings[append_target] = ForExpr(
-        target=target_name, iterable=iterable, body=append_expr, condition=condition
+        target=target, iterable=iterable, body=append_expr, condition=None
     )
 
 
-def _extract_for_append(
+def _extract_loop_body(
     body: cst.BaseSuite,
     externals: dict[str, ExternalComponent | ExternalFunction],
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
-) -> tuple[str | None, Any | None, JSExpr | None]:
+    name_map: dict[str, str] | None = None,
+) -> tuple[str | None, Any | None]:
     statements = _suite_statements(body)
-    if not statements or len(statements) != 1:
-        return None, None, None
-    stmt = statements[0]
-    if isinstance(stmt, cst.If):
-        if_body = _suite_statements(stmt.body)
-        if len(if_body) != 1:
-            return None, None, None
-        inner = if_body[0]
-        name, expr = _extract_append_call(inner, externals, component_names, locals, bindings)
-        if name is None:
-            return None, None, None
-        condition = JSExpr(_expr_to_js(stmt.test))
-        return name, expr, condition
-    name, expr = _extract_append_call(stmt, externals, component_names, locals, bindings)
-    return name, expr, None
+    if not statements:
+        return None, None
+    local_bindings = dict(bindings)
+    append_target: str | None = None
+    expressions: list[Any] = []
+
+    for stmt in statements:
+        if isinstance(stmt, cst.Assign) or isinstance(stmt, cst.AnnAssign):
+            _handle_assignment(stmt, externals, component_names, locals, local_bindings, name_map)
+            continue
+        if isinstance(stmt, cst.If):
+            target, expr = _extract_loop_if_expr(
+                stmt, externals, component_names, locals, local_bindings, name_map
+            )
+            if target is None:
+                result = _handle_if_statement(
+                    stmt, externals, component_names, locals, local_bindings, name_map
+                )
+                if result is not None:
+                    raise CompilerError("Return statements are not allowed inside for loops.")
+                continue
+            append_target = _merge_append_target(append_target, target)
+            expressions.append(expr)
+            continue
+        if isinstance(stmt, cst.For):
+            target, expr = _extract_nested_for_expr(
+                stmt, externals, component_names, locals, local_bindings, name_map
+            )
+            append_target = _merge_append_target(append_target, target)
+            expressions.append(expr)
+            continue
+        target, expr = _extract_append_call(
+            stmt, externals, component_names, locals, local_bindings, name_map
+        )
+        if target is None or expr is None:
+            raise CompilerError("For loop body must use append(...) calls.")
+        append_target = _merge_append_target(append_target, target)
+        expressions.append(expr)
+
+    if append_target is None:
+        return None, None
+    if not expressions:
+        return append_target, []
+    if len(expressions) == 1:
+        return append_target, expressions[0]
+    return append_target, expressions
+
+
+def _extract_loop_if_expr(
+    stmt: cst.If,
+    externals: dict[str, ExternalComponent | ExternalFunction],
+    component_names: set[str],
+    locals: set[str],
+    bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
+) -> tuple[str | None, Any | None]:
+    branches, else_body = _flatten_if(stmt)
+    append_target: str | None = None
+    branch_values: list[tuple[cst.BaseExpression, Any]] = []
+    for test, body in branches:
+        target, value = _extract_loop_body(
+            body, externals, component_names, locals, dict(bindings), name_map
+        )
+        if target is not None:
+            append_target = _merge_append_target(append_target, target)
+        if value is None:
+            value = []
+        branch_values.append((test, value))
+
+    if append_target is None:
+        return None, None
+
+    if else_body is not None:
+        _, else_value = _extract_loop_body(
+            else_body, externals, component_names, locals, dict(bindings), name_map
+        )
+        if else_value is None:
+            else_value = []
+    else:
+        else_value = []
+
+    expr = _build_conditional(branch_values, else_value, name_map)
+    return append_target, expr
+
+
+def _extract_nested_for_expr(
+    stmt: cst.For,
+    externals: dict[str, ExternalComponent | ExternalFunction],
+    component_names: set[str],
+    locals: set[str],
+    bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
+) -> tuple[str, ForExpr]:
+    target_name = _comp_target_name(stmt.target)
+    if target_name is None:
+        raise CompilerError("Nested for loop target must be a simple name.")
+    if stmt.orelse is not None:
+        raise CompilerError("For/else is not supported in components.")
+    iterable = JSExpr(_expr_to_js(stmt.iter, name_map))
+    append_target, body_expr = _extract_loop_body(
+        stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
+    )
+    if append_target is None or body_expr is None:
+        raise CompilerError(
+            "Nested for loops must append JSX expressions (e.g., items.append(h.li(x)))."
+        )
+    target = name_map.get(target_name, target_name) if name_map else target_name
+    return append_target, ForExpr(
+        target=target, iterable=iterable, body=body_expr, condition=None
+    )
+
+
+def _merge_append_target(existing: str | None, new: str) -> str:
+    if existing is None:
+        return new
+    if existing != new:
+        raise CompilerError("For loop must append to a single list variable.")
+    return existing
 
 
 def _extract_append_call(
@@ -1010,6 +1180,7 @@ def _extract_append_call(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> tuple[str | None, Any | None]:
     if not isinstance(stmt, cst.Expr):
         return None, None
@@ -1025,17 +1196,18 @@ def _extract_append_call(
         return None, None
     if len(call.args) != 1:
         return None, None
-    value = _eval_expr(call.args[0].value, externals, component_names, locals, bindings)
+    value = _eval_expr(call.args[0].value, externals, component_names, locals, bindings, name_map)
     return func.value.value, value
 
 
 def _build_conditional(
     branches: list[tuple[cst.BaseExpression, Any]],
     alternate: Any | None,
+    name_map: dict[str, str] | None = None,
 ) -> ConditionalExpr:
     current: Any = alternate
     for test, value in reversed(branches):
-        test_expr = JSExpr(_expr_to_js(test))
+        test_expr = JSExpr(_expr_to_js(test, name_map))
         current = ConditionalExpr(test=test_expr, consequent=value, alternate=current)
     return current
 
@@ -1086,6 +1258,7 @@ def _eval_expr(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> Any:
     """Evaluate a CST expression into a Node/JSExpr/value."""
     local_names = locals or set()
@@ -1094,7 +1267,8 @@ def _eval_expr(
         if expr.value in bound_values:
             return bound_values[expr.value]
         if expr.value in externals:
-            return JSExpr(expr.value)
+            ext = externals[expr.value]
+            return JSExpr(name_map.get(expr.value, ext.import_name) if name_map else ext.import_name)
         if expr.value in component_names:
             return LocalComponent(expr.value)
         if expr.value == "Fragment":
@@ -1108,13 +1282,13 @@ def _eval_expr(
         if expr.value == "None":
             return None
         if expr.value in local_names:
-            return JSExpr(expr.value)
+            return JSExpr(name_map.get(expr.value, expr.value) if name_map else expr.value)
         raise CompilerError(
             f"Unsupported name '{expr.value}'. Use external() for components or js(...) for expressions."
         )
 
     if isinstance(expr, cst.Attribute):
-        return JSExpr(_expr_to_js(expr))
+        return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.SimpleString):
         return _eval_string(expr)
@@ -1127,32 +1301,32 @@ def _eval_expr(
 
     if isinstance(expr, cst.List):
         return [
-            _eval_expr(el.value, externals, component_names, local_names, bound_values)
+            _eval_expr(el.value, externals, component_names, local_names, bound_values, name_map)
             for el in expr.elements
         ]
 
     if isinstance(expr, cst.ListComp):
-        return _eval_list_comp(expr, externals, component_names, local_names, bound_values)
+        return _eval_list_comp(expr, externals, component_names, local_names, bound_values, name_map)
 
     if isinstance(expr, cst.Tuple):
         return [
-            _eval_expr(el.value, externals, component_names, local_names, bound_values)
+            _eval_expr(el.value, externals, component_names, local_names, bound_values, name_map)
             for el in expr.elements
         ]
 
     if isinstance(expr, cst.Dict):
-        return _eval_dict(expr, externals, component_names, local_names, bound_values)
+        return _eval_dict(expr, externals, component_names, local_names, bound_values, name_map)
 
     if isinstance(expr, cst.Call):
         tag_name = _is_h_tag_call(expr)
         if tag_name is not None:
             return _eval_tag_call(
-                tag_name, expr.args, externals, component_names, local_names, bound_values
+                tag_name, expr.args, externals, component_names, local_names, bound_values, name_map
             )
 
         call_name = _call_name(expr)
         if call_name == "h":
-            return _eval_h_call(expr, externals, component_names, local_names, bound_values)
+            return _eval_h_call(expr, externals, component_names, local_names, bound_values, name_map)
         if call_name == "js":
             if not expr.args:
                 raise CompilerError("js() requires a string")
@@ -1162,7 +1336,7 @@ def _eval_expr(
         if call_name == "external_fn":
             return _eval_external_call(expr, kind="function")
         if call_name == "new_":
-            return JSExpr(_expr_to_js(expr))
+            return JSExpr(_expr_to_js(expr, name_map))
 
         if isinstance(expr.func, cst.Name):
             name = expr.func.value
@@ -1174,6 +1348,7 @@ def _eval_expr(
                     component_names,
                     local_names,
                     bound_values,
+                    name_map,
                 )
             if name in externals:
                 ext = externals[name]
@@ -1185,29 +1360,30 @@ def _eval_expr(
                         component_names,
                         local_names,
                         bound_values,
+                        name_map,
                     )
-                return JSExpr(_expr_to_js(expr))
+                return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.IfExp):
-        test_expr = JSExpr(_expr_to_js(expr.test))
-        consequent = _eval_expr(expr.body, externals, component_names, local_names, bound_values)
-        alternate = _eval_expr(expr.orelse, externals, component_names, local_names, bound_values)
+        test_expr = JSExpr(_expr_to_js(expr.test, name_map))
+        consequent = _eval_expr(expr.body, externals, component_names, local_names, bound_values, name_map)
+        alternate = _eval_expr(expr.orelse, externals, component_names, local_names, bound_values, name_map)
         return ConditionalExpr(test=test_expr, consequent=consequent, alternate=alternate)
 
     if isinstance(expr, cst.BooleanOperation):
-        return JSExpr(_expr_to_js(expr))
+        return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.UnaryOperation):
-        return JSExpr(_expr_to_js(expr))
+        return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.BinaryOperation):
-        return JSExpr(_expr_to_js(expr))
+        return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.Comparison):
-        return JSExpr(_expr_to_js(expr))
+        return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.FormattedString):
-        return JSExpr(_format_fstring(expr))
+        return JSExpr(_format_fstring(expr, name_map))
 
     raise CompilerError(f"Unsupported expression: {expr.__class__.__name__}")
 
@@ -1218,18 +1394,19 @@ def _eval_h_call(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> Node:
     """Evaluate a call to h(...) into a Node."""
     args = call.args
     if not args:
         raise CompilerError("h() requires at least a tag argument")
 
-    tag = _eval_tag_expr(args[0].value, externals, component_names, locals, bindings)
+    tag = _eval_tag_expr(args[0].value, externals, component_names, locals, bindings, name_map)
     props, children_args = _split_props(
-        args[1:], externals, component_names, locals, bindings
+        args[1:], externals, component_names, locals, bindings, name_map
     )
     children = [
-        _eval_expr(arg.value, externals, component_names, locals, bindings)
+        _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
         for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
@@ -1241,6 +1418,7 @@ def _eval_tag_expr(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> Any:
     """Evaluate the first argument to h(...) as a tag reference."""
     if isinstance(expr, cst.Name):
@@ -1255,8 +1433,8 @@ def _eval_tag_expr(
         if expr.value == "Slot":
             return Slot
     if isinstance(expr, cst.Attribute):
-        return JSExpr(_expr_to_js(expr))
-    return _eval_expr(expr, externals, component_names, locals, bindings)
+        return JSExpr(_expr_to_js(expr, name_map))
+    return _eval_expr(expr, externals, component_names, locals, bindings, name_map)
 
 
 def _eval_tag_call(
@@ -1266,13 +1444,14 @@ def _eval_tag_call(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> Node:
     """Evaluate a call to h.tag(...) into a Node."""
     props, children_args = _split_props(
-        args, externals, component_names, locals, bindings
+        args, externals, component_names, locals, bindings, name_map
     )
     children = [
-        _eval_expr(arg.value, externals, component_names, locals, bindings)
+        _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
         for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
@@ -1284,6 +1463,7 @@ def _eval_list_comp(
     component_names: set[str],
     locals: set[str],
     bindings: dict[str, Any],
+    name_map: dict[str, str] | None = None,
 ) -> ForExpr:
     """Evaluate a list comprehension into a ForExpr."""
     comp = expr.for_in
@@ -1294,15 +1474,19 @@ def _eval_list_comp(
     target_name = _comp_target_name(comp.target)
     if target_name is None:
         raise CompilerError("List comprehension target must be a simple name.")
-    iterable = JSExpr(_expr_to_js(comp.iter))
+    local_map = dict(name_map or {})
+    if target_name not in local_map:
+        local_map[target_name] = _camelize_identifier(target_name)
+    iterable = JSExpr(_expr_to_js(comp.iter, local_map))
     condition = None
     if comp.ifs:
-        tests = [_expr_to_js(cond.test) for cond in comp.ifs]
+        tests = [_expr_to_js(cond.test, local_map) for cond in comp.ifs]
         condition = JSExpr(" && ".join(f"({t})" for t in tests))
     body = _eval_expr(
-        expr.elt, externals, component_names, locals | {target_name}, bindings
+        expr.elt, externals, component_names, locals | {target_name}, bindings, local_map
     )
-    return ForExpr(target=target_name, iterable=iterable, body=body, condition=condition)
+    target = local_map.get(target_name, target_name)
+    return ForExpr(target=target, iterable=iterable, body=body, condition=condition)
 
 
 def _comp_target_name(target: cst.BaseExpression) -> str | None:
@@ -1321,13 +1505,14 @@ def _eval_component_call(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> Node:
     """Evaluate a call to a component function into a Node."""
     props, children_args = _split_props(
-        args, externals, component_names, locals, bindings
+        args, externals, component_names, locals, bindings, name_map
     )
     children = [
-        _eval_expr(arg.value, externals, component_names, locals, bindings)
+        _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
         for arg in children_args
     ]
     return Node(tag=tag, props=props, children=children)
@@ -1339,6 +1524,7 @@ def _split_props(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], list[cst.Arg]]:
     """Split props keywords/spreads from positional children."""
     positional: list[cst.Arg] = []
@@ -1348,11 +1534,11 @@ def _split_props(
             positional.append(arg)
         else:
             key = _normalize_prop_key(arg.keyword.value)
-            props[key] = _eval_expr(arg.value, externals, component_names, locals, bindings)
+            props[key] = _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
 
     if positional and isinstance(positional[0].value, cst.Dict):
         base_props = _eval_dict(
-            positional[0].value, externals, component_names, locals, bindings
+            positional[0].value, externals, component_names, locals, bindings, name_map
         )
         if isinstance(base_props, dict):
             spread = base_props.get("__spread__")
@@ -1370,6 +1556,7 @@ def _eval_dict(
     component_names: set[str],
     locals: set[str] | None = None,
     bindings: dict[str, Any] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate a dict expression into a props mapping."""
     result: dict[str, Any] = {}
@@ -1378,13 +1565,13 @@ def _eval_dict(
         if element is None:
             continue
         if isinstance(element, cst.StarredDictElement):
-            spreads.append(JSExpr(_expr_to_js(element.value)))
+            spreads.append(JSExpr(_expr_to_js(element.value, name_map)))
             continue
         if element.key is None or element.value is None:
             continue
         key = _normalize_prop_key(_eval_key(element.key))
         result[str(key)] = _eval_expr(
-            element.value, externals, component_names, locals, bindings
+            element.value, externals, component_names, locals, bindings, name_map
         )
     if spreads:
         result["__spread__"] = spreads
@@ -1413,7 +1600,7 @@ def _normalize_prop_key(key: str) -> str:
     return key
 
 
-def _expr_to_js(expr: cst.BaseExpression) -> str:
+def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None) -> str:
     """Convert a CST expression into a JS expression string."""
     if isinstance(expr, cst.Name):
         if expr.value == "None":
@@ -1422,16 +1609,16 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
             return "true"
         if expr.value == "False":
             return "false"
-        return expr.value
+        return name_map.get(expr.value, expr.value) if name_map else expr.value
     if isinstance(expr, cst.Attribute):
-        return f"{_expr_to_js(expr.value)}.{expr.attr.value}"
+        return f"{_expr_to_js(expr.value, name_map)}.{expr.attr.value}"
     if isinstance(expr, cst.SimpleString):
         return json.dumps(_eval_string(expr))
     if isinstance(expr, cst.List):
-        items = [_expr_to_js(el.value) for el in expr.elements if el is not None]
+        items = [_expr_to_js(el.value, name_map) for el in expr.elements if el is not None]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Tuple):
-        items = [_expr_to_js(el.value) for el in expr.elements if el is not None]
+        items = [_expr_to_js(el.value, name_map) for el in expr.elements if el is not None]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Dict):
         parts: list[str] = []
@@ -1439,25 +1626,25 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
             if element is None:
                 continue
             if isinstance(element, cst.StarredDictElement):
-                parts.append("..." + _expr_to_js(element.value))
+                parts.append("..." + _expr_to_js(element.value, name_map))
                 continue
             if element.key is None or element.value is None:
                 continue
             key = _eval_key(element.key)
-            parts.append(f"{json.dumps(key)}: {_expr_to_js(element.value)}")
+            parts.append(f"{json.dumps(key)}: {_expr_to_js(element.value, name_map)}")
         return "{" + ", ".join(parts) + "}"
     if isinstance(expr, cst.Integer):
         return expr.value
     if isinstance(expr, cst.Float):
         return expr.value
     if isinstance(expr, cst.IfExp):
-        return f"({_expr_to_js(expr.test)}) ? ({_expr_to_js(expr.body)}) : ({_expr_to_js(expr.orelse)})"
+        return f"({_expr_to_js(expr.test, name_map)}) ? ({_expr_to_js(expr.body, name_map)}) : ({_expr_to_js(expr.orelse, name_map)})"
     if isinstance(expr, cst.BooleanOperation):
         op = "&&" if isinstance(expr.operator, cst.And) else "||"
-        return f"({_expr_to_js(expr.left)}) {op} ({_expr_to_js(expr.right)})"
+        return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(expr.right, name_map)})"
     if isinstance(expr, cst.UnaryOperation):
         if isinstance(expr.operator, cst.Not):
-            return f"!({_expr_to_js(expr.expression)})"
+            return f"!({_expr_to_js(expr.expression, name_map)})"
     if isinstance(expr, cst.BinaryOperation):
         op_map = {
             cst.Add: "+",
@@ -1469,7 +1656,7 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
         op = op_map.get(type(expr.operator))
         if op is None:
             raise CompilerError("Unsupported binary operator in JS context.")
-        return f"({_expr_to_js(expr.left)}) {op} ({_expr_to_js(expr.right)})"
+        return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(expr.right, name_map)})"
     if isinstance(expr, cst.Comparison):
         if len(expr.comparisons) == 1:
             comp = expr.comparisons[0]
@@ -1486,7 +1673,7 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
                 cst.IsNot: "!==",
             }
             op = op_map.get(type(comp.operator), "==")
-            return f"({_expr_to_js(expr.left)}) {op} ({_expr_to_js(comp.comparator)})"
+            return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(comp.comparator, name_map)})"
     if isinstance(expr, cst.Call):
         # only allow js(...) calls inside expressions
         name = _call_name(expr)
@@ -1497,40 +1684,40 @@ def _expr_to_js(expr: cst.BaseExpression) -> str:
                 raise CompilerError("new_() requires a constructor argument.")
             if any(arg.keyword is not None for arg in expr.args):
                 raise CompilerError("new_() does not support keyword arguments.")
-            target = _expr_to_js(expr.args[0].value)
-            args = [_expr_to_js(arg.value) for arg in expr.args[1:]]
+            target = _expr_to_js(expr.args[0].value, name_map)
+            args = [_expr_to_js(arg.value, name_map) for arg in expr.args[1:]]
             return f"new {target}({', '.join(args)})"
     if isinstance(expr, cst.FormattedString):
-        return _format_fstring(expr)
+        return _format_fstring(expr, name_map)
     if isinstance(expr, cst.Subscript):
-        target = _expr_to_js(expr.value)
+        target = _expr_to_js(expr.value, name_map)
         if len(expr.slice) != 1:
             raise CompilerError("Unsupported subscript expression.")
         sub = expr.slice[0].slice
         if isinstance(sub, cst.Index):
-            return f"{target}[{_expr_to_js(sub.value)}]"
+            return f"{target}[{_expr_to_js(sub.value, name_map)}]"
         raise CompilerError("Unsupported subscript expression.")
     if isinstance(expr, cst.Call):
-        func = _expr_to_js(expr.func)
+        func = _expr_to_js(expr.func, name_map)
         args: list[str] = []
         for arg in expr.args:
             if arg.keyword is not None:
                 raise CompilerError("Keyword arguments are not supported in hook functions.")
-            args.append(_expr_to_js(arg.value))
+            args.append(_expr_to_js(arg.value, name_map))
         return f"{func}({', '.join(args)})"
     if isinstance(expr, cst.Await):
-        return f"await {_expr_to_js(expr.expression)}"
+        return f"await {_expr_to_js(expr.expression, name_map)}"
     raise CompilerError("Unsupported expression in JS context. Use js('...')")
 
 
-def _format_fstring(expr: cst.FormattedString) -> str:
+def _format_fstring(expr: cst.FormattedString, name_map: dict[str, str] | None = None) -> str:
     """Convert f-strings into JS template literals."""
     parts: list[str] = []
     for part in expr.parts:
         if isinstance(part, cst.FormattedStringText):
             parts.append(part.value.replace("`", "\\`"))
         elif isinstance(part, cst.FormattedStringExpression):
-            parts.append("${" + _expr_to_js(part.expression) + "}")
+            parts.append("${" + _expr_to_js(part.expression, name_map) + "}")
     return "`" + "".join(parts) + "`"
 
 
