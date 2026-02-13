@@ -4,12 +4,20 @@ import os
 import time
 import shlex
 import subprocess
+import json
+import hashlib
+import urllib.request
+import urllib.error
 from typing import Iterable, Type
 
 from nestipy.web.config import WebConfig
 from nestipy.web.compiler import compile_app
 from nestipy.web.client import codegen_client, codegen_client_from_url
-from nestipy.web.actions_client import write_actions_client_file, codegen_actions_from_url
+from nestipy.web.actions_client import (
+    write_actions_client_file,
+    codegen_actions_from_url,
+    generate_actions_client_code_from_schema,
+)
 
 
 def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
@@ -59,6 +67,9 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
         elif arg == "--actions-endpoint" and i + 1 < len(args_list):
             parsed["actions_endpoint"] = args_list[i + 1]
             i += 1
+        elif arg == "--actions-watch" and i + 1 < len(args_list):
+            parsed["actions_watch"] = args_list[i + 1]
+            i += 1
         elif arg == "--target" and i + 1 < len(args_list):
             parsed["target"] = args_list[i + 1]
             i += 1
@@ -97,6 +108,7 @@ def _collect_packages(args: Iterable[str]) -> list[str]:
         "--proxy-paths",
         "--actions-output",
         "--actions-endpoint",
+        "--actions-watch",
         "--target",
         "--spec",
         "--output",
@@ -253,6 +265,36 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     last_state: dict[str, float] = {}
     vite_process: subprocess.Popen[str] | None = None
     backend_process: subprocess.Popen[str] | None = None
+    actions_schema_url: str | None = None
+    actions_output: str | None = None
+    actions_hash: str | None = None
+    actions_etag: str | None = None
+    actions_poll_interval = float(os.getenv("NESTIPY_WEB_ACTIONS_POLL", "1.0") or 1.0)
+    last_actions_poll = 0.0
+    actions_watch_paths: list[str] = []
+    last_actions_state: dict[str, float] | None = None
+
+    if parsed.get("actions"):
+        spec_url = parsed.get("spec")
+        if spec_url:
+            actions_schema_url = str(spec_url)
+        elif config.proxy:
+            actions_endpoint = str(parsed.get("actions_endpoint", "/_actions"))
+            if not actions_endpoint.startswith("/"):
+                actions_endpoint = "/" + actions_endpoint
+            actions_schema_url = config.proxy.rstrip("/") + actions_endpoint + "/schema"
+        output = parsed.get("actions_output")
+        if not output:
+            actions_output = str(config.resolve_src_dir() / "actions.client.ts")
+        else:
+            actions_output = str(output)
+        actions_watch = str(
+            parsed.get("actions_watch")
+            or os.getenv("NESTIPY_WEB_ACTIONS_WATCH", "")
+            or ""
+        )
+        if actions_watch:
+            actions_watch_paths = [p.strip() for p in actions_watch.split(",") if p.strip()]
 
     def snapshot() -> dict[str, float]:
         """Capture modification times for app source files."""
@@ -264,10 +306,42 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                 continue
         return state
 
+    def snapshot_actions(paths: list[str]) -> dict[str, float]:
+        """Capture modification times for backend action source files."""
+        state: dict[str, float] = {}
+        for raw in paths:
+            base = os.path.abspath(raw)
+            if os.path.isfile(base):
+                if base.endswith(".py"):
+                    try:
+                        state[base] = os.path.getmtime(base)
+                    except FileNotFoundError:
+                        continue
+                continue
+            for root, _dirs, files in os.walk(base):
+                for name in files:
+                    if not name.endswith(".py"):
+                        continue
+                    full = os.path.join(root, name)
+                    try:
+                        state[full] = os.path.getmtime(full)
+                    except FileNotFoundError:
+                        continue
+        return state
+
     last_state = snapshot()
     compile_app(config)
     _maybe_codegen_client(parsed, config)
     _maybe_codegen_actions(parsed, config, modules)
+    if actions_schema_url and actions_output:
+        if actions_watch_paths:
+            last_actions_state = snapshot_actions(actions_watch_paths)
+        actions_hash, actions_etag = _maybe_codegen_actions_schema(
+            actions_schema_url,
+            actions_output,
+            actions_hash,
+            actions_etag,
+        )
     if parsed.get("vite"):
         if parsed.get("install"):
             _install_deps(config)
@@ -289,7 +363,36 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                 compile_app(config)
                 _maybe_codegen_client(parsed, config)
                 _maybe_codegen_actions(parsed, config, modules)
+                if actions_schema_url and actions_output:
+                    if actions_watch_paths:
+                        last_actions_state = snapshot_actions(actions_watch_paths)
+                    actions_hash, actions_etag = _maybe_codegen_actions_schema(
+                        actions_schema_url,
+                        actions_output,
+                        actions_hash,
+                        actions_etag,
+                    )
                 last_state = current
+            if actions_schema_url and actions_output and not actions_watch_paths:
+                now = time.monotonic()
+                if now - last_actions_poll >= actions_poll_interval:
+                    actions_hash, actions_etag = _maybe_codegen_actions_schema(
+                        actions_schema_url,
+                        actions_output,
+                        actions_hash,
+                        actions_etag,
+                    )
+                    last_actions_poll = now
+            elif actions_schema_url and actions_output and actions_watch_paths:
+                current_actions_state = snapshot_actions(actions_watch_paths)
+                if current_actions_state != (last_actions_state or {}):
+                    actions_hash, actions_etag = _maybe_codegen_actions_schema(
+                        actions_schema_url,
+                        actions_output,
+                        actions_hash,
+                        actions_etag,
+                    )
+                    last_actions_state = current_actions_state
     except KeyboardInterrupt:
         if vite_process is not None:
             vite_process.terminate()
@@ -390,6 +493,37 @@ def _maybe_codegen_actions(
         raise RuntimeError("Modules are required to generate actions client")
     endpoint = str(parsed.get("actions_endpoint", "/_actions"))
     write_actions_client_file(modules, str(output), endpoint=endpoint)
+
+
+def _maybe_codegen_actions_schema(
+    url: str,
+    output: str,
+    last_hash: str | None,
+    last_etag: str | None,
+) -> tuple[str | None, str | None]:
+    """Fetch the action schema and update the client file if it changed."""
+    headers: dict[str, str] = {}
+    if last_etag:
+        headers["If-None-Match"] = last_etag
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            etag = response.headers.get("ETag")
+            schema = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 304:
+            return last_hash, last_etag
+        return last_hash, last_etag
+    except Exception:
+        return last_hash, last_etag
+    code = generate_actions_client_code_from_schema(schema)
+    digest = hashlib.sha256(code.encode("utf-8")).hexdigest()
+    if digest == last_hash:
+        return last_hash, last_etag
+    os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+    return digest, (etag or last_etag)
 
 
 def _start_vite(config: WebConfig) -> subprocess.Popen[str]:

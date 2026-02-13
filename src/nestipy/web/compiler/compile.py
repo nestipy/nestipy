@@ -661,7 +661,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "}",
                     "",
                     "export async function fetchCsrfToken(endpoint = '/_actions/csrf', baseUrl = '', fetcher: typeof fetch = globalThis.fetch.bind(globalThis)): Promise<string> {",
-                    "  const response = await fetcher(baseUrl + endpoint, { method: 'GET' });",
+                    "  const response = await fetcher(baseUrl + endpoint, { method: 'GET', credentials: 'include' });",
                     "  const payload = (await response.json()) as { csrf?: string };",
                     "  return payload.csrf ?? '';",
                     "}",
@@ -679,6 +679,29 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "    meta.csrf = csrfMeta.csrf;",
                     "  }",
                     "  return meta;",
+                    "}",
+                    "",
+                    "export function createActionMetaProvider(options: { endpoint?: string; baseUrl?: string; csrfCookie?: string; includeTs?: boolean; includeNonce?: boolean } = {}): ActionMetaProvider {",
+                    "  let inflight: Promise<string> | null = null;",
+                    "  return async () => {",
+                    "    let meta = createActionMeta({",
+                    "      csrfCookie: options.csrfCookie,",
+                    "      includeTs: options.includeTs,",
+                    "      includeNonce: options.includeNonce,",
+                    "    });",
+                    "    if (!meta.csrf) {",
+                    "      if (!inflight) {",
+                    "        inflight = fetchCsrfToken(options.endpoint ?? '/_actions/csrf', options.baseUrl ?? '');",
+                    "      }",
+                    "      await inflight;",
+                    "      meta = createActionMeta({",
+                    "        csrfCookie: options.csrfCookie,",
+                    "        includeTs: options.includeTs,",
+                    "        includeNonce: options.includeNonce,",
+                    "      });",
+                    "    }",
+                    "    return meta;",
+                    "  };",
                     "}",
                     "",
                     "function stableStringify(value: unknown): string {",
@@ -746,22 +769,56 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         )
     else:
         existing = actions_client.read_text(encoding="utf-8")
-        if "fetchCsrfToken" not in existing:
-            actions_client.write_text(
-                existing.rstrip()
+        updated = existing
+        if "fetchCsrfToken" not in updated:
+            updated = (
+                updated.rstrip()
                 + "\n\n"
                 + "\n".join(
                     [
                         "export async function fetchCsrfToken(endpoint = '/_actions/csrf', baseUrl = '', fetcher: typeof fetch = globalThis.fetch.bind(globalThis)): Promise<string> {",
-                        "  const response = await fetcher(baseUrl + endpoint, { method: 'GET' });",
+                        "  const response = await fetcher(baseUrl + endpoint, { method: 'GET', credentials: 'include' });",
                         "  const payload = (await response.json()) as { csrf?: string };",
                         "  return payload.csrf ?? '';",
                         "}",
                         "",
                     ]
-                ),
-                encoding="utf-8",
+                )
             )
+        if "createActionMetaProvider" not in updated:
+            updated = (
+                updated.rstrip()
+                + "\n\n"
+                + "\n".join(
+                    [
+                        "export function createActionMetaProvider(options: { endpoint?: string; baseUrl?: string; csrfCookie?: string; includeTs?: boolean; includeNonce?: boolean } = {}): ActionMetaProvider {",
+                        "  let inflight: Promise<string> | null = null;",
+                        "  return async () => {",
+                        "    let meta = createActionMeta({",
+                        "      csrfCookie: options.csrfCookie,",
+                        "      includeTs: options.includeTs,",
+                        "      includeNonce: options.includeNonce,",
+                        "    });",
+                        "    if (!meta.csrf) {",
+                        "      if (!inflight) {",
+                        "        inflight = fetchCsrfToken(options.endpoint ?? '/_actions/csrf', options.baseUrl ?? '');",
+                        "      }",
+                        "      await inflight;",
+                        "      meta = createActionMeta({",
+                        "        csrfCookie: options.csrfCookie,",
+                        "        includeTs: options.includeTs,",
+                        "        includeNonce: options.includeNonce,",
+                        "      });",
+                        "    }",
+                        "    return meta;",
+                        "  };",
+                        "}",
+                        "",
+                    ]
+                )
+            )
+        if updated != existing:
+            actions_client.write_text(updated, encoding="utf-8")
 
 
 def _sanitize_package_name(name: str) -> str:

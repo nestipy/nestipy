@@ -302,10 +302,13 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
     if not actions:
         return "\n".join(
             [
-                "import { createActionClient, ActionResponse, ActionClientOptions } from './actions';",
+                "import { createActionClient, ActionResponse, ActionClientOptions, createActionMetaProvider } from './actions';",
                 "",
-                "export function createActions(_options: ActionClientOptions = {}) {",
-                "  const call = createActionClient(_options);",
+                "export function createActions(options: ActionClientOptions = {}) {",
+                "  const call = createActionClient({",
+                "    ...options,",
+                "    meta: options.meta ?? createActionMetaProvider(),",
+                "  });",
                 "  return {",
                 "    actions: {},",
                 "    call,",
@@ -345,13 +348,17 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
     interfaces = _render_model_interfaces_from_schema(schema.get("models", []))
 
     lines: list[str] = [
-        "import { createActionClient, ActionResponse, ActionClientOptions } from './actions';",
+        "import { createActionClient, ActionResponse, ActionClientOptions, createActionMetaProvider } from './actions';",
         "",
     ]
     if interfaces:
         lines.append(interfaces)
     lines.append("export function createActions(options: ActionClientOptions = {}) {")
-    lines.append("  const call = createActionClient({ ...options, endpoint: options.endpoint ?? '" + endpoint + "' });")
+    lines.append(
+        "  const call = createActionClient({ ...options, endpoint: options.endpoint ?? '"
+        + endpoint
+        + "', meta: options.meta ?? createActionMetaProvider() });"
+    )
     lines.append("  return {")
     for group, actions in grouped.items():
         lines.append(f"    {group}: {{")

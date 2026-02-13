@@ -711,13 +711,36 @@ class ActionsController:
         return {"csrf": token}
 
     @Get("/schema")
-    async def schema(self) -> dict[str, Any]:
+    async def schema(
+        self,
+        req: Annotated[Request, Req()] = None,
+        res: Annotated[Response, Res()] = None,
+    ) -> dict[str, Any]:
         """Return the action schema for client generation."""
         from nestipy.web.actions_client import build_actions_schema_from_registry
 
-        return build_actions_schema_from_registry(
-            self.registry.items(), endpoint=self.config.path
-        )
+        schema_cache = getattr(self, "_schema_cache", None)
+        schema_etag = getattr(self, "_schema_etag", None)
+        if schema_cache is None:
+            schema_cache = build_actions_schema_from_registry(
+                self.registry.items(), endpoint=self.config.path
+            )
+            payload = json.dumps(schema_cache, sort_keys=True, separators=(",", ":"))
+            schema_etag = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            setattr(self, "_schema_cache", schema_cache)
+            setattr(self, "_schema_etag", schema_etag)
+
+        if schema_etag and res is not None:
+            res.header("ETag", f"\"{schema_etag}\"")
+
+        if req is not None and schema_etag:
+            client_etag = req.headers.get("if-none-match") or req.headers.get("If-None-Match")
+            if client_etag in {schema_etag, f"\"{schema_etag}\""}:
+                if res is not None:
+                    res.status(304)
+                return {}
+
+        return schema_cache
 
 
 def _set_action_route(option: ActionsOption) -> None:

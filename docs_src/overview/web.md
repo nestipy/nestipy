@@ -251,7 +251,9 @@ await fetchCsrfToken(); // sets cookie + returns token
 ```
 
 If you use the web scaffold, the generated `main.tsx` calls `fetchCsrfToken()` on
-startup so the cookie is already present for the first action call.
+startup so the cookie is already present for the first action call. The typed
+client defaults to `createActionMetaProvider()`, which will fetch the CSRF token
+on-demand if it isn’t available yet.
 
 ### Server-to-Server Signatures
 
@@ -508,6 +510,13 @@ Generate typed server-action wrappers (recommended):
 ```bash
 nestipy run web:actions --spec http://127.0.0.1:8001/_actions/schema --output web/src/actions.client.ts
 ```
+
+When running `nestipy start --dev --web`, the web dev server enables `--actions`
+and will automatically refresh `web/src/actions.client.ts` by polling
+`/_actions/schema` as your backend reloads. If `NESTIPY_WEB_ACTIONS_WATCH` is
+set (defaulted by the CLI to `./src`), the client will only refetch the schema
+when those files change. The schema endpoint uses `ETag`, so unchanged schemas
+return `304 Not Modified`.
 
 Optional: generate typed HTTP client from RouterSpec:
 
