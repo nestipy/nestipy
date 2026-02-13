@@ -429,6 +429,23 @@ class NestipyApplication:
             # Default: reload only for .py changes (ignore other extensions).
             # Keep directories visible to avoid skipping python packages.
             options["reload_ignore_patterns"] = [r".*\.(?!py$)[^/]+$"]
+        if options.get("reload"):
+            if "reload_paths" not in options:
+                env_paths = os.getenv("NESTIPY_RELOAD_PATHS")
+                if env_paths:
+                    options["reload_paths"] = [
+                        Path(p.strip()).expanduser()
+                        for p in env_paths.split(",")
+                        if p.strip()
+                    ]
+            if "reload_ignore_paths" not in options:
+                env_ignore = os.getenv("NESTIPY_RELOAD_IGNORE_PATHS")
+                if env_ignore:
+                    options["reload_ignore_paths"] = [
+                        Path(p.strip()).expanduser()
+                        for p in env_ignore.split(",")
+                        if p.strip()
+                    ]
 
         if target is None:
             unsupported = set(options.keys()) - {

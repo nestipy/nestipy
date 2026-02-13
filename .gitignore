@@ -9,3 +9,4 @@ docs
 docs_old
 node_modules
 docs_src/.vitepress/cache/
+.vercel

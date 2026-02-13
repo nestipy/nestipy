@@ -273,9 +273,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             _install_deps(config)
         vite_process = _start_vite(config)
     if backend_cmd:
+        backend_env: dict[str, str] = {}
+        if "NESTIPY_RELOAD_IGNORE_PATHS" not in os.environ:
+            backend_env["NESTIPY_RELOAD_IGNORE_PATHS"] = str(app_dir)
         backend_process = _start_backend(
             str(backend_cmd),
             cwd=str(backend_cwd) if backend_cwd else None,
+            env=backend_env,
         )
     try:
         while True:
@@ -401,10 +405,18 @@ def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
     return subprocess.Popen(cmd, cwd=str(out_dir))
 
 
-def _start_backend(command: str, cwd: str | None = None) -> subprocess.Popen[str]:
+def _start_backend(
+    command: str,
+    cwd: str | None = None,
+    *,
+    env: dict[str, str] | None = None,
+) -> subprocess.Popen[str]:
     """Start the backend process from a shell command."""
     cmd = shlex.split(command)
-    return subprocess.Popen(cmd, cwd=cwd)
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    return subprocess.Popen(cmd, cwd=cwd, env=merged_env)
 
 
 def install(args: Iterable[str]) -> None:

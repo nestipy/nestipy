@@ -367,3 +367,54 @@ def Page():
         encoding="utf-8"
     )
     assert "groups.map" in page_tsx
+
+
+def test_layout_import_prefers_local(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "layout.py",
+        """
+from nestipy.web import component, h, Slot, create_context
+
+ThemeContext = create_context("root")
+
+@component
+def Layout():
+    return h.div(h(Slot))
+""".strip(),
+    )
+
+    _write(
+        app_dir / "api" / "layout.py",
+        """
+from nestipy.web import component, h, Slot, create_context
+
+ThemeContext = create_context("local")
+
+@component
+def Layout():
+    return h.div(h(Slot))
+""".strip(),
+    )
+
+    _write(
+        app_dir / "api" / "page.py",
+        """
+from nestipy.web import component, h
+from layout import ThemeContext
+
+@component
+def Page():
+    return h.div(ThemeContext, class_name="p-2")
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "api" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "components/api/layout" in page_tsx

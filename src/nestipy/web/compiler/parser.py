@@ -216,11 +216,21 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
 
                     path = None
                     if module_name:
-                        module_path = base_dir / Path(module_name.replace(".", "/"))
-                        path = _resolve_module_file(module_path, app_dir)
-                        if path is None and relative_level == 0:
-                            app_candidate = app_dir / Path(module_name.replace(".", "/"))
-                            path = _resolve_module_file(app_candidate, app_dir)
+                        module_rel = Path(module_name.replace(".", "/"))
+                        module_path = base_dir / module_rel
+                        local_path = _resolve_module_file(module_path, app_dir)
+                        app_path = None
+                        if module_name.startswith("app."):
+                            app_rel = Path(module_name.split(".", 1)[1].replace(".", "/"))
+                            app_path = _resolve_module_file(app_dir / app_rel, app_dir)
+                        elif relative_level == 0:
+                            app_path = _resolve_module_file(app_dir / module_rel, app_dir)
+                        if module_name == "layout" and local_path and app_path and local_path != app_path:
+                            # Prefer the local layout when both local and root exist.
+                            # Use "from app.layout import ..." to target the root layout.
+                            path = local_path
+                        else:
+                            path = local_path or app_path
                     else:
                         candidate = base_dir / name
                         path = _resolve_module_file(candidate, app_dir)

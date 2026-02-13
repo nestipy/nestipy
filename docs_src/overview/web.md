@@ -85,6 +85,28 @@ def Layout():
     )
 ```
 
+## Nested Layouts & Imports
+
+You can add `layout.py` in any subfolder to wrap only that subtree. For example:
+
+```
+app/
+  layout.py            # root layout
+  page.py              # home page
+  api/
+    layout.py          # wraps only /api/*
+    page.py
+```
+
+When importing from layouts, be explicit:
+
+- Use `from app.layout import ThemeContext` to always pull from the root layout.
+- Use `from .layout import ThemeContext` to pull from the *local* layout.
+
+`from layout import ...` resolves to the *nearest* layout (local if present,
+otherwise the root). If you need the root layout explicitly, use
+`from app.layout import ...`.
+
 ## External React Libraries
 
 Use `external()` to import any TS/React library:
