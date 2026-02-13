@@ -575,6 +575,13 @@ def _web_build_log_mode() -> str:
     return mode
 
 
+def _web_log(message: str) -> None:
+    if logger.isEnabledFor(20):
+        logger.info("[WEB] %s", message)
+    else:
+        print(f"[NESTIPY] INFO [WEB] {message}")
+
+
 def _run_command_capture(cmd: list[str], cwd: str) -> tuple[int, list[str]]:
     lines: list[str] = []
     process = subprocess.Popen(
@@ -586,7 +593,7 @@ def _run_command_capture(cmd: list[str], cwd: str) -> tuple[int, list[str]]:
         if line:
             lines.append(line)
         if _web_build_log_mode() == "verbose":
-            logger.info("[WEB] %s", line)
+            _web_log(line)
     return process.wait(), lines
 
 
@@ -607,13 +614,13 @@ def _build_vite(config: WebConfig) -> None:
             text = line.strip()
             lower = text.lower()
             if text.startswith("dist/") or text.startswith("web/dist/"):
-                logger.info("[WEB] %s", text)
+                _web_log(text)
             elif "building" in lower and "vite" in lower:
-                logger.info("[WEB] %s", text)
+                _web_log(text)
             elif "modules transformed" in lower:
-                logger.info("[WEB] %s", text)
+                _web_log(text)
             elif "built in" in lower:
-                logger.info("[WEB] %s", text)
+                _web_log(text)
     if rc != 0:
         raise RuntimeError("Vite build failed.")
 
@@ -705,7 +712,7 @@ def _install_deps(config: WebConfig) -> None:
         vuln_line = next((l for l in lines if "vulnerabilities" in l), None)
         summary_parts = [p for p in (added_line, audited_line, vuln_line) if p]
         if summary_parts:
-            logger.info("[WEB] Install: %s", " | ".join(summary_parts))
+            _web_log(f"Install: {' | '.join(summary_parts)}")
     if rc != 0:
         raise RuntimeError("Dependency install failed.")
 
