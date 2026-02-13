@@ -1,0 +1,33 @@
+{
+  "name": "nestipy",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">   <a target=\"_blank\"><img src=\"https://raw.githubusercontent.com/nestipy/nestipy/release-v1/nestipy.png\" width=\"200\" alt=\"Nestipy Logo\" /></a></p> <p align=\"center\">     <a href=\"https://pypi.org/project/nestipy\">         <img src=\"https://img.shields.io/pypi/v/nestipy?color=%2334D058&label=pypi%20package\" alt=\"Version\">     </a>     <a href=\"https://pypi.org/project/nestipy\">         <img src=\"https://img.shields.io/pypi/pyversions/nestipy.svg?color=%2334D058\" alt=\"Python\">     </a>     <a href=\"https://github.com/tsiresymila1/nestipy/blob/main/LICENSE\">         <img src=\"https://img.shields.io/github/license/tsiresymila1/nestipy\" alt=\"License\">     </a> </p>",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "example",
+    "test": "tests"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev docs_src",
+    "docs:build": "vitepress build docs_src",
+    "docs:preview": "vitepress preview docs_src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nestipy/nestipy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nestipy/nestipy/issues"
+  },
+  "homepage": "https://github.com/nestipy/nestipy#readme",
+  "devDependencies": {
+    "mermaid": "^11.12.2",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "vue": "^3.5.28"
+  }
+}

@@ -1,0 +1,20 @@
+:root {
+  --vp-c-brand-1: #ed2945;
+  --vp-c-brand-2: #c41e3a;
+  --vp-c-brand-3: #a01830;
+}
+
+.vp-doc h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc h2, .vp-doc h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Custom styling for containers if needed */
+.custom-block.tip {
+  border-color: var(--vp-c-brand-1);
+}
