@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: #0b1120;
+  --bg-soft: rgba(15, 23, 42, 0.7);
+  --card: rgba(15, 23, 42, 0.8);
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --nestipy: #c10e0e;
+  --react: #61dafb;
+  --vite: #646cff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, rgba(22, 163, 74, 0.18), transparent 45%),
+    radial-gradient(circle at top right, rgba(100, 108, 255, 0.2), transparent 40%),
+    var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.home {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.logo {
+  height: 96px;
+  width: 96px;
+  padding: 0.75rem;
+  transition: filter 300ms, transform 300ms;
+}
+
+.logo:hover {
+  transform: translateY(-2px);
+}
+
+.logo.nestipy:hover {
+  filter: drop-shadow(0 0 2em var(--nestipy));
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em var(--react));
+}
+
+.logo.vite:hover {
+  filter: drop-shadow(0 0 2em var(--vite));
+}
+
+.home-title {
+  font-size: clamp(2rem, 3vw, 3rem);
+  margin: 0;
+}
+
+.home-subtitle {
+  max-width: 640px;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.home-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  border-radius: 9999px;
+  border: 1px solid #1e293b;
+  background: #0f172a;
+  color: var(--text);
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 200ms, filter 200ms, border-color 200ms;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: linear-gradient(120deg, #c10e0e, #c10e0e);
+  color: #f4f4f4;
+}
+
+.home-card {
+  border: 1px solid #1e293b;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.home-nav {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nav-link {
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  transition: border-color 200ms, color 200ms;
+}
+
+.nav-link:hover {
+  border-color: #1e293b;
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .logo {
+    height: 72px;
+    width: 72px;
+  }
+}
+
+
+.page {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem 3rem;
+  text-align: center;
+}

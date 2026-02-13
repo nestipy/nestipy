@@ -1,0 +1,14 @@
+*.pyc
+__pycache__/*
+.venv
+.env
+*.cpyth
+.idea/*
+.vscode/*
+logs/*
+!logs/.gitkeep
+!logs/.gitignore
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
