@@ -11,6 +11,11 @@ class DiscoverService:
     _providers = []
     _controllers = []
 
+    def __init__(self) -> None:
+        self._modules = []
+        self._providers = []
+        self._controllers = []
+
     def get_all_controller(self) -> list[Type]:
         return uniq_list(self._controllers)
 

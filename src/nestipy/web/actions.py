@@ -1,18 +1,23 @@
 import inspect
 import json
 import time
-from dataclasses import dataclass
-from typing import Any, Callable, Annotated, get_args, get_origin
+import os
+from dataclasses import dataclass, field
+from typing import Any, Callable, Annotated, get_args, get_origin, Protocol, Iterable
+from urllib.parse import urlparse
+import hashlib
+import hmac
+import secrets
 
 from pydantic import TypeAdapter, ValidationError
 
-from nestipy.common import Controller, Post, Get, Injectable
+from nestipy.common import Controller, Post, Get, Injectable, Request, Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.status import HttpStatus
 from nestipy.dynamic_module import ConfigurableModuleBuilder
-from nestipy.ioc import Body, Inject
+from nestipy.ioc import Body, Inject, Req, Res, NestipyContainer
 from nestipy.ioc.helper import ContainerHelper
-from nestipy.metadata import CtxDepKey
+from nestipy.metadata import CtxDepKey, SetMetadata
 from nestipy.metadata import Reflect, RouteKey
 from nestipy.core.providers.discover import DiscoverService
 from nestipy.core.on_application_bootstrap import OnApplicationBootstrap
@@ -20,6 +25,195 @@ from nestipy.core.on_application_bootstrap import OnApplicationBootstrap
 ACTION_METADATA = "__nestipy_web_action__"
 ACTION_CACHE_TTL = "__nestipy_web_action_cache_ttl__"
 ACTION_CACHE_KEY = "__nestipy_web_action_cache_key__"
+ACTION_GUARDS = "__nestipy_web_action_guards__"
+ACTION_PERMISSIONS = "__nestipy_web_action_permissions__"
+
+
+@dataclass(slots=True)
+class ActionContext:
+    """Context passed to action guards."""
+    action: str
+    action_fn: Callable[..., Any] | None
+    payload: dict[str, Any]
+    args: list[Any]
+    kwargs: dict[str, Any]
+    request: Request | None = None
+
+    @property
+    def headers(self) -> dict[str, Any]:
+        return self.request.headers if self.request is not None else {}
+
+    @property
+    def user(self) -> Any:
+        return self.request.user if self.request is not None else None
+
+
+class ActionGuard(Protocol):
+    """Guard protocol for actions."""
+
+    def can_activate(self, ctx: ActionContext) -> Any:
+        ...
+
+
+@dataclass
+class ActionNonceCache:
+    """In-memory nonce cache for replay protection."""
+    ttl_seconds: int = 300
+    _entries: dict[str, float] = field(default_factory=dict)
+
+    def _cleanup(self) -> None:
+        now = time.time()
+        expired = [nonce for nonce, exp in self._entries.items() if exp <= now]
+        for nonce in expired:
+            self._entries.pop(nonce, None)
+
+    def add(self, nonce: str) -> None:
+        self._cleanup()
+        self._entries[nonce] = time.time() + self.ttl_seconds
+
+    def seen(self, nonce: str) -> bool:
+        self._cleanup()
+        return nonce in self._entries
+
+
+class OriginActionGuard:
+    """Validate request Origin/Referer against an allow-list."""
+
+    def __init__(
+        self,
+        *,
+        allowed_origins: Iterable[str] | None = None,
+        allow_missing: bool = True,
+        allow_same_origin: bool = True,
+    ) -> None:
+        self.allowed_origins = {o.rstrip("/") for o in (allowed_origins or [])}
+        self.allow_missing = allow_missing
+        self.allow_same_origin = allow_same_origin
+
+    def _origin_from_header(self, value: str) -> str | None:
+        if not value:
+            return None
+        if value.startswith("http://") or value.startswith("https://"):
+            parsed = urlparse(value)
+            if parsed.scheme and parsed.netloc:
+                return f"{parsed.scheme}://{parsed.netloc}"
+        return None
+
+    def can_activate(self, ctx: ActionContext) -> bool:
+        if ctx.request is None:
+            return True
+        origin = ctx.headers.get("origin") or ""
+        referer = ctx.headers.get("referer") or ctx.headers.get("referrer") or ""
+        origin_value = self._origin_from_header(origin) or self._origin_from_header(referer)
+        if not origin_value:
+            return self.allow_missing
+        origin_value = origin_value.rstrip("/")
+        if origin_value in self.allowed_origins:
+            return True
+        if self.allow_same_origin and ctx.request.host:
+            return origin_value == ctx.request.host.rstrip("/")
+        return False
+
+
+class CsrfActionGuard:
+    """Validate CSRF token from header/payload against cookie/session."""
+
+    def __init__(
+        self,
+        *,
+        header: str = "x-csrf-token",
+        cookie: str = "csrf_token",
+        meta_key: str = "csrf",
+        allow_missing: bool = False,
+    ) -> None:
+        self.header = header.lower()
+        self.cookie = cookie
+        self.meta_key = meta_key
+        self.allow_missing = allow_missing
+
+    def can_activate(self, ctx: ActionContext) -> bool:
+        if ctx.request is None:
+            return True
+        header_value = ctx.headers.get(self.header)
+        meta = ctx.payload.get("meta") if isinstance(ctx.payload, dict) else None
+        meta_value = meta.get(self.meta_key) if isinstance(meta, dict) else None
+        token = header_value or meta_value
+        if not token:
+            return self.allow_missing
+        cookie_value = ctx.request.cookies.get(self.cookie)
+        if cookie_value and secrets.compare_digest(str(cookie_value), str(token)):
+            return True
+        return False
+
+
+class ActionSignatureGuard:
+    """Validate HMAC signatures for action payloads with replay protection."""
+
+    def __init__(
+        self,
+        *,
+        secret: str | bytes,
+        ttl_seconds: int = 300,
+        header_ts: str = "x-action-ts",
+        header_nonce: str = "x-action-nonce",
+        header_sig: str = "x-action-signature",
+        meta_ts: str = "ts",
+        meta_nonce: str = "nonce",
+        meta_sig: str = "sig",
+        allow_payload_meta: bool = True,
+        nonce_cache: ActionNonceCache | None = None,
+    ) -> None:
+        self.secret = secret.encode() if isinstance(secret, str) else secret
+        self.ttl_seconds = ttl_seconds
+        self.header_ts = header_ts.lower()
+        self.header_nonce = header_nonce.lower()
+        self.header_sig = header_sig.lower()
+        self.meta_ts = meta_ts
+        self.meta_nonce = meta_nonce
+        self.meta_sig = meta_sig
+        self.allow_payload_meta = allow_payload_meta
+        self.nonce_cache = nonce_cache or ActionNonceCache(ttl_seconds=ttl_seconds)
+
+    def _signature_payload(self, ctx: ActionContext, ts: str, nonce: str) -> str:
+        body = json.dumps(
+            {"args": ctx.args, "kwargs": ctx.kwargs},
+            default=str,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return f"{ctx.action}|{ts}|{nonce}|{body}"
+
+    def can_activate(self, ctx: ActionContext) -> bool:
+        meta = ctx.payload.get("meta") if isinstance(ctx.payload, dict) else None
+        header_ts = ctx.headers.get(self.header_ts)
+        header_nonce = ctx.headers.get(self.header_nonce)
+        header_sig = ctx.headers.get(self.header_sig)
+        meta_ts = meta.get(self.meta_ts) if isinstance(meta, dict) else None
+        meta_nonce = meta.get(self.meta_nonce) if isinstance(meta, dict) else None
+        meta_sig = meta.get(self.meta_sig) if isinstance(meta, dict) else None
+
+        ts = header_ts or (meta_ts if self.allow_payload_meta else None)
+        nonce = header_nonce or (meta_nonce if self.allow_payload_meta else None)
+        sig = header_sig or (meta_sig if self.allow_payload_meta else None)
+
+        if not ts or not nonce or not sig:
+            return False
+
+        try:
+            ts_value = float(ts)
+        except Exception:
+            return False
+
+        if abs(time.time() - ts_value) > self.ttl_seconds:
+            return False
+
+        if self.nonce_cache.seen(str(nonce)):
+            return False
+        self.nonce_cache.add(str(nonce))
+
+        message = self._signature_payload(ctx, str(ts), str(nonce)).encode("utf-8")
+        expected = hmac.new(self.secret, message, hashlib.sha256).hexdigest()
+        return secrets.compare_digest(expected, str(sig))
 
 
 @dataclass(slots=True)
@@ -27,6 +221,15 @@ class ActionsOption:
     """Options to configure the actions controller and schema."""
     path: str = "/_actions"
     wrap_errors: bool = True
+    guards: list[Any] = field(default_factory=list)
+    csrf_enabled: bool = True
+    csrf_endpoint: str = "/csrf"
+    csrf_cookie: str = "csrf_token"
+    csrf_cookie_path: str = "/"
+    csrf_cookie_samesite: str = "Lax"
+    csrf_cookie_secure: bool = False
+    csrf_cookie_http_only: bool = False
+    csrf_token_bytes: int = 32
 
 
 ConfigurableModuleClass, ACTIONS_OPTION_TOKEN = (
@@ -48,6 +251,37 @@ def action(
             setattr(fn, ACTION_CACHE_TTL, float(cache))
         if key is not None:
             setattr(fn, ACTION_CACHE_KEY, key)
+        return fn
+
+    return decorator
+
+
+def UseActionGuards(*guards: Any):
+    """Attach guards to an action function."""
+    valid = [g for g in guards if g is not None]
+    return SetMetadata(ACTION_GUARDS, valid, as_list=True)
+
+
+def ActionPermissions(*permissions: str):
+    """Attach required permissions to an action function."""
+    perms = [p for p in permissions if p]
+    return SetMetadata(ACTION_PERMISSIONS, perms, as_list=True)
+
+
+def ActionAuth(
+    *permissions: str,
+    guards: Iterable[Any] | None = None,
+    require_permissions_guard: bool = True,
+):
+    """Attach permissions and guards to an action in one decorator."""
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        if permissions:
+            fn = ActionPermissions(*permissions)(fn)
+        guard_list: list[Any] = list(guards or [])
+        if permissions and require_permissions_guard:
+            guard_list.insert(0, ActionPermissionGuard)
+        if guard_list:
+            fn = UseActionGuards(*guard_list)(fn)
         return fn
 
     return decorator
@@ -137,6 +371,82 @@ def _get_action_name(fn: Any) -> str | None:
     if inspect.isfunction(fn):
         return getattr(fn, ACTION_METADATA, None)
     return getattr(fn, ACTION_METADATA, None)
+
+
+def _get_action_guards(fn: Any) -> list[Any]:
+    """Extract guard metadata from a callable."""
+    target = fn.__func__ if inspect.ismethod(fn) else fn
+    return Reflect.get_metadata(target, ACTION_GUARDS, []) or []
+
+
+def _get_action_permissions(fn: Any) -> list[str]:
+    target = fn.__func__ if inspect.ismethod(fn) else fn
+    return Reflect.get_metadata(target, ACTION_PERMISSIONS, []) or []
+
+
+def _extract_user_permissions(user: Any) -> set[str]:
+    if user is None:
+        return set()
+    if isinstance(user, dict) and "permissions" in user:
+        perms = user.get("permissions") or []
+    elif hasattr(user, "permissions"):
+        perms = getattr(user, "permissions")
+    elif hasattr(user, "get_permissions"):
+        try:
+            perms = user.get_permissions()
+        except Exception:
+            perms = []
+    else:
+        perms = []
+    if isinstance(perms, str):
+        return {perms}
+    if isinstance(perms, Iterable):
+        return {str(p) for p in perms}
+    return set()
+
+
+class ActionPermissionGuard:
+    """Ensure the current user has required action permissions."""
+
+    def __init__(self, *, require_all: bool = True) -> None:
+        self.require_all = require_all
+
+    def can_activate(self, ctx: ActionContext) -> bool:
+        if ctx.action_fn is None:
+            return True
+        required = _get_action_permissions(ctx.action_fn)
+        if not required:
+            return True
+        user_perms = _extract_user_permissions(ctx.user)
+        if self.require_all:
+            return all(p in user_perms for p in required)
+        return any(p in user_perms for p in required)
+
+
+async def _resolve_guard_instance(guard: Any) -> Any:
+    """Resolve a guard instance using DI when possible."""
+    if inspect.isclass(guard):
+        try:
+            return await NestipyContainer.get_instance().get(guard)
+        except Exception:
+            return guard()
+    return guard
+
+
+async def _run_action_guards(
+    guards: list[Any], ctx: ActionContext
+) -> None:
+    """Execute all action guards in order."""
+    for guard in guards:
+        instance = await _resolve_guard_instance(guard)
+        if hasattr(instance, "can_activate"):
+            result = instance.can_activate(ctx)
+        else:
+            result = instance(ctx)
+        if inspect.isawaitable(result):
+            result = await result
+        if not result:
+            raise HttpException(HttpStatus.FORBIDDEN, "Action access denied")
 
 
 class ActionValidationError(Exception):
@@ -291,6 +601,24 @@ def _make_cache_key(
     return json.dumps({"args": args, "kwargs": kwargs}, default=str, sort_keys=True)
 
 
+def _build_csrf_cookie(
+    name: str,
+    value: str,
+    *,
+    path: str = "/",
+    same_site: str = "Lax",
+    secure: bool = False,
+    http_only: bool = False,
+) -> str:
+    """Build a Set-Cookie string for CSRF tokens."""
+    parts = [f"{name}={value}", f"Path={path}", f"SameSite={same_site}"]
+    if secure:
+        parts.append("Secure")
+    if http_only:
+        parts.append("HttpOnly")
+    return "; ".join(parts)
+
+
 @Controller("/")
 class ActionsController:
     """HTTP controller that executes registered actions."""
@@ -298,7 +626,11 @@ class ActionsController:
     config: Annotated[ActionsOption, Inject(ACTIONS_OPTION_TOKEN)]
 
     @Post()
-    async def handle(self, payload: Annotated[dict, Body()]) -> dict[str, Any]:
+    async def handle(
+        self,
+        payload: Annotated[dict, Body()],
+        req: Annotated[Request, Req()] = None,
+    ) -> dict[str, Any]:
         """Execute an action from the request payload."""
         if not isinstance(payload, dict):
             raise HttpException(HttpStatus.BAD_REQUEST, "Invalid action payload")
@@ -314,6 +646,18 @@ class ActionsController:
             raise HttpException(HttpStatus.NOT_FOUND, f"Action '{name}' not found")
 
         try:
+            ctx = ActionContext(
+                action=str(name),
+                action_fn=action_fn,
+                payload=payload,
+                args=args,
+                kwargs=kwargs,
+                request=req,
+            )
+            guards = list(self.config.guards or [])
+            guards.extend(_get_action_guards(action_fn))
+            if guards:
+                await _run_action_guards(guards, ctx)
             call_args, call_kwargs = _prepare_action_call(action_fn, args, kwargs)
             cache_ttl, cache_key_fn = _get_action_cache(action_fn)
             cache_key = None
@@ -349,6 +693,23 @@ class ActionsController:
 
         return {"ok": True, "data": result}
 
+    @Get("/csrf")
+    async def csrf(self, res: Annotated[Response, Res()]) -> dict[str, Any]:
+        """Mint a CSRF token and set a cookie for double-submit protection."""
+        if not self.config.csrf_enabled:
+            raise HttpException(HttpStatus.NOT_FOUND, "CSRF endpoint disabled")
+        token = secrets.token_urlsafe(self.config.csrf_token_bytes)
+        cookie_value = _build_csrf_cookie(
+            self.config.csrf_cookie,
+            token,
+            path=self.config.csrf_cookie_path,
+            same_site=self.config.csrf_cookie_samesite,
+            secure=self.config.csrf_cookie_secure,
+            http_only=self.config.csrf_cookie_http_only,
+        )
+        res.header("Set-Cookie", cookie_value)
+        return {"csrf": token}
+
     @Get("/schema")
     async def schema(self) -> dict[str, Any]:
         """Return the action schema for client generation."""
@@ -364,6 +725,11 @@ def _set_action_route(option: ActionsOption) -> None:
     if not option.path.startswith("/"):
         option.path = "/" + option.path
     Reflect.set_metadata(ActionsController, RouteKey.path, option.path)
+    if option.csrf_endpoint:
+        csrf_path = option.csrf_endpoint
+        if not csrf_path.startswith("/"):
+            csrf_path = "/" + csrf_path
+        Reflect.set_metadata(ActionsController.csrf, RouteKey.path, csrf_path)
 
 
 class ActionsModule(ConfigurableModuleClass):
@@ -374,6 +740,50 @@ class ActionsModule(ConfigurableModuleClass):
     def for_root(cls, options: ActionsOption | None = None, extras: dict | None = None):
         """Register the actions controller and providers."""
         options = options or ActionsOption()
+        if not options.guards:
+            enabled = os.getenv("NESTIPY_ACTION_SECURITY", "").lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+            if enabled:
+                guards: list[Any] = []
+                origins_env = os.getenv("NESTIPY_ACTION_ALLOWED_ORIGINS", "")
+                origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+                allow_missing = os.getenv("NESTIPY_ACTION_ALLOW_MISSING_ORIGIN", "").lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+                guards.append(
+                    OriginActionGuard(
+                        allowed_origins=origins,
+                        allow_missing=allow_missing,
+                    )
+                )
+                csrf_enabled = os.getenv("NESTIPY_ACTION_CSRF", "").lower() not in {
+                    "0",
+                    "false",
+                    "no",
+                    "off",
+                }
+                if csrf_enabled:
+                    guards.append(
+                        CsrfActionGuard(cookie=options.csrf_cookie, allow_missing=False)
+                    )
+                signature_secret = os.getenv("NESTIPY_ACTION_SIGNATURE_SECRET")
+                if signature_secret:
+                    guards.append(ActionSignatureGuard(secret=signature_secret))
+                if os.getenv("NESTIPY_ACTION_PERMISSIONS", "").lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }:
+                    guards.append(ActionPermissionGuard())
+                options.guards = guards
         _set_action_route(options)
         dynamic_module = super().for_root(options, extras=extras)
         if ActionsController not in dynamic_module.controllers:

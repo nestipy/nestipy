@@ -151,6 +151,99 @@ use_effect(lambda: api.ping().then(lambda value: set_status(f"Ping: {value}")), 
 Lambdas compile to JS arrow functions. Complex lambdas with default values or `*args/**kwargs`
 are not supported.
 
+## Action Guards
+
+Actions are providers, so HTTP guards don't apply. Use action guards instead:
+
+```py
+from nestipy.web import action, UseActionGuards, ActionGuard, ActionContext
+
+class AuthGuard(ActionGuard):
+    def can_activate(self, ctx: ActionContext) -> bool:
+        return ctx.user is not None
+
+class DemoActions:
+    @UseActionGuards(AuthGuard)
+    @action()
+    async def hello(self, name: str) -> str:
+        return f"Hello, {name}"
+```
+
+You can also register global action guards via `ActionsOption(guards=[...])`.
+
+### Built-in Guards
+
+Nestipy ships with a few common action guards:
+
+- `OriginActionGuard` — allow-list `Origin`/`Referer`.
+- `CsrfActionGuard` — double-submit CSRF validation (header or payload vs cookie).
+- `ActionSignatureGuard` — HMAC + nonce replay protection.
+- `ActionPermissionGuard` — enforce `@ActionPermissions(...)`.
+
+Example:
+
+```py
+from nestipy.web import (
+    ActionsModule,
+    ActionsOption,
+    OriginActionGuard,
+    CsrfActionGuard,
+    ActionSignatureGuard,
+    ActionPermissionGuard,
+)
+
+module = ActionsModule.for_root(
+    ActionsOption(
+        guards=[
+            OriginActionGuard(allowed_origins=["http://localhost:5173"]),
+            CsrfActionGuard(),
+            ActionSignatureGuard(secret="dev-secret"),
+            ActionPermissionGuard(),
+        ]
+    )
+)
+```
+
+For browser clients, prefer `OriginActionGuard` + `CsrfActionGuard`.
+Use `ActionSignatureGuard` mainly for trusted server-to-server calls.
+
+### ActionAuth Convenience Decorator
+
+You can bundle permissions + guards in one decorator:
+
+```py
+from nestipy.web import ActionAuth, ActionPermissionGuard, action
+
+class AppActions:
+    @ActionAuth("hello:read", guards=[ActionPermissionGuard])
+    @action()
+    async def hello(self, name: str) -> str:
+        return f"Hello {name}"
+```
+
+### CSRF Token Endpoint
+
+Nestipy exposes a CSRF endpoint at `/_actions/csrf` by default. It returns a token
+and sets a `csrf_token` cookie for double-submit validation:
+
+```ts
+import { fetchCsrfToken } from './actions';
+
+await fetchCsrfToken(); // sets cookie + returns token
+```
+
+### Server-to-Server Signatures
+
+For internal services, you can sign action payloads:
+
+```ts
+import { createActionClient, createSignedMeta } from './actions';
+
+const call = createActionClient({
+  meta: (ctx) => createSignedMeta(process.env.ACTION_SECRET!, ctx),
+});
+```
+
 ## Props (Typed)
 
 ```py

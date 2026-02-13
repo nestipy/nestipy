@@ -15,7 +15,16 @@ from nestipy.web import (
     write_actions_client_file,
     build_actions_schema,
     generate_actions_client_code_from_schema,
+    CsrfActionGuard,
+    OriginActionGuard,
+    ActionSignatureGuard,
+    ActionPermissionGuard,
+    ActionPermissions,
 )
+import hashlib
+import hmac
+import json
+import time
 
 
 @Injectable()
@@ -118,3 +127,240 @@ def test_actions_codegen_from_schema(tmp_path: Path):
     text = out.read_text(encoding="utf-8")
     assert "DemoActions" in text
     assert "cached_counter" in text
+
+
+@Injectable()
+class GuardedActions:
+    @action()
+    async def secure(self) -> str:
+        return "ok"
+
+
+@Injectable()
+class PermissionedActions:
+    @ActionPermissions("demo:read")
+    @action()
+    async def gated(self) -> str:
+        return "ok"
+
+
+class InjectUserGuard:
+    def can_activate(self, ctx) -> bool:
+        if ctx.request is not None:
+            ctx.request.user = {"permissions": ["demo:read"]}
+        return True
+
+
+@Module(
+    imports=[ActionsModule.for_root(ActionsOption(path="/_actions"))],
+    providers=[GuardedActions],
+)
+class CsrfModule:
+    pass
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                guards=[CsrfActionGuard()],
+            )
+        )
+    ],
+    providers=[GuardedActions],
+)
+class CsrfGuardModule:
+    pass
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                guards=[OriginActionGuard(allowed_origins=["http://127.0.0.1:8000"], allow_missing=False)],
+            )
+        )
+    ],
+    providers=[GuardedActions],
+)
+class OriginGuardModule:
+    pass
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                guards=[ActionSignatureGuard(secret="secret")],
+            )
+        )
+    ],
+    providers=[GuardedActions],
+)
+class SignatureGuardModule:
+    pass
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                guards=[ActionPermissionGuard()],
+            )
+        )
+    ],
+    providers=[PermissionedActions],
+)
+class PermissionGuardModule:
+    pass
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                guards=[InjectUserGuard, ActionPermissionGuard()],
+            )
+        )
+    ],
+    providers=[PermissionedActions],
+)
+class PermissionGuardAllowModule:
+    pass
+
+
+@pytest.mark.asyncio
+async def test_actions_csrf_endpoint():
+    app = NestipyFactory.create(CsrfModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        response = await client.get("/_actions/csrf")
+        assert response.status() == 200
+        payload = response.json()
+        assert payload.get("csrf")
+        headers = response.get_headers()
+        cookie_header = headers.get("set-cookie") or headers.get("Set-Cookie")
+        assert cookie_header is not None
+        assert f"csrf_token={payload['csrf']}" in cookie_header
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_actions_csrf_guard():
+    app = NestipyFactory.create(CsrfGuardModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        missing = await client.post(
+            "/_actions",
+            json={"action": "GuardedActions.secure", "args": [], "kwargs": {}},
+        )
+        assert missing.status() == 200
+        missing_payload = missing.json()
+        assert missing_payload.get("ok") is False
+        assert missing_payload.get("error", {}).get("type") == "HttpException"
+        token = "csrf-token"
+        ok = await client.post(
+            "/_actions",
+            headers={"x-csrf-token": token, "cookie": f"csrf_token={token}"},
+            json={"action": "GuardedActions.secure", "args": [], "kwargs": {}},
+        )
+        assert ok.status() == 200
+        assert ok.json() == {"ok": True, "data": "ok"}
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_actions_origin_guard():
+    app = NestipyFactory.create(OriginGuardModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        denied = await client.post(
+            "/_actions",
+            headers={"origin": "http://evil.com"},
+            json={"action": "GuardedActions.secure", "args": [], "kwargs": {}},
+        )
+        assert denied.status() == 200
+        denied_payload = denied.json()
+        assert denied_payload.get("ok") is False
+        assert denied_payload.get("error", {}).get("type") == "HttpException"
+        ok = await client.post(
+            "/_actions",
+            headers={"origin": "http://127.0.0.1:8000"},
+            json={"action": "GuardedActions.secure", "args": [], "kwargs": {}},
+        )
+        assert ok.status() == 200
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_actions_signature_guard():
+    app = NestipyFactory.create(SignatureGuardModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        ts = int(time.time())
+        nonce = "nonce-1"
+        body = json.dumps({"args": [], "kwargs": {}}, sort_keys=True, separators=(",", ":"))
+        message = f"GuardedActions.secure|{ts}|{nonce}|{body}"
+        sig = hmac.new(b"secret", message.encode("utf-8"), hashlib.sha256).hexdigest()
+        ok = await client.post(
+            "/_actions",
+            json={
+                "action": "GuardedActions.secure",
+                "args": [],
+                "kwargs": {},
+                "meta": {"ts": ts, "nonce": nonce, "sig": sig},
+            },
+        )
+        assert ok.status() == 200
+        assert ok.json() == {"ok": True, "data": "ok"}
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+
+@pytest.mark.asyncio
+async def test_actions_permission_guard():
+    app = NestipyFactory.create(PermissionGuardModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        denied = await client.post(
+            "/_actions",
+            json={"action": "PermissionedActions.gated", "args": [], "kwargs": {}},
+        )
+        assert denied.status() == 200
+        denied_payload = denied.json()
+        assert denied_payload.get("ok") is False
+        assert denied_payload.get("error", {}).get("type") == "HttpException"
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()
+
+    app = NestipyFactory.create(PermissionGuardAllowModule)
+    await app.setup()
+    client = TestClient(app)
+    try:
+        allowed = await client.post(
+            "/_actions",
+            json={"action": "PermissionedActions.gated", "args": [], "kwargs": {}},
+        )
+        assert allowed.status() == 200
+        assert allowed.json() == {"ok": True, "data": "ok"}
+    finally:
+        NestipyContainer.clear()
+        RequestContextContainer.get_instance().destroy()

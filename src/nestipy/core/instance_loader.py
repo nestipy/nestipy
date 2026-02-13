@@ -50,6 +50,20 @@ class InstanceLoader:
     _profile_module_ms: float = 0.0
     _profile_modules: list[dict] = []
 
+    def __init__(self) -> None:
+        self._is_controller = False
+        self._module_instances = []
+        self.graphql_instance = None
+        self.discover = DiscoverService()
+        self._profile_enabled = False
+        self._profile_provider_count = 0
+        self._profile_controller_count = 0
+        self._profile_module_count = 0
+        self._profile_provider_ms = 0.0
+        self._profile_controller_ms = 0.0
+        self._profile_module_ms = 0.0
+        self._profile_modules = []
+
     def enable_profile(self, enabled: bool) -> None:
         self._profile_enabled = enabled
 
