@@ -698,6 +698,7 @@ def _install_deps(config: WebConfig) -> None:
     """Install frontend dependencies with the selected package manager."""
     out_dir = config.resolve_out_dir()
     manager = _select_package_manager(out_dir)
+    _web_log(f"Install: running {manager} install")
     if manager == "pnpm":
         cmd = ["pnpm", "install"]
     elif manager == "yarn":
@@ -713,6 +714,8 @@ def _install_deps(config: WebConfig) -> None:
         summary_parts = [p for p in (added_line, audited_line, vuln_line) if p]
         if summary_parts:
             _web_log(f"Install: {' | '.join(summary_parts)}")
+        else:
+            _web_log("Install: complete")
     if rc != 0:
         raise RuntimeError("Dependency install failed.")
 

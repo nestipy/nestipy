@@ -50,6 +50,14 @@ class LayoutInfo:
 
 
 @dataclass(slots=True)
+class ErrorInfo:
+    """Describe a compiled error boundary component."""
+    export_name: str
+    import_alias: str
+    import_path: str
+
+
+@dataclass(slots=True)
 class LayoutNode:
     """Tree node for nested layouts."""
     raw_parts: tuple[str, ...]
@@ -110,7 +118,27 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
         info.output.parent.mkdir(parents=True, exist_ok=True)
         info.output.write_text(tsx, encoding="utf-8")
 
-    build_routes(routes, config, root, layout_infos=layout_infos)
+    error_info: ErrorInfo | None = None
+    error_file = app_dir / "error.py"
+    if error_file.exists():
+        parsed, out_path = compile_component_module(
+            error_file,
+            app_dir=app_dir,
+            src_dir=src_dir,
+            cache=component_cache,
+            visiting=visiting,
+            target_names=("ErrorBoundary", "Error", "error"),
+        )
+        import_path = component_import_path(
+            config.resolve_src_dir(root) / "routes.tsx", out_path
+        )
+        error_info = ErrorInfo(
+            export_name=parsed.primary,
+            import_alias="AppErrorBoundary",
+            import_path=import_path,
+        )
+
+    build_routes(routes, config, root, layout_infos=layout_infos, error_info=error_info)
     ensure_vite_files(config, root)
     return routes
 
@@ -121,6 +149,7 @@ def build_routes(
     root: str | None = None,
     *,
     layout_infos: dict[tuple[str, ...], LayoutInfo] | None = None,
+    error_info: ErrorInfo | None = None,
 ) -> None:
     """Generate router and entrypoint files from discovered routes."""
     src_dir = config.resolve_src_dir(root)
@@ -147,7 +176,19 @@ def build_routes(
                 f"import {{ {info.export_name} as {info.import_alias} }} from '{info.import_path}';"
             )
 
+    error_imports: list[str] = []
+    if error_info:
+        if error_info.export_name == error_info.import_alias:
+            error_imports.append(
+                f"import {{ {error_info.export_name} }} from '{error_info.import_path}';"
+            )
+        else:
+            error_imports.append(
+                f"import {{ {error_info.export_name} as {error_info.import_alias} }} from '{error_info.import_path}';"
+            )
+
     header = ["import { createBrowserRouter } from 'react-router-dom';"]
+    header.extend(error_imports)
     header.extend(layout_imports)
     header.extend(imports)
     header.append("")
@@ -156,14 +197,22 @@ def build_routes(
     layout_root = _build_layout_tree(layout_infos)
     _attach_pages_to_layouts(layout_root, routes, page_vars, route_index, app_dir, layout_infos)
 
+    error_element = f"<{error_info.import_alias} />" if error_info else None
+
     def render_page_entry(path: str | None, element: str, *, top_level: bool) -> str:
         if path in (None, ""):
             if top_level:
+                if error_element:
+                    return f"      {{ path: '/', element: {element}, errorElement: {error_element} }}"
                 return f"      {{ path: '/', element: {element} }}"
+            if error_element and top_level:
+                return f"      {{ index: true, element: {element}, errorElement: {error_element} }}"
             return f"      {{ index: true, element: {element} }}"
         route_path = path
         if top_level:
             route_path = "/" + route_path
+        if error_element and top_level:
+            return f"      {{ path: '{route_path}', element: {element}, errorElement: {error_element} }}"
         return f"      {{ path: '{route_path}', element: {element} }}"
 
     def render_layout_node(node: LayoutNode, parent_parts: tuple[str, ...], *, top_level: bool) -> list[str]:
@@ -205,11 +254,17 @@ def build_routes(
             "  {",
             f"    path: '{path}'," if path else "    path: '/',",
             f"    element: {element},",
+        ]
+        if error_element and top_level:
+            entry_lines.append(f"    errorElement: {error_element},")
+        entry_lines.extend(
+            [
             "    children: [",
             ",\n".join(children_lines),
             "    ],",
             "  },",
-        ]
+            ]
+        )
         entries.append("\n".join(entry_lines))
         return entries
 

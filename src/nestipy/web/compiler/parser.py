@@ -1056,7 +1056,7 @@ def _handle_for_statement(
         raise CompilerError("For loop target must be a simple name.")
     if stmt.orelse is not None:
         raise CompilerError("For/else is not supported in components.")
-    iterable = JSExpr(_expr_to_js(stmt.iter, name_map))
+    iterable = JSExpr(_expr_to_js(stmt.iter, name_map, bindings))
 
     append_target, append_expr = _extract_loop_body(
         stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
@@ -1178,7 +1178,7 @@ def _extract_nested_for_expr(
         raise CompilerError("Nested for loop target must be a simple name.")
     if stmt.orelse is not None:
         raise CompilerError("For/else is not supported in components.")
-    iterable = JSExpr(_expr_to_js(stmt.iter, name_map))
+    iterable = JSExpr(_expr_to_js(stmt.iter, name_map, bindings))
     append_target, body_expr = _extract_loop_body(
         stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
     )
@@ -1512,10 +1512,10 @@ def _eval_list_comp(
     local_map = dict(name_map or {})
     if target_name not in local_map:
         local_map[target_name] = _camelize_identifier(target_name)
-    iterable = JSExpr(_expr_to_js(comp.iter, local_map))
+    iterable = JSExpr(_expr_to_js(comp.iter, local_map, bindings))
     condition = None
     if comp.ifs:
-        tests = [_expr_to_js(cond.test, local_map) for cond in comp.ifs]
+        tests = [_expr_to_js(cond.test, local_map, bindings) for cond in comp.ifs]
         condition = JSExpr(" && ".join(f"({t})" for t in tests))
     body = _eval_expr(
         expr.elt, externals, component_names, locals | {target_name}, bindings, local_map
@@ -1635,9 +1635,65 @@ def _normalize_prop_key(key: str) -> str:
     return key
 
 
-def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None) -> str:
+def _binding_to_js(value: Any) -> str | None:
+    """Convert a bound value into a JS expression string when possible."""
+    if isinstance(value, JSExpr):
+        return str(value)
+    if isinstance(value, ConditionalExpr):
+        consequent = _binding_to_js(value.consequent)
+        alternate = _binding_to_js(value.alternate)
+        if consequent is None or alternate is None:
+            return None
+        return f"{value.test} ? {consequent} : {alternate}"
+    if isinstance(value, str):
+        return json.dumps(value)
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            rendered = _binding_to_js(item)
+            if rendered is None:
+                return None
+            parts.append(rendered)
+        return "[" + ", ".join(parts) + "]"
+    if isinstance(value, dict):
+        parts: list[str] = []
+        spreads = value.get("__spread__") if isinstance(value, dict) else None
+        if spreads:
+            for spread in spreads:
+                spread_js = _binding_to_js(spread)
+                if spread_js is None:
+                    return None
+                parts.append(f"...{spread_js}")
+        for key, item in value.items():
+            if key == "__spread__":
+                continue
+            rendered = _binding_to_js(item)
+            if rendered is None:
+                return None
+            parts.append(f"{json.dumps(key)}: {rendered}")
+        return "{" + ", ".join(parts) + "}"
+    return None
+
+
+def _expr_to_js(
+    expr: cst.BaseExpression,
+    name_map: dict[str, str] | None = None,
+    bindings: dict[str, Any] | None = None,
+) -> str:
     """Convert a CST expression into a JS expression string."""
     if isinstance(expr, cst.Name):
+        if bindings and expr.value in bindings:
+            rendered = _binding_to_js(bindings[expr.value])
+            if rendered is not None:
+                return rendered
         if expr.value == "None":
             return "null"
         if expr.value == "True":
@@ -1646,20 +1702,28 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
             return "false"
         return name_map.get(expr.value, expr.value) if name_map else expr.value
     if isinstance(expr, cst.Attribute):
-        return f"{_expr_to_js(expr.value, name_map)}.{expr.attr.value}"
+        return f"{_expr_to_js(expr.value, name_map, bindings)}.{expr.attr.value}"
     if isinstance(expr, cst.ConcatenatedString):
         parts = _flatten_concat_string(expr)
         if all(isinstance(part, cst.SimpleString) for part in parts):
             return json.dumps("".join(_eval_string(part) for part in parts))
-        joined = " + ".join(_expr_to_js(part, name_map) for part in parts)
+        joined = " + ".join(_expr_to_js(part, name_map, bindings) for part in parts)
         return f"({joined})"
     if isinstance(expr, cst.SimpleString):
         return json.dumps(_eval_string(expr))
     if isinstance(expr, cst.List):
-        items = [_expr_to_js(el.value, name_map) for el in expr.elements if el is not None]
+        items = [
+            _expr_to_js(el.value, name_map, bindings)
+            for el in expr.elements
+            if el is not None
+        ]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Tuple):
-        items = [_expr_to_js(el.value, name_map) for el in expr.elements if el is not None]
+        items = [
+            _expr_to_js(el.value, name_map, bindings)
+            for el in expr.elements
+            if el is not None
+        ]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Dict):
         parts: list[str] = []
@@ -1667,25 +1731,34 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
             if element is None:
                 continue
             if isinstance(element, cst.StarredDictElement):
-                parts.append("..." + _expr_to_js(element.value, name_map))
+                parts.append("..." + _expr_to_js(element.value, name_map, bindings))
                 continue
             if element.key is None or element.value is None:
                 continue
             key = _eval_key(element.key)
-            parts.append(f"{json.dumps(key)}: {_expr_to_js(element.value, name_map)}")
+            parts.append(
+                f"{json.dumps(key)}: {_expr_to_js(element.value, name_map, bindings)}"
+            )
         return "{" + ", ".join(parts) + "}"
     if isinstance(expr, cst.Integer):
         return expr.value
     if isinstance(expr, cst.Float):
         return expr.value
     if isinstance(expr, cst.IfExp):
-        return f"({_expr_to_js(expr.test, name_map)}) ? ({_expr_to_js(expr.body, name_map)}) : ({_expr_to_js(expr.orelse, name_map)})"
+        return (
+            f"({_expr_to_js(expr.test, name_map, bindings)}) ? "
+            f"({_expr_to_js(expr.body, name_map, bindings)}) : "
+            f"({_expr_to_js(expr.orelse, name_map, bindings)})"
+        )
     if isinstance(expr, cst.BooleanOperation):
         op = "&&" if isinstance(expr.operator, cst.And) else "||"
-        return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(expr.right, name_map)})"
+        return (
+            f"({_expr_to_js(expr.left, name_map, bindings)}) {op} "
+            f"({_expr_to_js(expr.right, name_map, bindings)})"
+        )
     if isinstance(expr, cst.UnaryOperation):
         if isinstance(expr.operator, cst.Not):
-            return f"!({_expr_to_js(expr.expression, name_map)})"
+            return f"!({_expr_to_js(expr.expression, name_map, bindings)})"
     if isinstance(expr, cst.BinaryOperation):
         op_map = {
             cst.Add: "+",
@@ -1697,7 +1770,10 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
         op = op_map.get(type(expr.operator))
         if op is None:
             raise CompilerError("Unsupported binary operator in JS context.")
-        return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(expr.right, name_map)})"
+        return (
+            f"({_expr_to_js(expr.left, name_map, bindings)}) {op} "
+            f"({_expr_to_js(expr.right, name_map, bindings)})"
+        )
     if isinstance(expr, cst.Comparison):
         if len(expr.comparisons) == 1:
             comp = expr.comparisons[0]
@@ -1714,7 +1790,10 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
                 cst.IsNot: "!==",
             }
             op = op_map.get(type(comp.operator), "==")
-            return f"({_expr_to_js(expr.left, name_map)}) {op} ({_expr_to_js(comp.comparator, name_map)})"
+            return (
+                f"({_expr_to_js(expr.left, name_map, bindings)}) {op} "
+                f"({_expr_to_js(comp.comparator, name_map, bindings)})"
+            )
     if isinstance(expr, cst.Call):
         # only allow js(...) calls inside expressions
         name = _call_name(expr)
@@ -1725,8 +1804,10 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
                 raise CompilerError("new_() requires a constructor argument.")
             if any(arg.keyword is not None for arg in expr.args):
                 raise CompilerError("new_() does not support keyword arguments.")
-            target = _expr_to_js(expr.args[0].value, name_map)
-            args = [_expr_to_js(arg.value, name_map) for arg in expr.args[1:]]
+            target = _expr_to_js(expr.args[0].value, name_map, bindings)
+            args = [
+                _expr_to_js(arg.value, name_map, bindings) for arg in expr.args[1:]
+            ]
             return f"new {target}({', '.join(args)})"
     if isinstance(expr, cst.Lambda):
         params: list[str] = []
@@ -1740,7 +1821,7 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
         for param in ordered:
             name = param.name.value
             if param.default is not None:
-                default_js = _expr_to_js(param.default, name_map)
+                default_js = _expr_to_js(param.default, name_map, bindings)
                 params.append(f"{name} = {default_js}")
             else:
                 params.append(name)
@@ -1749,39 +1830,45 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
             star_name = _param_name(star)
             if star_name:
                 params.append(f"...{star_name}")
-        body_js = _expr_to_js(expr.body, name_map)
+        body_js = _expr_to_js(expr.body, name_map, bindings)
         return f"({', '.join(params)}) => {body_js}"
     if isinstance(expr, cst.FormattedString):
-        return _format_fstring(expr, name_map)
+        return _format_fstring(expr, name_map, bindings)
     if isinstance(expr, cst.Subscript):
-        target = _expr_to_js(expr.value, name_map)
+        target = _expr_to_js(expr.value, name_map, bindings)
         if len(expr.slice) != 1:
             raise CompilerError("Unsupported subscript expression.")
         sub = expr.slice[0].slice
         if isinstance(sub, cst.Index):
-            return f"{target}[{_expr_to_js(sub.value, name_map)}]"
+            return f"{target}[{_expr_to_js(sub.value, name_map, bindings)}]"
         raise CompilerError("Unsupported subscript expression.")
     if isinstance(expr, cst.Call):
-        func = _expr_to_js(expr.func, name_map)
+        func = _expr_to_js(expr.func, name_map, bindings)
         args: list[str] = []
         for arg in expr.args:
             if arg.keyword is not None:
                 raise CompilerError("Keyword arguments are not supported in hook functions.")
-            args.append(_expr_to_js(arg.value, name_map))
+            args.append(_expr_to_js(arg.value, name_map, bindings))
         return f"{func}({', '.join(args)})"
     if isinstance(expr, cst.Await):
-        return f"await {_expr_to_js(expr.expression, name_map)}"
+        return f"await {_expr_to_js(expr.expression, name_map, bindings)}"
     raise CompilerError("Unsupported expression in JS context. Use js('...')")
 
 
-def _format_fstring(expr: cst.FormattedString, name_map: dict[str, str] | None = None) -> str:
+def _format_fstring(
+    expr: cst.FormattedString,
+    name_map: dict[str, str] | None = None,
+    bindings: dict[str, Any] | None = None,
+) -> str:
     """Convert f-strings into JS template literals."""
     parts: list[str] = []
     for part in expr.parts:
         if isinstance(part, cst.FormattedStringText):
             parts.append(part.value.replace("`", "\\`"))
         elif isinstance(part, cst.FormattedStringExpression):
-            parts.append("${" + _expr_to_js(part.expression, name_map) + "}")
+            parts.append(
+                "${" + _expr_to_js(part.expression, name_map, bindings) + "}"
+            )
     return "`" + "".join(parts) + "`"
 
 
