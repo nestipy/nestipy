@@ -207,6 +207,24 @@ module = ActionsModule.for_root(
 For browser clients, prefer `OriginActionGuard` + `CsrfActionGuard`.
 Use `ActionSignatureGuard` mainly for trusted server-to-server calls.
 
+### Action Security Presets (Env + CLI)
+
+You can enable a default guard stack via environment variables (used by
+`ActionsModule.for_root` when `guards` is empty):
+
+- `NESTIPY_ACTION_SECURITY=1` enable presets
+- `NESTIPY_ACTION_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
+- `NESTIPY_ACTION_ALLOW_MISSING_ORIGIN=1`
+- `NESTIPY_ACTION_CSRF=1` or `0`
+- `NESTIPY_ACTION_SIGNATURE_SECRET=...`
+- `NESTIPY_ACTION_PERMISSIONS=1`
+
+CLI shortcuts map to these env vars:
+
+```
+nestipy start --dev --action-security --action-origins "http://localhost:5173" --action-csrf
+```
+
 ### ActionAuth Convenience Decorator
 
 You can bundle permissions + guards in one decorator:
@@ -231,6 +249,9 @@ import { fetchCsrfToken } from './actions';
 
 await fetchCsrfToken(); // sets cookie + returns token
 ```
+
+If you use the web scaffold, the generated `main.tsx` calls `fetchCsrfToken()` on
+startup so the cookie is already present for the first action call.
 
 ### Server-to-Server Signatures
 

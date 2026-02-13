@@ -141,6 +141,80 @@ class AppService:
         return "test"
 
 ```
+
+## Web Actions Security
+
+Nestipy Web actions support guard-based security similar to NestJS. You can enable default
+guards globally or attach guards per action.
+
+Enable security presets globally:
+
+```python
+from nestipy.common import Module
+from nestipy.web import ActionsModule, ActionsOption
+
+
+@Module(
+    imports=[
+        ActionsModule.for_root(
+            ActionsOption(
+                path="/_actions",
+                csrf_enabled=True,
+            )
+        )
+    ],
+)
+class AppModule: ...
+```
+
+Attach guards/permissions per action:
+
+```python
+from nestipy.web import (
+    action,
+    ActionAuth,
+    ActionPermissions,
+    UseActionGuards,
+    OriginActionGuard,
+    CsrfActionGuard,
+    ActionSignatureGuard,
+)
+
+
+class AppActions:
+    @action()
+    @ActionAuth("admin", guards=[OriginActionGuard, CsrfActionGuard])
+    async def secure_action(self, payload: dict) -> str:
+        return "ok"
+
+    @action()
+    @UseActionGuards(ActionSignatureGuard)
+    async def signed_action(self, payload: dict) -> str:
+        return "ok"
+```
+
+When CSRF protection is enabled, call the CSRF endpoint once on the client to set the cookie:
+
+```ts
+import { fetchCsrfToken } from './actions';
+
+await fetchCsrfToken('/_actions/csrf');
+```
+
+Environment presets (read at import time):
+
+- `NESTIPY_ACTION_SECURITY=1` enable defaults
+- `NESTIPY_ACTION_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
+- `NESTIPY_ACTION_CSRF=1` / `0`
+- `NESTIPY_ACTION_SIGNATURE_SECRET=...`
+- `NESTIPY_ACTION_PERMISSIONS=1`
+
+CLI convenience flags map to these env vars:
+
+```
+nestipy start --action-security --action-origins "http://localhost:5173" --action-csrf
+```
+
 ## Documentation
 
 View full documentation from [here](https://nestipy.vercel.app).

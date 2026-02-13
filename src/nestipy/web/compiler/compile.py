@@ -249,8 +249,11 @@ def build_routes(
             "import React from 'react';",
             "import ReactDOM from 'react-dom/client';",
             "import { RouterProvider } from 'react-router-dom';",
+            "import { fetchCsrfToken } from './actions';",
             "import { router } from './routes';",
             "import './index.css';",
+            "",
+            "void fetchCsrfToken().catch(() => undefined);",
             "",
             "ReactDOM.createRoot(document.getElementById('root')!).render(",
             "  <React.StrictMode>",
@@ -741,6 +744,24 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             ),
             encoding="utf-8",
         )
+    else:
+        existing = actions_client.read_text(encoding="utf-8")
+        if "fetchCsrfToken" not in existing:
+            actions_client.write_text(
+                existing.rstrip()
+                + "\n\n"
+                + "\n".join(
+                    [
+                        "export async function fetchCsrfToken(endpoint = '/_actions/csrf', baseUrl = '', fetcher: typeof fetch = globalThis.fetch.bind(globalThis)): Promise<string> {",
+                        "  const response = await fetcher(baseUrl + endpoint, { method: 'GET' });",
+                        "  const payload = (await response.json()) as { csrf?: string };",
+                        "  return payload.csrf ?? '';",
+                        "}",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
 
 
 def _sanitize_package_name(name: str) -> str:
