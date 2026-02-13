@@ -1728,6 +1728,29 @@ def _expr_to_js(expr: cst.BaseExpression, name_map: dict[str, str] | None = None
             target = _expr_to_js(expr.args[0].value, name_map)
             args = [_expr_to_js(arg.value, name_map) for arg in expr.args[1:]]
             return f"new {target}({', '.join(args)})"
+    if isinstance(expr, cst.Lambda):
+        params: list[str] = []
+        if expr.params.star_kwarg is not None:
+            raise CompilerError("Lambda **kwargs are not supported in JS context.")
+        ordered = (
+            list(expr.params.posonly_params)
+            + list(expr.params.params)
+            + list(expr.params.kwonly_params)
+        )
+        for param in ordered:
+            name = param.name.value
+            if param.default is not None:
+                default_js = _expr_to_js(param.default, name_map)
+                params.append(f"{name} = {default_js}")
+            else:
+                params.append(name)
+        star = expr.params.star_arg
+        if star is not None:
+            star_name = _param_name(star)
+            if star_name:
+                params.append(f"...{star_name}")
+        body_js = _expr_to_js(expr.body, name_map)
+        return f"({', '.join(params)}) => {body_js}"
     if isinstance(expr, cst.FormattedString):
         return _format_fstring(expr, name_map)
     if isinstance(expr, cst.Subscript):
@@ -1760,6 +1783,22 @@ def _format_fstring(expr: cst.FormattedString, name_map: dict[str, str] | None =
         elif isinstance(part, cst.FormattedStringExpression):
             parts.append("${" + _expr_to_js(part.expression, name_map) + "}")
     return "`" + "".join(parts) + "`"
+
+
+def _param_name(param: object) -> str | None:
+    """Extract a parameter name from CST nodes or raw strings."""
+    if isinstance(param, cst.Param):
+        return param.name.value
+    if isinstance(param, cst.Name):
+        return param.value
+    if isinstance(param, str):
+        return param
+    name = getattr(param, "name", None)
+    if isinstance(name, cst.Name):
+        return name.value
+    if isinstance(name, str):
+        return name
+    return None
 
 
 def _flatten_concat_string(expr: cst.ConcatenatedString) -> list[cst.BaseExpression]:

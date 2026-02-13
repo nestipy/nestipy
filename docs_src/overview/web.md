@@ -139,6 +139,18 @@ def Page():
     )
 ```
 
+## JS Context Expressions
+
+When writing hook callbacks, `js(...)` can be used for raw JS snippets, but the compiler
+also supports simple Python lambdas in JS contexts:
+
+```py
+use_effect(lambda: api.ping().then(lambda value: set_status(f"Ping: {value}")), deps=[])
+```
+
+Lambdas compile to JS arrow functions. Complex lambdas with default values or `*args/**kwargs`
+are not supported.
+
 ## Props (Typed)
 
 ```py
