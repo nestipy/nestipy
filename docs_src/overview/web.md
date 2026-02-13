@@ -621,6 +621,60 @@ if (res2.ok) {
 }
 ```
 
+## State Management (Zustand)
+
+You can use any React state library by defining the store in TS and calling it
+from Python via `external_fn`.
+
+`web/src/store.ts`:
+
+```ts
+import { create } from 'zustand';
+
+type CounterState = {
+  count: number;
+  inc: () => void;
+  dec: () => void;
+};
+
+export const useCounterStore = create<CounterState>((set) => ({
+  count: 0,
+  inc: () => set((state) => ({ count: state.count + 1 })),
+  dec: () => set((state) => ({ count: state.count - 1 })),
+}));
+```
+
+`app/counter/page.py`:
+
+```py
+from nestipy.web import component, h, external_fn
+
+use_counter_store = external_fn("../store", "useCounterStore", alias="useCounterStore")
+
+@component
+def Counter():
+    count = use_counter_store(lambda s: s.count)
+    inc = use_counter_store(lambda s: s.inc)
+    dec = use_counter_store(lambda s: s.dec)
+
+    return h.section(
+        h.h2("Zustand Counter"),
+        h.div(h.span(count), class_name="counter-display"),
+        h.div(
+            h.button("-1", on_click=dec, class_name="btn"),
+            h.button("+1", on_click=inc, class_name="btn btn-primary"),
+            class_name="home-actions",
+        ),
+        class_name="page",
+    )
+```
+
+Install the dependency:
+
+```bash
+npm install zustand
+```
+
 ## Hot Reload
 
 Run both the Python compiler and Vite dev server:
