@@ -19,8 +19,8 @@ from app_actions import AppActions
                 guards=[
                     OriginActionGuard(
                         allowed_origins=[
-                            "http://localhost:5173",
-                            "http://127.0.0.1:5173",
+                            "http://localhost:2345",
+                            "http://127.0.0.1:2345",
                         ]
                     ),
                     CsrfActionGuard(),

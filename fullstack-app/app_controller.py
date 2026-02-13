@@ -2,9 +2,9 @@ from typing import Annotated
 
 from nestipy.common import Controller, Get
 from nestipy.ioc import Inject
+from datetime import datetime
 
 from app_service import AppService
-from datetime import datetime
 
 
 @Controller("/api")
@@ -13,7 +13,8 @@ class AppController:
 
     @Get("/ping")
     async def ping(self) -> str:
-        return "pong - " + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        from_service = await self.service.get()
+        return "pong - " + from_service
 
     @Get("/message")
     async def message(self) -> str:

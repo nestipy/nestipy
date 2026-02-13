@@ -1415,7 +1415,7 @@ def _eval_expr(
         return JSExpr(_expr_to_js(expr, name_map))
 
     if isinstance(expr, cst.FormattedString):
-        return JSExpr(_format_fstring(expr, name_map))
+        return JSExpr(_format_fstring(expr, name_map, bindings))
 
     if isinstance(expr, cst.Subscript):
         return JSExpr(_expr_to_js(expr, name_map))

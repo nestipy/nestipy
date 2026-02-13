@@ -1,18 +1,19 @@
 import React from 'react';
 import type { JSX } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 
 
-export const ThemeContext = React.createContext({"theme": "dark", "toggle": null});
+export const ThemeContext = React.createContext({"theme": "light", "toggle": null});
 
 
 export function Layout(): JSX.Element {
-  const [theme, setTheme] = React.useState("dark");
+  const [theme, setTheme] = React.useState("light");
   const toggleTheme = () => {
-    setTheme(((theme) === ("dark")) ? ("light") : ("dark"));
+    setTheme(((theme) === ("light")) ? ("dark") : ("light"));
   };
+  const navLinks = [];
   const toggleHandler = React.useCallback(toggleTheme, [theme]);
   return (
-    <ThemeContext.Provider value={{"theme": theme, "toggle": toggleHandler}}><div className="min-h-screen flex flex-col"><header className="flex items-center justify-between gap-4 border-b border-slate-900 px-6 py-4"><div className="flex items-center gap-3"><span className="text-xs uppercase tracking-[0.35em] text-slate-400">Nestipy Web</span><span className="text-xs text-slate-500">Python-first UI</span></div><button onClick={toggleHandler} className="rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800">{`Switch to ${((theme) === ("dark")) ? ("light") : ("dark")} mode`}</button></header><main className="flex-1 px-6"><Outlet /></main></div></ThemeContext.Provider>
+    <ThemeContext.Provider value={{"theme": theme, "toggle": toggleHandler}}><div className={(theme) === ("dark") ? "app-shell theme-dark" : "app-shell theme-light"}><header className="topbar"><div className="brand-block"><div className="brand"><span className="brand-name">Nestipy</span><span className="brand-pill">Web</span></div><p className="brand-subtitle">Python-first UI and typed APIs.</p></div><nav className="nav">{[{"label": "Home", "to": "/"}, {"label": "Counter", "to": "/counter"}, {"label": "API", "to": "/api-call"}].map((item) => (<Link to={item["to"]} key={item["to"]} className="nav-link">{item["label"]}</Link>))}</nav><div className="header-actions"><button onClick={toggleHandler} className="btn btn-ghost">{(theme) === ("dark") ? "Switch to light" : "Switch to dark"}</button><span className="theme-label">{(theme) === ("dark") ? "Dark mode" : "Light mode"}</span></div></header><main className="container"><Outlet /></main><footer className="footer"><span>Nestipy Web</span><span>•</span><span>Fullstack scaffold</span></footer></div></ThemeContext.Provider>
   );
 }

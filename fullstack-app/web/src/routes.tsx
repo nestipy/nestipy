@@ -1,4 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { Error as AppErrorBoundary } from './components/error';
+import { NotFound } from './components/notfound';
 import { Layout as LayoutApicall } from './components/api-call/layout';
 import { Layout } from './components/layout';
 import Page0 from './pages/index';
@@ -9,6 +11,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <AppErrorBoundary />,
     children: [
       { index: true, element: <Page0 /> },
       { path: 'counter', element: <Page2 /> },
@@ -18,7 +21,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Page1 /> }
     ],
-  },
+  },,
+      { path: '*', element: <NotFound /> }
     ],
   },
 ]);

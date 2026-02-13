@@ -155,6 +155,7 @@ export function createActionClient(options: ActionClientOptions = {}) {
       : { action, args, kwargs };
     const response = await fetcher(baseUrl + endpoint, {
       method: 'POST',
+      credentials: init?.credentials ?? 'include',
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
       body: JSON.stringify(payload),
       ...init,

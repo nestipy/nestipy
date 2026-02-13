@@ -271,7 +271,7 @@ def Page():
     page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
         encoding="utf-8"
     )
-    assert "items.map" in page_tsx
+    assert "].map" in page_tsx
     assert "show ? " in page_tsx
 
 
@@ -305,7 +305,7 @@ def Page():
     page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
         encoding="utf-8"
     )
-    assert "items.map" in page_tsx
+    assert "].map" in page_tsx
     assert "show ? " in page_tsx
 
 
@@ -366,7 +366,7 @@ def Page():
     page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
         encoding="utf-8"
     )
-    assert "groups.map" in page_tsx
+    assert "group[\"items\"].map" in page_tsx
 
 
 def test_layout_import_prefers_local(tmp_path: Path) -> None:

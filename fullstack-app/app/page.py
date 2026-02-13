@@ -47,72 +47,111 @@ def Page():
     use_effect(load_action, deps=[])
     use_effect(load_ping, deps=[])
 
-    links = []
-    for item in [
-        {"label": "Home", "to": "/"},
-        {"label": "Counter", "to": "/counter"},
-        {"label": "API", "to": "/api-call"},
-    ]:
-        links.append(
-            Link(
-                item["label"],
-                to=item["to"],
-                key=item["to"],
-                class_name="nav-link",
-            )
-        )
-
     if ping == "Loading...":
-        ping_status = "Loading API ping..."
+        ping_status = "Connecting to API..."
     else:
         ping_status = f"API ping: {ping}"
 
+    if theme["theme"] == "dark":
+        theme_name = "Dark"
+    else:
+        theme_name = "Light"
+
+    features = []
+    for item in [
+        {
+            "title": "Python-first UI",
+            "desc": "Write components in Python. Compile to TSX for Vite.",
+        },
+        {
+            "title": "Typed Actions",
+            "desc": "Call backend providers from the browser with type safety.",
+        },
+        {
+            "title": "Instant Feedback",
+            "desc": "Dev server + compiler keep your UI hot and fast.",
+        },
+    ]:
+        features.append(
+            h.div(
+                h.h3(item["title"], class_name="feature-title"),
+                h.p(item["desc"], class_name="feature-desc"),
+                class_name="card feature-card",
+            )
+        )
+   
+    stats = []
+    for item in [
+        {"label": "Theme", "value": theme_name},
+        {"label": "Action", "value": "Live" if message != "Loading..." else "Booting"},
+        {"label": "API", "value": "Ready" if ping != "Loading..." else "Syncing"},
+    ]:
+        stats.append(
+            h.div(
+                h.span(item["label"], class_name="stat-label"),
+                h.span(item["value"], class_name="stat-value"),
+                class_name="stat-card",
+            )
+        )
+
     return h.section(
         h.div(
-            h.img(
-                src="/nestipy.png",
-                alt="Nestipy logo",
-                class_name="logo nestipy",
+            h.div(
+                h.span("Fullstack starter", class_name="pill"),
+                h.span("Nestipy + React + Vite", class_name="pill pill-accent"),
+                class_name="pill-row",
             ),
-            h.img(
-                src="/react.svg",
-                alt="React logo",
-                class_name="logo react",
+            h.h1("Ship Python UI with modern tooling.", class_name="hero-title"),
+            h.p(
+                "Nestipy Web compiles Python components to React, keeps actions typed, and gives you a single fullstack workflow.",
+                class_name="hero-subtitle",
             ),
-            h.img(
-                src="/vite.svg",
-                alt="Vite logo",
-                class_name="logo vite",
+            h.div(
+                Link("Explore Counter", to="/counter", class_name="btn btn-primary"),
+                Link("Open API Playground", to="/api-call", class_name="btn btn-outline"),
+                class_name="hero-actions",
+            ),
+            class_name="hero",
+        ),
+        h.div(
+            h.a(
+                h.img(src="/nestipy.png", alt="Nestipy logo", class_name="logo nestipy"),
+                href="https://github.com/nestipy/nestipy",
+                target="_blank",
+                rel="noreferrer",
+                class_name="logo-link",
+            ),
+            h.a(
+                h.img(src="/react.svg", alt="React logo", class_name="logo react"),
+                href="https://react.dev",
+                target="_blank",
+                rel="noreferrer",
+                class_name="logo-link",
+            ),
+            h.a(
+                h.img(src="/vite.svg", alt="Vite logo", class_name="logo vite"),
+                href="https://vitejs.dev",
+                target="_blank",
+                rel="noreferrer",
+                class_name="logo-link",
             ),
             class_name="logo-row",
         ),
-        h.h1("Nestipy Web + React + Vite", class_name="home-title"),
-        h.p(
-            "Build fullstack apps with Python-first UI, typed actions, and fast HMR.",
-            class_name="home-subtitle",
-        ),
+        h.p("Click the logos to learn more.", class_name="logo-caption"),
         h.div(
-            h.button(
-                "Reload Action",
-                on_click=reload_action,
-                class_name="btn btn-primary",
+            h.div(
+                h.p(action_label, class_name="card-title"),
+                h.p(ping_status, class_name="card-subtitle"),
+                class_name="card-content",
             ),
-            h.button(
-                "Reload API",
-                on_click=reload_ping,
-                class_name="btn",
+            h.div(
+                h.button("Reload Action", on_click=reload_action, class_name="btn btn-primary"),
+                h.button("Reload API", on_click=reload_ping, class_name="btn"),
+                class_name="home-actions",
             ),
-            class_name="home-actions",
+            class_name="card status-card",
         ),
-        h.div(
-            h.p(action_label, class_name="text-sm"),
-            h.p(ping_status, class_name="text-xs text-slate-400"),
-            h.p(
-                f"Theme: {theme['theme']}",
-                class_name="text-xs text-slate-500",
-            ),
-            class_name="home-card",
-        ),
-        h.nav(links, class_name="home-nav"),
-        class_name="home",
+        h.div(features, class_name="feature-grid gap-4"),
+        h.div(stats, class_name="stat-grid gap-4"),
+        class_name="home space-y-8",
     )

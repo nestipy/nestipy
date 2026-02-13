@@ -5,14 +5,14 @@ from nestipy.web import component, h, Slot
 def Layout():
     return h.section(
         h.div(
-            h.p("API Workspace", class_name="text-xs uppercase tracking-[0.3em] text-slate-500"),
-            h.h3("Typed Client Playground", class_name="text-xl font-semibold text-slate-100"),
+            h.span("Workspace", class_name="pill"),
+            h.h3("Typed Client Playground", class_name="panel-title"),
             h.p(
-                "This section has its own nested layout.",
-                class_name="text-sm text-slate-400",
+                "This nested layout scopes tooling for /api-call routes.",
+                class_name="panel-subtitle",
             ),
-            class_name="space-y-2",
+            class_name="panel-header",
         ),
-        h.div(h(Slot), class_name="mt-6"),
-        class_name="rounded-3xl border border-slate-800 bg-slate-900/40 p-6",
+        h.div(h(Slot), class_name="panel-body"),
+        class_name="panel",
     )

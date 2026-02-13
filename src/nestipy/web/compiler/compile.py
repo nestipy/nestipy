@@ -58,6 +58,15 @@ class ErrorInfo:
 
 
 @dataclass(slots=True)
+class NotFoundInfo:
+    """Describe a compiled notfound component."""
+    raw_parts: tuple[str, ...]
+    export_name: str
+    import_alias: str
+    import_path: str
+
+
+@dataclass(slots=True)
 class LayoutNode:
     """Tree node for nested layouts."""
     raw_parts: tuple[str, ...]
@@ -88,6 +97,13 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     component_cache: dict[Path, tuple[ParsedFile, Path]] = {}
     visiting: set[Path] = set()
     layout_infos = _compile_layouts(
+        app_dir=app_dir,
+        src_dir=src_dir,
+        cache=component_cache,
+        visiting=visiting,
+        routes_file=config.resolve_src_dir(root) / "routes.tsx",
+    )
+    notfound_infos = _compile_notfound(
         app_dir=app_dir,
         src_dir=src_dir,
         cache=component_cache,
@@ -138,7 +154,14 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
             import_path=import_path,
         )
 
-    build_routes(routes, config, root, layout_infos=layout_infos, error_info=error_info)
+    build_routes(
+        routes,
+        config,
+        root,
+        layout_infos=layout_infos,
+        error_info=error_info,
+        notfound_infos=notfound_infos,
+    )
     ensure_vite_files(config, root)
     return routes
 
@@ -150,6 +173,7 @@ def build_routes(
     *,
     layout_infos: dict[tuple[str, ...], LayoutInfo] | None = None,
     error_info: ErrorInfo | None = None,
+    notfound_infos: dict[tuple[str, ...], NotFoundInfo] | None = None,
 ) -> None:
     """Generate router and entrypoint files from discovered routes."""
     src_dir = config.resolve_src_dir(root)
@@ -165,6 +189,7 @@ def build_routes(
         imports.append(f"import {var_name} from '{info.import_path}';")
 
     layout_infos = layout_infos or {}
+    notfound_infos = notfound_infos or {}
     layout_imports: list[str] = []
     for info in layout_infos.values():
         if info.export_name == info.import_alias:
@@ -177,6 +202,7 @@ def build_routes(
             )
 
     error_imports: list[str] = []
+    use_default_error = error_info is None
     if error_info:
         if error_info.export_name == error_info.import_alias:
             error_imports.append(
@@ -187,17 +213,83 @@ def build_routes(
                 f"import {{ {error_info.export_name} as {error_info.import_alias} }} from '{error_info.import_path}';"
             )
 
-    header = ["import { createBrowserRouter } from 'react-router-dom';"]
+    notfound_imports: list[str] = []
+    for info in sorted(
+        notfound_infos.values(), key=lambda item: (item.raw_parts, item.import_alias)
+    ):
+        if info.export_name == info.import_alias:
+            notfound_imports.append(
+                f"import {{ {info.export_name} }} from '{info.import_path}';"
+            )
+        else:
+            notfound_imports.append(
+                f"import {{ {info.export_name} as {info.import_alias} }} from '{info.import_path}';"
+            )
+
+    if use_default_error:
+        header = [
+            "import { createBrowserRouter, useRouteError, isRouteErrorResponse } from 'react-router-dom';"
+        ]
+    else:
+        header = ["import { createBrowserRouter } from 'react-router-dom';"]
     header.extend(error_imports)
+    header.extend(notfound_imports)
     header.extend(layout_imports)
     header.extend(imports)
+    if use_default_error:
+        header.extend(
+            [
+                "",
+                "const DefaultErrorBoundary = () => {",
+                "  const error = useRouteError();",
+                "  const status = isRouteErrorResponse(error) ? error.status : 500;",
+                "  const title = isRouteErrorResponse(error) ? error.statusText : 'Unexpected error';",
+                "  const message = error?.message ?? 'Something went wrong while rendering this page.';",
+                "  return (",
+                "    <section className=\"error-page\">",
+                "      <div className=\"error-card\">",
+                "        <span className=\"error-code\">{status}</span>",
+                "        <h1 className=\"error-title\">{title}</h1>",
+                "        <p className=\"error-message\">{message}</p>",
+                "      </div>",
+                "    </section>",
+                "  );",
+                "};",
+            ]
+        )
     header.append("")
 
     app_dir = config.resolve_app_dir(root)
     layout_root = _build_layout_tree(layout_infos)
     _attach_pages_to_layouts(layout_root, routes, page_vars, route_index, app_dir, layout_infos)
 
-    error_element = f"<{error_info.import_alias} />" if error_info else None
+    error_element = (
+        f"<{error_info.import_alias} />" if error_info else "<DefaultErrorBoundary />"
+    )
+    notfound_by_layout: dict[tuple[str, ...], list[NotFoundInfo]] = {}
+    if notfound_infos:
+        for info in notfound_infos.values():
+            prefix = _find_layout_prefix(info.raw_parts, layout_infos)
+            notfound_by_layout.setdefault(prefix, []).append(info)
+
+    def _notfound_path(info: NotFoundInfo, prefix: tuple[str, ...]) -> str:
+        rel_parts = info.raw_parts[len(prefix):]
+        if not rel_parts:
+            return "*"
+        segments = [_segment_from_part(part) for part in rel_parts]
+        return "/".join(segments) + "/*"
+
+    def _render_notfound_entry(info: NotFoundInfo, prefix: tuple[str, ...]) -> str:
+        path = _notfound_path(info, prefix)
+        element = f"<{info.import_alias} />"
+        return f"      {{ path: '{path}', element: {element} }}"
+
+    def _render_top_level_notfound(info: NotFoundInfo) -> str:
+        path = _notfound_path(info, ())
+        element = f"<{info.import_alias} />"
+        if path == "*":
+            return f"      {{ path: '*', element: {element} }}"
+        return f"      {{ path: '/{path}', element: {element} }}"
 
     def render_page_entry(path: str | None, element: str, *, top_level: bool) -> str:
         if path in (None, ""):
@@ -225,6 +317,12 @@ def build_routes(
                 entries.append(render_page_entry(full_path or None, element, top_level=True))
             for child in node.children:
                 entries.extend(render_layout_node(child, parent_parts, top_level=True))
+            if top_level:
+                for info in sorted(
+                    notfound_by_layout.get((), []),
+                    key=lambda item: (len(item.raw_parts), item.import_alias),
+                ):
+                    entries.append(_render_top_level_notfound(info))
             return entries
 
         relative_parts = node.raw_parts[len(parent_parts):]
@@ -249,6 +347,11 @@ def build_routes(
             children_lines.extend(
                 render_layout_node(child, node.raw_parts, top_level=False)
             )
+        for info in sorted(
+            notfound_by_layout.get(node.raw_parts, []),
+            key=lambda item: (len(item.raw_parts), item.import_alias),
+        ):
+            children_lines.append(_render_notfound_entry(info, node.raw_parts))
 
         entry_lines = [
             "  {",
@@ -276,6 +379,11 @@ def build_routes(
                 raise CompilerError(f"Route index missing for {info.source}")
             element = f"<{page_vars[idx]} />"
             flat_entries.append(f"  {{ path: '{info.route}', element: {element} }}")
+        for info in sorted(
+            notfound_by_layout.get((), []),
+            key=lambda item: (len(item.raw_parts), item.import_alias),
+        ):
+            flat_entries.append("  " + _render_top_level_notfound(info).strip())
         routes_tsx = "\n".join(
             [
                 *header,
@@ -287,6 +395,27 @@ def build_routes(
         )
     else:
         route_objects = render_layout_node(layout_root, tuple(), top_level=True)
+        if layout_root.info is None:
+            for info in sorted(
+                notfound_by_layout.get((), []),
+                key=lambda item: (len(item.raw_parts), item.import_alias),
+            ):
+                path = _notfound_path(info, ())
+                element = f"<{info.import_alias} />"
+                if path == "*":
+                    path = "*"
+                else:
+                    path = f"/{path}"
+                route_objects.append(
+                    "\n".join(
+                        [
+                            "  {",
+                            f"    path: '{path}',",
+                            f"    element: {element},",
+                            "  },",
+                        ]
+                    )
+                )
         routes_tsx = "\n".join(
             [
                 *header,
@@ -361,6 +490,45 @@ def _compile_layouts(
             import_path=import_path,
         )
     return layout_infos
+
+
+def _compile_notfound(
+    *,
+    app_dir: Path,
+    src_dir: Path,
+    cache: dict[Path, tuple[ParsedFile, Path]],
+    visiting: set[Path],
+    routes_file: Path,
+) -> dict[tuple[str, ...], NotFoundInfo]:
+    """Compile notfound modules and return metadata."""
+    notfound_infos: dict[tuple[str, ...], NotFoundInfo] = {}
+    used_aliases: set[str] = set()
+    for notfound_file in sorted(app_dir.rglob("notfound.py")):
+        rel_parts = tuple(notfound_file.relative_to(app_dir).parts[:-1])
+        parsed, out_path = compile_component_module(
+            notfound_file,
+            app_dir=app_dir,
+            src_dir=src_dir,
+            cache=cache,
+            visiting=visiting,
+            target_names=("NotFound", "notfound"),
+        )
+        export_name = parsed.primary
+        alias = _notfound_alias_for_parts(rel_parts)
+        if alias in used_aliases:
+            suffix = 2
+            while f"{alias}{suffix}" in used_aliases:
+                suffix += 1
+            alias = f"{alias}{suffix}"
+        used_aliases.add(alias)
+        import_path = component_import_path(routes_file, out_path)
+        notfound_infos[rel_parts] = NotFoundInfo(
+            raw_parts=rel_parts,
+            export_name=export_name,
+            import_alias=alias,
+            import_path=import_path,
+        )
+    return notfound_infos
 
 
 def _build_layout_tree(layout_infos: dict[tuple[str, ...], LayoutInfo]) -> LayoutNode:
@@ -447,6 +615,25 @@ def _layout_alias_for_parts(parts: tuple[str, ...]) -> str:
         return safe[:1].upper() + safe[1:]
 
     return "Layout" + "".join(clean(part) for part in parts)
+
+
+def _notfound_alias_for_parts(parts: tuple[str, ...]) -> str:
+    """Create a stable alias for a notfound component based on its path."""
+    if not parts:
+        return "NotFound"
+
+    def clean(part: str) -> str:
+        if part.startswith("[") and part.endswith("]"):
+            name = part[1:-1]
+            if name.startswith("..."):
+                name = name[3:] or "all"
+            return "Param" + name[:1].upper() + name[1:]
+        safe = "".join(ch for ch in part if ch.isalnum() or ch == "_")
+        if not safe:
+            safe = "Segment"
+        return safe[:1].upper() + safe[1:]
+
+    return "NotFound" + "".join(clean(part) for part in parts)
 
 
 def _segment_from_part(part: str) -> str:
@@ -810,6 +997,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "      : { action, args, kwargs };",
                     "    const response = await fetcher(baseUrl + endpoint, {",
                     "      method: 'POST',",
+                    "      credentials: init?.credentials ?? 'include',",
                     "      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },",
                     "      body: JSON.stringify(payload),",
                     "      ...init,",
@@ -871,6 +1059,12 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                         "",
                     ]
                 )
+            )
+        if "credentials: init?.credentials" not in updated and "method: 'POST'" in updated:
+            updated = updated.replace(
+                "      method: 'POST',\n",
+                "      method: 'POST',\n      credentials: init?.credentials ?? 'include',\n",
+                1,
             )
         if updated != existing:
             actions_client.write_text(updated, encoding="utf-8")

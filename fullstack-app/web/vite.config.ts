@@ -8,10 +8,11 @@ export default defineConfig({
   plugins: [react(), tailwind()],
   server: {
     proxy: {
-      '/_actions': { target: backend, changeOrigin: true },
-      '/_router': { target: backend, changeOrigin: true },
-      '/_devtools': { target: backend, changeOrigin: true },
-      '^/api(/|$)': { target: backend, changeOrigin: true },
+      '/_actions': { target: backend, changeOrigin: false },
+      '/_router': { target: backend, changeOrigin: false },
+      '/_devtools': { target: backend, changeOrigin: false },
+      '^/api(/|$)': { target: backend, changeOrigin: false },
     },
+    port: 2345,
   },
 });

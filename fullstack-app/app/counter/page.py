@@ -5,11 +5,8 @@ from nestipy.web import (
     use_memo,
     use_callback,
     use_context,
-    external,
 )
 from app.layout import ThemeContext
-
-Link = external("react-router-dom", "Link")
 
 
 @component
@@ -31,57 +28,44 @@ def Page():
 
     title = use_memo(label, deps=[count])
 
-    links = []
-    for item in [
-        {"label": "Home", "to": "/"},
-        {"label": "Counter", "to": "/counter"},
-        {"label": "API", "to": "/api-call"},
-    ]:
-        links.append(
-            Link(
-                item["label"],
-                to=item["to"],
-                key=item["to"],
-                class_name="nav-link",
-            )
-        )
+    if theme["theme"] == "dark":
+        theme_name = "Dark"
+    else:
+        theme_name = "Light"
 
     if count % 2 == 0:
-        parity = h.span("Even", class_name="text-xs text-emerald-400")
+        parity = h.span("Even", class_name="pill")
     else:
-        parity = h.span("Odd", class_name="text-xs text-amber-400")
+        parity = h.span("Odd", class_name="pill pill-accent")
 
     return h.section(
-        h.nav(links, class_name="home-nav"),
         h.div(
-            h.h2("Counter", class_name="text-2xl font-semibold text-slate-100"),
+            h.h2("Counter", class_name="page-title"),
             h.p(
-                "Use hooks to keep state and memoize values.",
-                class_name="text-sm text-slate-400",
+                "Stateful hooks, memoized labels, and responsive controls.",
+                class_name="page-subtitle",
             ),
-            class_name="space-y-2 text-center",
+            class_name="page-header",
         ),
         h.div(
-            h.p(title, class_name="text-base text-slate-200"),
-            parity,
             h.div(
-                h.button(
-                    "+1",
-                    on_click=inc,
-                    class_name="btn btn-primary",
-                ),
-                h.button(
-                    "-1",
-                    on_click=dec,
-                    class_name="btn",
-                ),
+                h.span("Current value", class_name="stat-label"),
+                h.span(count, class_name="counter-display"),
+                parity,
+                class_name="counter-stack",
+            ),
+            h.div(
+                h.button("-1", on_click=dec, class_name="btn"),
+                h.button("+1", on_click=inc, class_name="btn btn-primary"),
                 class_name="home-actions",
             ),
-            class_name="home-card",
+            h.p(title, class_name="card-subtitle"),
+            class_name="card counter-card",
         ),
-        h.p(
-            f"Theme: {theme['theme']}",
-            class_name="text-xs text-slate-500",
+        h.div(
+            h.span("Theme"),
+            h.span(theme_name, class_name="stat-value"),
+            class_name="stat-card",
         ),
         class_name="page",
     )
