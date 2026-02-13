@@ -72,11 +72,14 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+    routes_tsx = (out_dir / "src" / "routes.tsx").read_text(encoding="utf-8")
+    assert "Layout" in routes_tsx
+    assert "children" in routes_tsx
+
+    layout_tsx = (out_dir / "src" / "components" / "layout.tsx").read_text(
         encoding="utf-8"
     )
-    assert "RootLayout" in page_tsx
-    assert "ReactNode" in page_tsx
+    assert "Outlet" in layout_tsx
 
 
 def test_compile_with_nested_component(tmp_path: Path) -> None:

@@ -218,6 +218,9 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                     if module_name:
                         module_path = base_dir / Path(module_name.replace(".", "/"))
                         path = _resolve_module_file(module_path, app_dir)
+                        if path is None and relative_level == 0:
+                            app_candidate = app_dir / Path(module_name.replace(".", "/"))
+                            path = _resolve_module_file(app_candidate, app_dir)
                     else:
                         candidate = base_dir / name
                         path = _resolve_module_file(candidate, app_dir)

@@ -40,6 +40,24 @@ class ComponentImport:
     names: list[tuple[str, str]]
 
 
+@dataclass(slots=True)
+class LayoutInfo:
+    """Describe a compiled layout component."""
+    raw_parts: tuple[str, ...]
+    export_name: str
+    import_alias: str
+    import_path: str
+
+
+@dataclass(slots=True)
+class LayoutNode:
+    """Tree node for nested layouts."""
+    raw_parts: tuple[str, ...]
+    info: LayoutInfo | None
+    children: list["LayoutNode"]
+    pages: list[tuple[str | None, str]]
+
+
 def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     """Compile the web app sources into a Vite-ready project."""
     app_dir = config.resolve_app_dir(root)
@@ -58,28 +76,16 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     pages_dir.mkdir(parents=True, exist_ok=True)
 
     routes = discover_routes(app_dir, pages_dir)
-    root_layout = load_layout(app_dir, app_dir)
     src_dir = config.resolve_src_dir(root)
     component_cache: dict[Path, tuple[ParsedFile, Path]] = {}
     visiting: set[Path] = set()
-    layout_import_path: str | None = None
-    layout_component: str | None = None
-
-    if root_layout is not None:
-        layout_component = root_layout.primary
-        layout_source = app_dir / "layout.py"
-        _, layout_out = compile_component_module(
-            layout_source,
-            app_dir=app_dir,
-            src_dir=src_dir,
-            cache=component_cache,
-            visiting=visiting,
-            slot_component=layout_component,
-            slot_token="<Outlet />",
-            extra_imports={"react-router-dom": {"named": {"Outlet"}, "default": set()}},
-        )
-        routes_file = config.resolve_src_dir(root) / "routes.tsx"
-        layout_import_path = component_import_path(routes_file, layout_out)
+    layout_infos = _compile_layouts(
+        app_dir=app_dir,
+        src_dir=src_dir,
+        cache=component_cache,
+        visiting=visiting,
+        routes_file=config.resolve_src_dir(root) / "routes.tsx",
+    )
 
     for info in routes:
         parsed_page = render_page_tree(info.source, app_dir)
@@ -104,13 +110,7 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
         info.output.parent.mkdir(parents=True, exist_ok=True)
         info.output.write_text(tsx, encoding="utf-8")
 
-    build_routes(
-        routes,
-        config,
-        root,
-        layout_import_path=layout_import_path,
-        layout_component=layout_component,
-    )
+    build_routes(routes, config, root, layout_infos=layout_infos)
     ensure_vite_files(config, root)
     return routes
 
@@ -120,58 +120,123 @@ def build_routes(
     config: WebConfig,
     root: str | None = None,
     *,
-    layout_import_path: str | None = None,
-    layout_component: str | None = None,
+    layout_infos: dict[tuple[str, ...], LayoutInfo] | None = None,
 ) -> None:
     """Generate router and entrypoint files from discovered routes."""
     src_dir = config.resolve_src_dir(root)
     src_dir.mkdir(parents=True, exist_ok=True)
 
     imports: list[str] = []
-    route_entries: list[str] = []
+    page_vars: list[str] = []
+    route_index: dict[Path, int] = {}
     for idx, info in enumerate(routes):
         var_name = f"Page{idx}"
+        page_vars.append(var_name)
+        route_index[info.source] = idx
         imports.append(f"import {var_name} from '{info.import_path}';")
-        element = f"<{var_name} />"
-        route_entries.append((info.route, element))
+
+    layout_infos = layout_infos or {}
+    layout_imports: list[str] = []
+    for info in layout_infos.values():
+        if info.export_name == info.import_alias:
+            layout_imports.append(
+                f"import {{ {info.export_name} }} from '{info.import_path}';"
+            )
+        else:
+            layout_imports.append(
+                f"import {{ {info.export_name} as {info.import_alias} }} from '{info.import_path}';"
+            )
 
     header = ["import { createBrowserRouter } from 'react-router-dom';"]
-    if layout_import_path and layout_component:
-        header.append(f"import {{ {layout_component} }} from '{layout_import_path}';")
+    header.extend(layout_imports)
     header.extend(imports)
     header.append("")
 
-    if layout_import_path and layout_component:
-        children: list[str] = []
-        for route, element in route_entries:
-            if route == "/":
-                children.append(f"      {{ index: true, element: {element} }}")
+    app_dir = config.resolve_app_dir(root)
+    layout_root = _build_layout_tree(layout_infos)
+    _attach_pages_to_layouts(layout_root, routes, page_vars, route_index, app_dir, layout_infos)
+
+    def render_page_entry(path: str | None, element: str, *, top_level: bool) -> str:
+        if path in (None, ""):
+            if top_level:
+                return f"      {{ path: '/', element: {element} }}"
+            return f"      {{ index: true, element: {element} }}"
+        route_path = path
+        if top_level:
+            route_path = "/" + route_path
+        return f"      {{ path: '{route_path}', element: {element} }}"
+
+    def render_layout_node(node: LayoutNode, parent_parts: tuple[str, ...], *, top_level: bool) -> list[str]:
+        entries: list[str] = []
+        if node.info is None:
+            # No layout at this node; render pages as top-level siblings.
+            for path, var_name in node.pages:
+                element = f"<{var_name} />"
+                full_path = path or ""
+                entries.append(render_page_entry(full_path or None, element, top_level=True))
+            for child in node.children:
+                entries.extend(render_layout_node(child, parent_parts, top_level=True))
+            return entries
+
+        relative_parts = node.raw_parts[len(parent_parts):]
+        path_segments = [_segment_from_part(part) for part in relative_parts]
+        path = "/".join(path_segments)
+        if not path and not top_level:
+            path = ""
+        elif top_level:
+            path = "/" + path if path else "/"
+        element = f"<{node.info.import_alias} />"
+
+        children_lines: list[str] = []
+        for child_page_path, var_name in node.pages:
+            child_element = f"<{var_name} />"
+            if child_page_path in (None, ""):
+                children_lines.append(f"      {{ index: true, element: {child_element} }}")
             else:
-                children.append(
-                    f"      {{ path: '{route.lstrip('/')}', element: {element} }}"
+                children_lines.append(
+                    f"      {{ path: '{child_page_path}', element: {child_element} }}"
                 )
-        routes_tsx = "\n".join(
-            [
-                *header,
-                "export const router = createBrowserRouter([",
-                "  {",
-                "    path: '/',",
-                f"    element: <{layout_component} />,",
-                "    children: [",
-                ",\n".join(children),
-                "    ],",
-                "  },",
-                "]);",
-                "",
-            ]
-        )
-    else:
-        flat_entries = [f"  {{ path: '{route}', element: {element} }}" for route, element in route_entries]
+        for child in node.children:
+            children_lines.extend(
+                render_layout_node(child, node.raw_parts, top_level=False)
+            )
+
+        entry_lines = [
+            "  {",
+            f"    path: '{path}'," if path else "    path: '/',",
+            f"    element: {element},",
+            "    children: [",
+            ",\n".join(children_lines),
+            "    ],",
+            "  },",
+        ]
+        entries.append("\n".join(entry_lines))
+        return entries
+
+    if layout_root.info is None and not layout_root.children:
+        flat_entries = []
+        for info in routes:
+            idx = route_index.get(info.source)
+            if idx is None:
+                raise CompilerError(f"Route index missing for {info.source}")
+            element = f"<{page_vars[idx]} />"
+            flat_entries.append(f"  {{ path: '{info.route}', element: {element} }}")
         routes_tsx = "\n".join(
             [
                 *header,
                 "export const router = createBrowserRouter([",
                 ",\n".join(flat_entries),
+                "]);",
+                "",
+            ]
+        )
+    else:
+        route_objects = render_layout_node(layout_root, tuple(), top_level=True)
+        routes_tsx = "\n".join(
+            [
+                *header,
+                "export const router = createBrowserRouter([",
+                ",\n".join(route_objects),
                 "]);",
                 "",
             ]
@@ -197,6 +262,143 @@ def build_routes(
     )
 
     (src_dir / "main.tsx").write_text(main_tsx, encoding="utf-8")
+
+
+def _compile_layouts(
+    *,
+    app_dir: Path,
+    src_dir: Path,
+    cache: dict[Path, tuple[ParsedFile, Path]],
+    visiting: set[Path],
+    routes_file: Path,
+) -> dict[tuple[str, ...], LayoutInfo]:
+    """Compile layout modules and return layout metadata."""
+    layout_infos: dict[tuple[str, ...], LayoutInfo] = {}
+    used_aliases: set[str] = set()
+    for layout_file in sorted(app_dir.rglob("layout.py")):
+        rel_parts = tuple(layout_file.relative_to(app_dir).parts[:-1])
+        parsed, out_path = compile_component_module(
+            layout_file,
+            app_dir=app_dir,
+            src_dir=src_dir,
+            cache=cache,
+            visiting=visiting,
+            slot_token="<Outlet />",
+            extra_imports={"react-router-dom": {"named": {"Outlet"}, "default": set()}},
+            target_names=("Layout", "layout"),
+        )
+        export_name = parsed.primary
+        alias = _layout_alias_for_parts(rel_parts)
+        if alias in used_aliases:
+            suffix = 2
+            while f"{alias}{suffix}" in used_aliases:
+                suffix += 1
+            alias = f"{alias}{suffix}"
+        used_aliases.add(alias)
+        import_path = component_import_path(routes_file, out_path)
+        layout_infos[rel_parts] = LayoutInfo(
+            raw_parts=rel_parts,
+            export_name=export_name,
+            import_alias=alias,
+            import_path=import_path,
+        )
+    return layout_infos
+
+
+def _build_layout_tree(layout_infos: dict[tuple[str, ...], LayoutInfo]) -> LayoutNode:
+    """Build a layout tree from layout metadata."""
+    nodes: dict[tuple[str, ...], LayoutNode] = {}
+    root = LayoutNode(raw_parts=(), info=layout_infos.get(()), children=[], pages=[])
+    nodes[()] = root
+
+    for parts, info in layout_infos.items():
+        if parts == ():
+            continue
+        nodes[parts] = LayoutNode(raw_parts=parts, info=info, children=[], pages=[])
+
+    for parts, node in list(nodes.items()):
+        if parts == ():
+            continue
+        parent = _find_layout_prefix(parts[:-1], layout_infos)
+        parent_node = nodes.get(parent, root)
+        parent_node.children.append(node)
+
+    return root
+
+
+def _attach_pages_to_layouts(
+    root: LayoutNode,
+    routes: list[RouteInfo],
+    page_vars: list[str],
+    route_index: dict[Path, int],
+    app_dir: Path,
+    layout_infos: dict[tuple[str, ...], LayoutInfo],
+) -> None:
+    """Attach pages to the nearest layout node."""
+    node_map: dict[tuple[str, ...], LayoutNode] = {}
+
+    def register(node: LayoutNode) -> None:
+        node_map[node.raw_parts] = node
+        for child in node.children:
+            register(child)
+
+    register(root)
+    for info in routes:
+        raw_parts = tuple(info.source.relative_to(app_dir).parts[:-1])
+        prefix = _find_layout_prefix(raw_parts, layout_infos)
+        node = node_map.get(prefix, root)
+        remaining = raw_parts[len(prefix):]
+        if remaining:
+            path = "/".join(_segment_from_part(part) for part in remaining)
+        else:
+            path = None
+        idx = route_index.get(info.source)
+        if idx is None:
+            raise CompilerError(f"Route index missing for {info.source}")
+        node.pages.append((path, page_vars[idx]))
+
+
+def _find_layout_prefix(
+    parts: tuple[str, ...],
+    layout_infos: dict[tuple[str, ...], LayoutInfo],
+) -> tuple[str, ...]:
+    """Find the longest layout prefix for a path."""
+    if not layout_infos:
+        return ()
+    for i in range(len(parts), -1, -1):
+        prefix = parts[:i]
+        if prefix in layout_infos:
+            return prefix
+    return ()
+
+
+def _layout_alias_for_parts(parts: tuple[str, ...]) -> str:
+    """Create a stable alias for a layout based on its path."""
+    if not parts:
+        return "Layout"
+
+    def clean(part: str) -> str:
+        if part.startswith("[") and part.endswith("]"):
+            name = part[1:-1]
+            if name.startswith("..."):
+                name = name[3:] or "all"
+            return "Param" + name[:1].upper() + name[1:]
+        safe = "".join(ch for ch in part if ch.isalnum() or ch == "_")
+        if not safe:
+            safe = "Segment"
+        return safe[:1].upper() + safe[1:]
+
+    return "Layout" + "".join(clean(part) for part in parts)
+
+
+def _segment_from_part(part: str) -> str:
+    """Convert a folder name into a route segment."""
+    if part.startswith("[") and part.endswith("]"):
+        name = part[1:-1]
+        if name.startswith("..."):
+            return "*"
+        return f":{name}"
+    return part
 
 
 def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
@@ -915,6 +1117,7 @@ def compile_component_module(
     slot_component: str | None = None,
     slot_token: str | None = None,
     extra_imports: dict[str, dict[str, set[str]]] | None = None,
+    target_names: Iterable[str] | None = None,
 ) -> tuple[ParsedFile, Path]:
     """Compile a component module into TSX and return parse output."""
     resolved = path.resolve()
@@ -924,8 +1127,14 @@ def compile_component_module(
         raise CompilerError(f"Circular component import detected: {resolved}")
     visiting.add(resolved)
 
-    parsed = parse_component_file(resolved, target_names=(), app_dir=app_dir)
+    parsed = parse_component_file(
+        resolved,
+        target_names=target_names or (),
+        app_dir=app_dir,
+    )
     out_path = component_output_for_path(resolved, app_dir, src_dir)
+    if slot_token and slot_component is None:
+        slot_component = parsed.primary
 
     used = collect_used_components(parsed.components.values())
     component_imports, imported_props = resolve_component_imports(
