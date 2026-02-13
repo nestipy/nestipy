@@ -62,6 +62,24 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     src_dir = config.resolve_src_dir(root)
     component_cache: dict[Path, tuple[ParsedFile, Path]] = {}
     visiting: set[Path] = set()
+    layout_import_path: str | None = None
+    layout_component: str | None = None
+
+    if root_layout is not None:
+        layout_component = root_layout.primary
+        layout_source = app_dir / "layout.py"
+        _, layout_out = compile_component_module(
+            layout_source,
+            app_dir=app_dir,
+            src_dir=src_dir,
+            cache=component_cache,
+            visiting=visiting,
+            slot_component=layout_component,
+            slot_token="<Outlet />",
+            extra_imports={"react-router-dom": {"named": {"Outlet"}, "default": set()}},
+        )
+        routes_file = config.resolve_src_dir(root) / "routes.tsx"
+        layout_import_path = component_import_path(routes_file, layout_out)
 
     for info in routes:
         parsed_page = render_page_tree(info.source, app_dir)
@@ -75,36 +93,36 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
             cache=component_cache,
             visiting=visiting,
         )
-        layout_imports: list[ComponentImport] = []
-        layout_imported_props: dict[str, PropsSpec] = {}
-        if root_layout is not None:
-            layout_imports, layout_imported_props = resolve_component_imports(
-                root_layout,
-                used_names=collect_used_components(root_layout.components.values()),
-                local_names=set(root_layout.components.keys()),
-                app_dir=app_dir,
-                src_dir=src_dir,
-                from_output=info.output,
-                cache=component_cache,
-                visiting=visiting,
-            )
-        component_imports = merge_component_imports(page_imports + layout_imports)
-        imported_props = {**page_imported_props, **layout_imported_props}
+        component_imports = merge_component_imports(page_imports)
+        imported_props = dict(page_imported_props)
         tsx = build_page_tsx(
             parsed_page,
-            root_layout=root_layout,
+            root_layout=None,
             component_imports=component_imports,
             imported_props=imported_props,
         )
         info.output.parent.mkdir(parents=True, exist_ok=True)
         info.output.write_text(tsx, encoding="utf-8")
 
-    build_routes(routes, config, root)
+    build_routes(
+        routes,
+        config,
+        root,
+        layout_import_path=layout_import_path,
+        layout_component=layout_component,
+    )
     ensure_vite_files(config, root)
     return routes
 
 
-def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = None) -> None:
+def build_routes(
+    routes: list[RouteInfo],
+    config: WebConfig,
+    root: str | None = None,
+    *,
+    layout_import_path: str | None = None,
+    layout_component: str | None = None,
+) -> None:
     """Generate router and entrypoint files from discovered routes."""
     src_dir = config.resolve_src_dir(root)
     src_dir.mkdir(parents=True, exist_ok=True)
@@ -115,19 +133,49 @@ def build_routes(routes: list[RouteInfo], config: WebConfig, root: str | None = 
         var_name = f"Page{idx}"
         imports.append(f"import {var_name} from '{info.import_path}';")
         element = f"<{var_name} />"
-        route_entries.append(f"  {{ path: '{info.route}', element: {element} }}")
+        route_entries.append((info.route, element))
 
-    routes_tsx = "\n".join(
-        [
-            "import { createBrowserRouter } from 'react-router-dom';",
-            *imports,
-            "",
-            "export const router = createBrowserRouter([",
-            ",\n".join(route_entries),
-            "]);",
-            "",
-        ]
-    )
+    header = ["import { createBrowserRouter } from 'react-router-dom';"]
+    if layout_import_path and layout_component:
+        header.append(f"import {{ {layout_component} }} from '{layout_import_path}';")
+    header.extend(imports)
+    header.append("")
+
+    if layout_import_path and layout_component:
+        children: list[str] = []
+        for route, element in route_entries:
+            if route == "/":
+                children.append(f"      {{ index: true, element: {element} }}")
+            else:
+                children.append(
+                    f"      {{ path: '{route.lstrip('/')}', element: {element} }}"
+                )
+        routes_tsx = "\n".join(
+            [
+                *header,
+                "export const router = createBrowserRouter([",
+                "  {",
+                "    path: '/',",
+                f"    element: <{layout_component} />,",
+                "    children: [",
+                ",\n".join(children),
+                "    ],",
+                "  },",
+                "]);",
+                "",
+            ]
+        )
+    else:
+        flat_entries = [f"  {{ path: '{route}', element: {element} }}" for route, element in route_entries]
+        routes_tsx = "\n".join(
+            [
+                *header,
+                "export const router = createBrowserRouter([",
+                ",\n".join(flat_entries),
+                "]);",
+                "",
+            ]
+        )
 
     (src_dir / "routes.tsx").write_text(routes_tsx, encoding="utf-8")
 
@@ -671,8 +719,9 @@ def render_imports(
     lines: list[str] = []
     if include_react_default:
         lines.append("import React from 'react';")
+        lines.append("import type { JSX } from 'react';")
     if include_react_node:
-        lines.append("import type { ReactNode, JSX } from 'react';")
+        lines.append("import type { ReactNode } from 'react';")
     for module, spec in imports.items():
         default_name = next(iter(spec.get("default", [])), None)
         named = sorted(spec.get("named", set()))
@@ -815,8 +864,6 @@ def resolve_component_imports(
     for imp in parsed.imports:
         if imp.path is None:
             continue
-        if imp.alias not in used_names:
-            continue
         import_map.setdefault(imp.path, []).append(imp)
 
     unresolved = used_names - local_names - {imp.alias for imp in parsed.imports if imp.path}
@@ -834,17 +881,23 @@ def resolve_component_imports(
             visiting=visiting,
         )
         names: list[tuple[str, str]] = []
+        module_exports = _extract_module_exports(dep_parsed.module_prelude)
         for spec in specs:
-            if spec.name not in dep_parsed.components:
-                raise CompilerError(
-                    f"Component '{spec.name}' not found in {path} (imported as {spec.alias})."
-                )
-            names.append((spec.name, spec.alias))
-            prop_name = dep_parsed.component_props.get(spec.name)
-            if prop_name:
-                prop_spec = dep_parsed.props.get(prop_name)
-                if prop_spec:
-                    imported_props[spec.alias] = prop_spec
+            if spec.name in dep_parsed.components:
+                names.append((spec.name, spec.alias))
+                prop_name = dep_parsed.component_props.get(spec.name)
+                if prop_name:
+                    prop_spec = dep_parsed.props.get(prop_name)
+                    if prop_spec:
+                        imported_props[spec.alias] = prop_spec
+                continue
+            if spec.name in module_exports:
+                names.append((spec.name, spec.alias))
+                continue
+            raise CompilerError(
+                f"Import '{spec.name}' not found in {path}. "
+                "Only components and exported values are supported."
+            )
 
         import_path = component_import_path(from_output, dep_out)
         component_imports.append(ComponentImport(import_path=import_path, names=names))
@@ -859,6 +912,9 @@ def compile_component_module(
     src_dir: Path,
     cache: dict[Path, tuple[ParsedFile, Path]],
     visiting: set[Path],
+    slot_component: str | None = None,
+    slot_token: str | None = None,
+    extra_imports: dict[str, dict[str, set[str]]] | None = None,
 ) -> tuple[ParsedFile, Path]:
     """Compile a component module into TSX and return parse output."""
     resolved = path.resolve()
@@ -890,7 +946,13 @@ def compile_component_module(
         imported_props=imported_props,
     )
 
-    tsx = build_component_module_tsx(parsed, component_imports)
+    tsx = build_component_module_tsx(
+        parsed,
+        component_imports,
+        slot_component=slot_component,
+        slot_token=slot_token,
+        extra_imports=extra_imports,
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(tsx, encoding="utf-8")
 
@@ -902,15 +964,30 @@ def compile_component_module(
 def build_component_module_tsx(
     parsed: ParsedFile,
     component_imports: list[ComponentImport],
+    *,
+    slot_component: str | None = None,
+    slot_token: str | None = None,
+    extra_imports: dict[str, dict[str, set[str]]] | None = None,
 ) -> str:
     """Render a TSX module for reusable components."""
     imports = collect_imports(parsed.components, extra_externals=parsed.externals)
+    if slot_component and slot_token:
+        extra_imports = extra_imports or {}
+        extra_imports.setdefault("react-router-dom", {"named": set(), "default": set()})
+        extra_imports["react-router-dom"]["named"].add("Outlet")
+    if extra_imports:
+        for module, spec in extra_imports.items():
+            entry = imports.setdefault(module, {"named": set(), "default": set()})
+            entry["named"].update(spec.get("named", set()))
+            entry["default"].update(spec.get("default", set()))
     props_interfaces = render_props_interfaces(parsed.props)
     component_defs = build_component_exports(
         parsed.components,
         parsed.component_props,
         component_hooks=parsed.hooks,
         component_prelude=parsed.component_prelude,
+        slot_component=slot_component,
+        slot_token=slot_token,
     )
     module_prelude_block = "\n".join(parsed.module_prelude).strip()
     if module_prelude_block:
@@ -940,10 +1017,13 @@ def build_component_exports(
     *,
     component_hooks: dict[str, list[str]] | None = None,
     component_prelude: dict[str, list[str]] | None = None,
+    slot_component: str | None = None,
+    slot_token: str | None = None,
 ) -> str:
     """Render exported component functions."""
     blocks: list[str] = []
     for name, tree in components.items():
+        token = slot_token if slot_component and name == slot_component else None
         blocks.append(
             _component_block(
                 name,
@@ -951,6 +1031,7 @@ def build_component_exports(
                 component_props.get(name),
                 hooks=(component_hooks or {}).get(name),
                 prelude=(component_prelude or {}).get(name),
+                slot_token=token,
                 exported=True,
             )
         )
@@ -1070,10 +1151,11 @@ def _component_block(
     *,
     hooks: list[str] | None = None,
     prelude: list[str] | None = None,
+    slot_token: str | None = None,
     exported: bool = False,
 ) -> str:
     """Render a component function block."""
-    body = render_root_value(tree)
+    body = render_root_value(tree, slot_token=slot_token)
     signature = (
         f"function {name}(): JSX.Element"
         if not props_type
@@ -1285,6 +1367,20 @@ def escape_text(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def _extract_module_exports(module_prelude: list[str]) -> set[str]:
+    """Extract exported names from module prelude lines."""
+    exports: set[str] = set()
+    for line in module_prelude:
+        stripped = line.strip()
+        if not stripped.startswith("export const "):
+            continue
+        remainder = stripped[len("export const "):]
+        name = remainder.split("=", 1)[0].strip().rstrip(";")
+        if name:
+            exports.add(name)
+    return exports
 
 
 def render_conditional_expr(expr: ConditionalExpr) -> str:
