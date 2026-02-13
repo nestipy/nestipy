@@ -4,6 +4,7 @@ from nestipy.common import Controller, Get
 from nestipy.ioc import Inject
 
 from app_service import AppService
+from datetime import datetime
 
 
 @Controller("/api")
@@ -12,7 +13,7 @@ class AppController:
 
     @Get("/ping")
     async def ping(self) -> str:
-        return "pong"
+        return "pong - " + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     @Get("/message")
     async def message(self) -> str:

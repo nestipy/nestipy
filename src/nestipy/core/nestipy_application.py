@@ -6,6 +6,7 @@ import os.path
 import secrets
 import time
 import traceback
+import sys
 import typing
 from pathlib import Path
 from typing import (
@@ -80,7 +81,7 @@ if TYPE_CHECKING:
 
 
 class GranianOptions(TypedDict, total=False):
-    address: str
+    host: str
     port: int
     uds: Optional[Path]
     uds_permissions: Optional[int]
@@ -402,6 +403,60 @@ class NestipyApplication:
         If target is not provided, an embedded Granian server is used with
         the app instance directly.
         """
+        web_enabled = bool(options.pop("web", False))
+        web_dist = options.pop("web_dist", None)
+        web_static_path = options.pop("web_static_path", None)
+        web_index = options.pop("web_index", None)
+        web_fallback = options.pop("web_fallback", None)
+
+        argv = sys.argv[1:]
+        if "--web" in argv:
+            web_enabled = True
+
+        def _cli_value(flag: str) -> Optional[str]:
+            for idx, arg in enumerate(argv):
+                if arg == flag and idx + 1 < len(argv):
+                    return argv[idx + 1]
+                if arg.startswith(flag + "="):
+                    return arg.split("=", 1)[1]
+            return None
+
+        if not web_dist:
+            web_dist = _cli_value("--web-dist")
+        if not web_static_path:
+            web_static_path = _cli_value("--web-path")
+        if not web_index:
+            web_index = _cli_value("--web-index")
+        if web_fallback is None:
+            web_fallback = _cli_value("--web-fallback")
+
+        def _default_web_dist() -> str:
+            candidates = ("web/dist", "src/dist", "dist")
+            for candidate in candidates:
+                if os.path.isdir(candidate):
+                    return candidate
+            return "web/dist"
+
+        if web_enabled:
+            dist = (
+                str(web_dist)
+                if web_dist
+                else os.getenv("NESTIPY_WEB_DIST")
+                or _default_web_dist()
+            )
+            os.environ["NESTIPY_WEB_DIST"] = dist
+            logger.info("[WEB] Enabled (dist=%s)", dist)
+            if web_static_path:
+                os.environ["NESTIPY_WEB_STATIC_PATH"] = str(web_static_path)
+            if web_index:
+                os.environ["NESTIPY_WEB_STATIC_INDEX"] = str(web_index)
+            if web_fallback is not None:
+                val = str(web_fallback).strip().lower()
+                if val in {"0", "false", "no", "off"}:
+                    os.environ["NESTIPY_WEB_STATIC_FALLBACK"] = "0"
+                elif val in {"1", "true", "yes", "on"}:
+                    os.environ["NESTIPY_WEB_STATIC_FALLBACK"] = "1"
+
         if "interface" not in options:
             try:
                 from granian.constants import Interfaces as GranianInterfaces
@@ -449,7 +504,7 @@ class NestipyApplication:
 
         if target is None:
             unsupported = set(options.keys()) - {
-                "address",
+                "host",
                 "port",
                 "uds",
                 "interface",
@@ -497,7 +552,7 @@ class NestipyApplication:
 
         from granian import Granian
 
-        server = Granian(target=target, **options)
+        server = Granian(target=target, **options, address=options.get("host", None))
         server.serve()
 
     def _register_devtools_static(self) -> None:
@@ -576,6 +631,114 @@ class NestipyApplication:
             fallback_route = "/" + fallback_route
         self._http_adapter.get(fallback_route, devtools_static_fallback, {})
         self._http_adapter.head(fallback_route, devtools_static_fallback, {})
+
+    def _register_web_static(self) -> None:
+        dist_dir = os.getenv("NESTIPY_WEB_DIST") or ""
+        if not dist_dir:
+            if os.getenv("NESTIPY_WEB_DEV") == "1" or "--dev" in sys.argv:
+                return
+        if not dist_dir:
+            argv = sys.argv[1:]
+
+            def _cli_value(flag: str) -> Optional[str]:
+                for idx, arg in enumerate(argv):
+                    if arg == flag and idx + 1 < len(argv):
+                        return argv[idx + 1]
+                    if arg.startswith(flag + "="):
+                        return arg.split("=", 1)[1]
+                return None
+
+            dist_dir = _cli_value("--web-dist") or ""
+            if not dist_dir and "--web" in argv:
+                candidates = ("web/dist", "src/dist", "dist")
+                for candidate in candidates:
+                    if os.path.isdir(candidate):
+                        dist_dir = candidate
+                        break
+                if not dist_dir:
+                    dist_dir = "web/dist"
+            if dist_dir:
+                os.environ["NESTIPY_WEB_DIST"] = dist_dir
+            else:
+                logger.info("[WEB] Static serving disabled (NESTIPY_WEB_DIST not set)")
+                return
+        static_dir = os.path.realpath(dist_dir)
+        if not os.path.isdir(static_dir):
+            logger.warning(
+                "[WEB] Static dist directory not found: %s (run `nestipy run web:build --vite`)",
+                static_dir,
+            )
+            return
+
+        static_path = os.getenv("NESTIPY_WEB_STATIC_PATH", "/").strip()
+        if not static_path:
+            static_path = "/"
+        if not static_path.startswith("/"):
+            static_path = "/" + static_path
+        static_path = static_path.rstrip("/") or "/"
+
+        index_name = os.getenv("NESTIPY_WEB_STATIC_INDEX", "index.html").strip()
+        if not index_name:
+            index_name = "index.html"
+
+        fallback_enabled = (
+            os.getenv("NESTIPY_WEB_STATIC_FALLBACK", "1").strip().lower()
+            not in {"0", "false", "no", "off"}
+        )
+
+        def _accepts_html(req: "Request") -> bool:
+            accept = (req.headers.get("accept") or "").lower()
+            return "text/html" in accept or "application/xhtml+xml" in accept
+
+        def _resolve_rel_path(req_path: str) -> Optional[str]:
+            path = req_path or "/"
+            if static_path != "/":
+                if not path.startswith(static_path):
+                    return None
+                rel = path[len(static_path) :].lstrip("/")
+            else:
+                rel = path.lstrip("/")
+            if not rel or rel.endswith("/"):
+                return index_name
+            return rel
+
+        async def web_static_handler(req: "Request", res: "Response", _next_fn):
+            rel_path = _resolve_rel_path(req.path)
+            if rel_path is None:
+                return await res.status(404).send("Not found")
+            file_path = os.path.realpath(os.path.join(static_dir, rel_path))
+            if not file_path.startswith(static_dir):
+                return await res.status(404).send("Not found")
+            if os.path.isdir(file_path):
+                file_path = os.path.join(file_path, index_name)
+            if not os.path.isfile(file_path):
+                if fallback_enabled and _accepts_html(req):
+                    file_path = os.path.join(static_dir, index_name)
+                if not os.path.isfile(file_path):
+                    return await res.status(404).send("Not found")
+            mime_type, _ = mimetypes.guess_type(file_path)
+            mime_type = mime_type or "application/octet-stream"
+            async with aiofiles.open(file_path, "rb") as f:
+                payload = await f.read()
+            res.header("Content-Type", mime_type)
+            await res._write(payload)
+            return res
+
+        logger.info("[WEB] Serving static from %s at %s", static_dir, static_path)
+        if static_path == "/":
+            self._http_adapter.get("/", web_static_handler, {})
+            self._http_adapter.head("/", web_static_handler, {})
+            static_route = self._http_adapter.create_wichard("", name="path")
+        else:
+            self._http_adapter.get(static_path, web_static_handler, {})
+            self._http_adapter.head(static_path, web_static_handler, {})
+            static_route = self._http_adapter.create_wichard(
+                static_path.strip("/"), name="path"
+            )
+        if not static_route.startswith("/"):
+            static_route = "/" + static_route
+        self._http_adapter.get(static_route, web_static_handler, {})
+        self._http_adapter.head(static_route, web_static_handler, {})
     def _register_devtools_graph(self) -> None:
         root_path = self._devtools_static_path
         if root_path.endswith("/static"):
@@ -907,15 +1070,71 @@ class NestipyApplication:
             self._register_devtools_static()
             # Router spec endpoint (optional)
             self._register_router_spec()
+            # Web static (optional)
+            self._register_web_static()
             # Not found
             not_found_path = self._http_adapter.create_wichard()
             if not not_found_path.startswith("/"):
                 not_found_path = "/" + not_found_path
+            custom_not_found = self._router_proxy.render_not_found
+            dist_dir = os.getenv("NESTIPY_WEB_DIST")
+            if dist_dir:
+                static_dir = os.path.realpath(dist_dir)
+                fallback_enabled = (
+                    os.getenv("NESTIPY_WEB_STATIC_FALLBACK", "1")
+                    .strip()
+                    .lower()
+                    not in {"0", "false", "no", "off"}
+                )
+                static_path = os.getenv("NESTIPY_WEB_STATIC_PATH", "/").strip()
+                if not static_path:
+                    static_path = "/"
+                if not static_path.startswith("/"):
+                    static_path = "/" + static_path
+                static_path = static_path.rstrip("/") or "/"
+                index_name = os.getenv("NESTIPY_WEB_STATIC_INDEX", "index.html").strip()
+                if not index_name:
+                    index_name = "index.html"
+
+                def _accepts_html(req: "Request") -> bool:
+                    accept = (req.headers.get("accept") or "").lower()
+                    return "text/html" in accept or "application/xhtml+xml" in accept
+
+                if os.path.isdir(static_dir) and fallback_enabled:
+                    async def web_not_found(req: "Request", res: "Response", _next_fn):
+                        path = req.path or "/"
+                        if static_path != "/" and not (
+                            path == static_path or path.startswith(static_path + "/")
+                        ):
+                            return await self._router_proxy.render_not_found(
+                                req, res, _next_fn
+                            )
+                        if not _accepts_html(req):
+                            return await self._router_proxy.render_not_found(
+                                req, res, _next_fn
+                            )
+                        index_path = os.path.realpath(
+                            os.path.join(static_dir, index_name)
+                        )
+                        if not index_path.startswith(static_dir) or not os.path.isfile(
+                            index_path
+                        ):
+                            return await self._router_proxy.render_not_found(
+                                req, res, _next_fn
+                            )
+                        async with aiofiles.open(index_path, "rb") as f:
+                            payload = await f.read()
+                        res.header("Content-Type", "text/html; charset=utf-8")
+                        await res._write(payload)
+                        return res
+
+                    custom_not_found = web_not_found
+
             self._http_adapter.all(
                 not_found_path,
                 self._router_proxy.create_request_handler(
                     self._http_adapter,
-                    custom_callback=self._router_proxy.render_not_found,
+                    custom_callback=custom_not_found,
                 ),
                 {},
             )

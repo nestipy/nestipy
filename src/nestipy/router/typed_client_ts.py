@@ -141,7 +141,7 @@ def generate_typescript_client_code(
         "",
         "  constructor(options: ClientOptions) {",
         "    this._baseUrl = options.baseUrl.replace(/\\/+$/, \"\");",
-        "    this._fetcher = options.fetcher ?? fetch;",
+        "    this._fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);",
         "    this._headers = options.headers ?? {};",
         "  }",
         "",
@@ -224,7 +224,8 @@ def generate_typescript_client_code(
             options_type = "{ " + "; ".join(option_fields) + " }"
             signature = f"options?: {options_type}"
         else:
-            signature = ""
+            # Always include options so generated code can safely reference it.
+            signature = "options?: {}"
 
         return_hint = _ts_type(route.return_type, custom_types)
         method_name = _safe_identifier(route.handler)

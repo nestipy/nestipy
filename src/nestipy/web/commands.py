@@ -10,6 +10,7 @@ import urllib.request
 import urllib.error
 from typing import Iterable, Type
 
+from nestipy.common.logger import logger
 from nestipy.web.config import WebConfig
 from nestipy.web.compiler import compile_app
 from nestipy.web.client import codegen_client, codegen_client_from_url
@@ -159,8 +160,36 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         proxy_paths=proxy_paths_list or WebConfig().proxy_paths,
     )
     compile_app(config)
-    _maybe_codegen_client(parsed, config)
-    _maybe_codegen_actions(parsed, config, modules)
+    if modules is not None:
+        actions_output = parsed.get("actions_output")
+        if not actions_output:
+            actions_output = str(config.resolve_src_dir() / "actions.client.ts")
+        actions_endpoint = str(parsed.get("actions_endpoint", "/_actions"))
+        write_actions_client_file(modules, str(actions_output), endpoint=actions_endpoint)
+
+        client_output = parsed.get("output")
+        if not client_output:
+            client_output = str(config.resolve_src_dir() / "api" / "client.ts")
+        client_language = str(parsed.get("lang", "ts"))
+        class_name = str(parsed.get("class_name", "ApiClient"))
+        prefix = str(parsed.get("prefix", ""))
+        codegen_client(
+            modules,
+            str(client_output),
+            language=client_language,
+            class_name=class_name,
+            prefix=prefix,
+        )
+    else:
+        _maybe_codegen_client(parsed, config)
+        _maybe_codegen_actions(parsed, config, modules)
+    if parsed.get("vite"):
+        from nestipy.web.compiler import ensure_vite_files
+
+        ensure_vite_files(config)
+        if parsed.get("install"):
+            _install_deps(config)
+        _build_vite(config)
 
 
 def init(args: Iterable[str]) -> None:
@@ -539,6 +568,56 @@ def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
     return subprocess.Popen(cmd, cwd=str(out_dir))
 
 
+def _web_build_log_mode() -> str:
+    mode = os.getenv("NESTIPY_WEB_BUILD_LOG", "summary").strip().lower()
+    if mode not in {"summary", "verbose", "silent"}:
+        mode = "summary"
+    return mode
+
+
+def _run_command_capture(cmd: list[str], cwd: str) -> tuple[int, list[str]]:
+    lines: list[str] = []
+    process = subprocess.Popen(
+        cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+    )
+    assert process.stdout is not None
+    for raw in process.stdout:
+        line = raw.rstrip("\n")
+        if line:
+            lines.append(line)
+        if _web_build_log_mode() == "verbose":
+            logger.info("[WEB] %s", line)
+    return process.wait(), lines
+
+
+def _build_vite(config: WebConfig) -> None:
+    """Run the Vite production build using the detected package manager."""
+    out_dir = config.resolve_out_dir()
+    manager = _select_package_manager(out_dir)
+    if manager == "pnpm":
+        cmd = ["pnpm", "build"]
+    elif manager == "yarn":
+        cmd = ["yarn", "build"]
+    else:
+        cmd = ["npm", "run", "build"]
+    rc, lines = _run_command_capture(cmd, str(out_dir))
+    mode = _web_build_log_mode()
+    if mode != "silent":
+        for line in lines:
+            text = line.strip()
+            lower = text.lower()
+            if text.startswith("dist/") or text.startswith("web/dist/"):
+                logger.info("[WEB] %s", text)
+            elif "building" in lower and "vite" in lower:
+                logger.info("[WEB] %s", text)
+            elif "modules transformed" in lower:
+                logger.info("[WEB] %s", text)
+            elif "built in" in lower:
+                logger.info("[WEB] %s", text)
+    if rc != 0:
+        raise RuntimeError("Vite build failed.")
+
+
 def _start_backend(
     command: str,
     cwd: str | None = None,
@@ -618,7 +697,17 @@ def _install_deps(config: WebConfig) -> None:
         cmd = ["yarn", "install"]
     else:
         cmd = ["npm", "install"]
-    subprocess.run(cmd, cwd=str(out_dir), check=False)
+    rc, lines = _run_command_capture(cmd, str(out_dir))
+    mode = _web_build_log_mode()
+    if mode != "silent":
+        added_line = next((l for l in lines if "added " in l and "package" in l), None)
+        audited_line = next((l for l in lines if "audited " in l), None)
+        vuln_line = next((l for l in lines if "vulnerabilities" in l), None)
+        summary_parts = [p for p in (added_line, audited_line, vuln_line) if p]
+        if summary_parts:
+            logger.info("[WEB] Install: %s", " | ".join(summary_parts))
+    if rc != 0:
+        raise RuntimeError("Dependency install failed.")
 
 
 def _select_package_manager(out_dir) -> str:

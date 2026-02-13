@@ -645,6 +645,40 @@ If your backend entrypoint is not at the repo root, pass a working directory:
 nestipy run web:dev --vite --backend "python main.py" --backend-cwd ./backend
 ```
 
+## Production Build + Serve
+
+Nestipy can serve a built Vite app directly from the backend. Set a dist directory
+and Nestipy will register a static handler with SPA fallback (for HTML requests).
+
+1) Build the frontend (compile Python UI + Vite build):
+
+```bash
+nestipy run web:build --vite --install
+```
+
+This also generates:
+- `web/src/actions.client.ts` (actions client)
+- `web/src/api/client.ts` (typed HTTP client)
+
+2) Serve it from the backend:
+
+```bash
+NESTIPY_WEB_DIST=web/dist python main.py
+```
+
+Or use CLI flags directly (no env needed):
+
+```bash
+python main.py --web --web-dist web/dist
+```
+
+If `--web-dist` is omitted, Nestipy looks for `web/dist`, then `src/dist`, then `dist`.
+
+Optional environment variables:
+- `NESTIPY_WEB_STATIC_PATH=/` (mount path)
+- `NESTIPY_WEB_STATIC_INDEX=index.html`
+- `NESTIPY_WEB_STATIC_FALLBACK=1` (serve index.html for HTML requests when file not found)
+
 ## Vite Proxy
 
 If your Nestipy backend runs on another port, you can configure a Vite proxy so the frontend can call:
