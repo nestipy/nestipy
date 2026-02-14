@@ -1,0 +1,7 @@
+[project]
+name = "nestipy_app"
+version = "0.0.1"
+dependencies = ["nestipy", "granian[reload]"]
+
+[tool.uv]
+package = false

@@ -196,7 +196,7 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
             logger.exception("[WEB] SSR build failed")
             if not logger.isEnabledFor(20):
                 traceback.print_exc()
-        raise
+        return
     if modules is not None:
         actions_output = parsed.get("actions_output")
         if not actions_output:

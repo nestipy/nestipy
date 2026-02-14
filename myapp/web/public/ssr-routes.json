@@ -1,0 +1,16 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "ssr": true
+    },
+    {
+      "path": "/api-call",
+      "ssr": true
+    },
+    {
+      "path": "/counter",
+      "ssr": true
+    }
+  ]
+}
