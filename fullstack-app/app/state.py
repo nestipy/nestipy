@@ -29,5 +29,5 @@ class UseAppStore(Protocol):
 
 use_app_store: UseAppStore = external_fn("@/store", "useAppStore", alias="useAppStore")
 
-theme_default: ThemeContextValue = {"theme": "light", "toggle": None}
+theme_default: ThemeContextValue = {"theme": "dark", "toggle": None}
 ThemeContext = create_context(theme_default)

@@ -9,7 +9,7 @@ type AppState = {
 };
 
 export const useAppStore = create<AppState>((set) => ({
-  theme: 'light',
+  theme: 'dark',
   sharedCount: 0,
   toggleTheme: () =>
     set((state) => ({

@@ -11,7 +11,7 @@ from nestipy.web import (
     use_callback,
     use_context,
     external,
-    new_,
+    external_fn,
 )
 from app.state import ThemeContext, use_app_store
 
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from app.state import ThemeContextValue
 
 Link = external("react-router-dom", "Link")
-create_actions = external("../actions.client", "createActions", alias="createActions")
-ApiClient = external("../api/client", "ApiClient")
+create_actions = external_fn("../actions.client", "createActions", alias="createActions")
+create_api_client = external_fn("../api/client", "createApiClient", alias="createApiClient")
 
 
 @component
@@ -32,7 +32,7 @@ def Page():
     ping, set_ping = use_state("Loading...")
 
     actions = create_actions()
-    api = new_(ApiClient, {"baseUrl": ""})
+    api = create_api_client()
 
     def on_action(result):
         set_message(result.ok and result.data or "Error")
@@ -44,15 +44,12 @@ def Page():
         actions.AppActions.hello({"name": "Nestipy"}).then(on_action)
 
     def load_ping():
-        api.ping().then(on_ping)
+        api.App.ping().then(on_ping)
 
     reload_action = use_callback(load_action, deps=[])
     reload_ping = use_callback(load_ping, deps=[])
 
-    def label():
-        return f"Action says: {message}"
-
-    action_label = use_memo(label, deps=[message])
+    action_label = use_memo(lambda: f"Action says: {message}", deps=[message])
     use_effect(load_action, deps=[])
     use_effect(load_ping, deps=[])
 
@@ -69,16 +66,16 @@ def Page():
     features = []
     for item in [
         {
-            "title": "Python-first UI",
-            "desc": "Write components in Python. Compile to TSX for Vite.",
+            "title": "Python-first components",
+            "desc": "Compose UI in Python and compile to TSX for Vite.",
         },
         {
-            "title": "Typed Actions",
-            "desc": "Call backend providers from the browser with type safety.",
+            "title": "Typed actions + API",
+            "desc": "Generate clients for providers and HTTP routes automatically.",
         },
         {
-            "title": "Instant Feedback",
-            "desc": "Dev server + compiler keep your UI hot and fast.",
+            "title": "Instant feedback loop",
+            "desc": "Hot reload + schema regen keeps the stack synchronized.",
         },
     ]:
         features.append(
@@ -86,6 +83,7 @@ def Page():
                 h.h3(item["title"], class_name="feature-title"),
                 h.p(item["desc"], class_name="feature-desc"),
                 class_name="card feature-card",
+                key=item["title"],
             )
         )
    
@@ -101,6 +99,7 @@ def Page():
                 h.span(item["label"], class_name="stat-label"),
                 h.span(item["value"], class_name="stat-value"),
                 class_name="stat-card",
+                key=item["label"],
             )
         )
 
@@ -111,17 +110,17 @@ def Page():
                 h.span("Nestipy + React + Vite", class_name="pill pill-accent"),
                 class_name="pill-row",
             ),
-            h.h1("Ship Python UI with modern tooling.", class_name="hero-title"),
+            h.h1("Build modern web experiences in Python.", class_name="hero-title"),
             h.p(
-                "Nestipy Web compiles Python components to React, keeps actions typed, and gives you a single fullstack workflow.",
+                "Nestipy Web turns Python UI into React, ships typed actions and API clients, and keeps everything hot in Vite.",
                 class_name="hero-subtitle",
             ),
             h.div(
-                Link("Explore Counter", to="/counter", class_name="btn btn-primary"),
-                Link("Open API Playground", to="/api-call", class_name="btn btn-outline"),
+                Link("View Counter", to="/counter", class_name="btn btn-primary"),
+                Link("API Playground", to="/api-call", class_name="btn btn-outline"),
                 class_name="hero-actions",
             ),
-            class_name="hero",
+            class_name="hero-card",
         ),
         h.div(
             h.a(
@@ -147,7 +146,6 @@ def Page():
             ),
             class_name="logo-row",
         ),
-        h.p("Click the logos to learn more.", class_name="logo-caption"),
         h.div(
             h.div(
                 h.p(action_label, class_name="card-title"),
@@ -162,7 +160,7 @@ def Page():
             ),
             class_name="card status-card",
         ),
-        h.div(features, class_name="feature-grid gap-4"),
-        h.div(stats, class_name="stat-grid gap-4"),
-        class_name="home space-y-8",
+        h.div(stats, class_name="stat-grid"),
+        h.div(features, class_name="feature-grid"),
+        class_name="home",
     )

@@ -18,6 +18,7 @@ def Error():
 
     return h.section(
         h.div(
+            h.span("Runtime error", class_name="pill pill-accent"),
             h.span(status, class_name="error-code"),
             h.h1(title, class_name="error-title"),
             h.p(message, class_name="error-message"),

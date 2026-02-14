@@ -5,6 +5,7 @@ from nestipy.web import component, h
 def NotFound():
     return h.section(
         h.div(
+            h.span("404", class_name="pill pill-accent"),
             h.h1("Page not found", class_name="page-title"),
             h.p(
                 "This route does not exist yet. Check your navigation or update routes.",

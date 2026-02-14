@@ -14,6 +14,6 @@ export function Error(): JSX.Element {
   const title = isRouteErrorResponse(error) ? error.statusText : 'Unexpected error';
   const message = error?.message ?? 'Something went wrong while rendering this page.';
   return (
-    <section className="error-page"><div className="error-card"><span className="error-code">{isRouteErrorResponse(error) ? error.status : 500}</span><h1 className="error-title">{isRouteErrorResponse(error) ? error.statusText : 'Unexpected error'}</h1><p className="error-message">{error?.message ?? 'Something went wrong while rendering this page.'}</p><Link to="/" className="btn btn-primary">Back home</Link></div></section>
+    <section className="error-page"><div className="error-card"><span className="pill pill-accent">Runtime error</span><span className="error-code">{isRouteErrorResponse(error) ? error.status : 500}</span><h1 className="error-title">{isRouteErrorResponse(error) ? error.statusText : 'Unexpected error'}</h1><p className="error-message">{error?.message ?? 'Something went wrong while rendering this page.'}</p><Link to="/" className="btn btn-primary">Back home</Link></div></section>
   );
 }

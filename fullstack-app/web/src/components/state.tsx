@@ -4,5 +4,5 @@ import { useAppStore } from '@/store';
 
 
 export const use_app_store = useAppStore;
-const theme_default = {"theme": "light", "toggle": null};
+const theme_default = {"theme": "dark", "toggle": null};
 export const ThemeContext = React.createContext(theme_default);

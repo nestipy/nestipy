@@ -28,11 +28,11 @@ def Layout():
     if theme == "dark":
         shell_class = "app-shell theme-dark"
         toggle_label = "Switch to light"
-        theme_label = "Dark mode"
+        theme_label = "Dark"
     else:
         shell_class = "app-shell theme-light"
         toggle_label = "Switch to dark"
-        theme_label = "Light mode"
+        theme_label = "Light"
 
     return h(
         ThemeContext.Provider,
@@ -41,13 +41,10 @@ def Layout():
                 h.div(
                     h.div(
                         h.span("Nestipy", class_name="brand-name"),
-                        h.span("Web", class_name="brand-pill"),
+                        h.span("Fullstack", class_name="brand-pill"),
                         class_name="brand",
                     ),
-                    h.p(
-                        "Python-first UI and typed APIs.",
-                        class_name="brand-subtitle",
-                    ),
+                    h.p("Python UI + typed APIs", class_name="brand-subtitle"),
                     class_name="brand-block",
                 ),
                 h.nav(nav_links, class_name="nav"),
@@ -71,9 +68,9 @@ def Layout():
             ),
             h.main(h(Slot), class_name="container"),
             h.footer(
-                h.span("Nestipy Web"),
+                h.span("Nestipy"),
                 h.span("•"),
-                h.span("Fullstack scaffold"),
+                h.span("Web scaffold"),
                 class_name="footer",
             ),
             class_name=shell_class,

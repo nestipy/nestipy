@@ -50,16 +50,17 @@ def Page():
 
     return h.section(
         h.div(
-            h.h2("Counter", class_name="page-title"),
+            h.span("Interactive demo", class_name="pill"),
+            h.h2("Counter lab", class_name="page-title"),
             h.p(
-                "Stateful hooks, memoized labels, and responsive controls.",
+                "Stateful hooks, memoized labels, and shared store updates in one place.",
                 class_name="page-subtitle",
             ),
             class_name="page-header",
         ),
         h.div(
             h.div(
-                h.span("Current value", class_name="stat-label"),
+                h.span("Local count", class_name="stat-label"),
                 h.span(count, class_name="counter-display"),
                 parity,
                 class_name="counter-stack",
@@ -86,9 +87,12 @@ def Page():
             class_name="card counter-card",
         ),
         h.div(
-            h.span("Theme"),
-            h.span(theme_name, class_name="stat-value"),
-            class_name="stat-card",
+            h.div(
+                h.span("Theme", class_name="stat-label"),
+                h.span(theme_name, class_name="stat-value"),
+                class_name="stat-card",
+            ),
+            class_name="stat-row",
         ),
         class_name="page",
     )
