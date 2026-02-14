@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from nestipy.web.config import WebConfig
 from .compile_assets import ensure_vite_files
@@ -106,5 +107,24 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
         error_info=error_info,
         notfound_infos=notfound_infos,
     )
+    _write_ssr_routes(routes, config, root)
     ensure_vite_files(config, root)
     return routes
+
+
+def _write_ssr_routes(routes: list[RouteInfo], config: WebConfig, root: str | None) -> None:
+    """Persist SSR opt-in routes to web/public for runtime lookup."""
+    entries = [
+        {"path": info.route, "ssr": info.ssr}
+        for info in routes
+        if info.ssr is not None
+    ]
+    if not entries:
+        return
+    out_dir = config.resolve_out_dir(root)
+    public_dir = out_dir / "public"
+    public_dir.mkdir(parents=True, exist_ok=True)
+    payload = {"routes": entries}
+    (public_dir / "ssr-routes.json").write_text(
+        json.dumps(payload, indent=2), encoding="utf-8"
+    )

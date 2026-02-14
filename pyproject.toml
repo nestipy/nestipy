@@ -41,6 +41,7 @@ dependencies = [
 
 [project.optional-dependencies]
 blacksheep = []
+web-ssr = ["jsrun"]
 
 [dependency-groups]
 dev = [

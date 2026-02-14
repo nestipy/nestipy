@@ -15,6 +15,7 @@ class RouteInfo:
     output: Path
     import_path: str
     component_name: str
+    ssr: bool | None = None
 
 
 @dataclass(slots=True)

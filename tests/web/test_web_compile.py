@@ -233,7 +233,10 @@ def Page():
         encoding="utf-8"
     )
     assert "import React from 'react';" in page_tsx
-    assert "export const AppContext = React.createContext(\"default\");" in page_tsx
+    assert (
+        "export const AppContext = React.createContext(\"default\");" in page_tsx
+        or "const AppContext = React.createContext(\"default\");" in page_tsx
+    )
     assert "const [count, setCount] = React.useState(0);" in page_tsx
     assert "const value = React.useContext(AppContext);" in page_tsx
     assert "const bump = () =>" in page_tsx

@@ -1,13 +1,14 @@
 # nestipy_web (Vite target) - Plan
 
 ## Goal
-Provide a Next.js-like developer experience for frontend, but compile Python components to TSX and run with Vite. Integrate with existing `nestipy-cli` (no new CLI package) and reuse Nestipy RouterSpec for typed clients.
+Provide a Next.js-like developer experience for frontend, compile Python components to TSX, and run with Vite. Integrate with existing `nestipy-cli` (no new CLI package) and reuse Nestipy RouterSpec for typed clients. Add optional SSR (via jsrun / V8) without requiring Node.
 
 ## Constraints
 - Target: Vite (default).
 - Use `nestipy-cli` commands to invoke `nestipy_web` functionality.
 - Support external React TS libraries (shadcn/ui, tailwind, etc.).
 - Prefer existing libraries for parsing/generation when useful.
+- SSR must be optional and have safe CSR fallback.
 
 ## Proposed Architecture
 - `nestipy_web.ui`: Python DSL for components.
@@ -15,6 +16,7 @@ Provide a Next.js-like developer experience for frontend, but compile Python com
 - `nestipy_web.client`: typed client generator (wrap existing router spec).
 - `nestipy_web.config`: config schema and defaults.
 - `nestipy_web.commands`: entrypoints called by nestipy-cli.
+- `nestipy_web.ssr`: optional SSR runtime adapters (jsrun first).
 
 ## Step-by-step Plan
 
@@ -51,14 +53,32 @@ Provide a Next.js-like developer experience for frontend, but compile Python com
   - `dev`: watch `app/` and recompile
   - `codegen`: generate typed client from RouterSpec
 
-### Step 6: Docs + examples
+### Step 6: SSR build pipeline (optional)
+- Emit SSR entrypoints (client + server).
+- Update Vite config to support `vite build --ssr`.
+- CLI flags:
+  - `nestipy run web:build --vite --ssr`
+  - `nestipy start --web --ssr`
+- Environment:
+  - `NESTIPY_WEB_SSR=1`
+  - `NESTIPY_WEB_SSR_RUNTIME=jsrun|node`
+  - `NESTIPY_WEB_SSR_ENTRY=web/dist/ssr/entry-server.js`
+
+### Step 7: SSR runtime adapters (optional)
+- Implement jsrun (V8 via PyO3) adapter.
+- Provide CSR fallback on error.
+- Optional dependency: `pip install nestipy[web-ssr]` (adds `jsrun`).
+
+### Step 8: Docs + examples
 - Add `docs/web/overview.md`
 - Add example using shadcn + tailwind
+- Add SSR usage guide and optional install (`nestipy[web-ssr]`)
 
-### Step 7: Tests
+### Step 9: Tests
 - Unit tests for compiler output
 - Snapshot tests for generated TSX
 - CLI command smoke tests
+- SSR adapter smoke tests (skip if jsrun not installed)
 
 ## Libraries to Consider
 - Parsing Python: `libcst` (preferred) or stdlib `ast`

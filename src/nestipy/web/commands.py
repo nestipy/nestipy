@@ -78,6 +78,17 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
         elif arg == "--actions-watch" and i + 1 < len(args_list):
             parsed["actions_watch"] = args_list[i + 1]
             i += 1
+        elif arg == "--ssr":
+            parsed["ssr"] = True
+        elif arg == "--ssr-entry" and i + 1 < len(args_list):
+            parsed["ssr_entry"] = args_list[i + 1]
+            i += 1
+        elif arg == "--ssr-out-dir" and i + 1 < len(args_list):
+            parsed["ssr_out_dir"] = args_list[i + 1]
+            i += 1
+        elif arg == "--ssr-runtime" and i + 1 < len(args_list):
+            parsed["ssr_runtime"] = args_list[i + 1]
+            i += 1
         elif arg == "--target" and i + 1 < len(args_list):
             parsed["target"] = args_list[i + 1]
             i += 1
@@ -117,6 +128,9 @@ def _collect_packages(args: Iterable[str]) -> list[str]:
         "--actions-output",
         "--actions-endpoint",
         "--actions-watch",
+        "--ssr-entry",
+        "--ssr-out-dir",
+        "--ssr-runtime",
         "--target",
         "--spec",
         "--output",
@@ -131,6 +145,7 @@ def _collect_packages(args: Iterable[str]) -> list[str]:
         "--install",
         "--no-build",
         "--actions",
+        "--ssr",
         "--dev",
         "-D",
         "--peer",
@@ -172,6 +187,15 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         logger.exception("[WEB] compile failed")
         if not logger.isEnabledFor(20):
             traceback.print_exc()
+    if parsed.get("ssr") and parsed.get("vite"):
+        ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
+        ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
+        try:
+            _build_vite(config, ssr=True, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir)
+        except Exception:
+            logger.exception("[WEB] SSR build failed")
+            if not logger.isEnabledFor(20):
+                traceback.print_exc()
         raise
     if modules is not None:
         actions_output = parsed.get("actions_output")
@@ -202,7 +226,10 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         ensure_vite_files(config)
         if parsed.get("install"):
             _install_deps(config)
-        _build_vite(config)
+        ssr_enabled = bool(parsed.get("ssr"))
+        ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
+        ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
+        _build_vite(config, ssr=ssr_enabled, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir)
 
 
 def init(args: Iterable[str]) -> None:
@@ -423,6 +450,8 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         if parsed.get("install"):
             _install_deps(config)
         vite_process = _start_vite(config)
+        if parsed.get("ssr"):
+            _web_log("SSR build enabled for dev (will rebuild on changes).")
     if backend_cmd:
         backend_env: dict[str, str] = {}
         if "NESTIPY_RELOAD_IGNORE_PATHS" not in os.environ:
@@ -443,6 +472,20 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                     logger.exception("[WEB] compile failed")
                     if not logger.isEnabledFor(20):
                         traceback.print_exc()
+                if parsed.get("ssr") and parsed.get("vite"):
+                    ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
+                    ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
+                    try:
+                        _build_vite(
+                            config,
+                            ssr=True,
+                            ssr_entry=ssr_entry,
+                            ssr_out_dir=ssr_out_dir,
+                        )
+                    except Exception:
+                        logger.exception("[WEB] SSR build failed")
+                        if not logger.isEnabledFor(20):
+                            traceback.print_exc()
                 _maybe_codegen_client(parsed, config)
                 _maybe_codegen_actions(parsed, config, modules)
                 if actions_schema_url and actions_output:
@@ -702,30 +745,57 @@ def _run_command_capture(cmd: list[str], cwd: str) -> tuple[int, list[str]]:
     return process.wait(), lines
 
 
-def _build_vite(config: WebConfig) -> None:
+def _summarize_build_lines(lines: list[str]) -> None:
+    mode = _web_build_log_mode()
+    if mode == "silent":
+        return
+    for line in lines:
+        text = line.strip()
+        lower = text.lower()
+        if text.startswith("dist/") or text.startswith("web/dist/"):
+            _web_log(text)
+        elif "building" in lower and "vite" in lower:
+            _web_log(text)
+        elif "modules transformed" in lower:
+            _web_log(text)
+        elif "built in" in lower:
+            _web_log(text)
+
+
+def _build_vite(
+    config: WebConfig,
+    *,
+    ssr: bool = False,
+    ssr_entry: str = "src/entry-server.tsx",
+    ssr_out_dir: str = "dist/ssr",
+) -> None:
     """Run the Vite production build using the detected package manager."""
     out_dir = config.resolve_out_dir()
     manager = _select_package_manager(out_dir)
-    if manager == "pnpm":
-        cmd = ["pnpm", "build"]
-    elif manager == "yarn":
-        cmd = ["yarn", "build"]
-    else:
-        cmd = ["npm", "run", "build"]
-    rc, lines = _run_command_capture(cmd, str(out_dir))
-    mode = _web_build_log_mode()
-    if mode != "silent":
-        for line in lines:
-            text = line.strip()
-            lower = text.lower()
-            if text.startswith("dist/") or text.startswith("web/dist/"):
-                _web_log(text)
-            elif "building" in lower and "vite" in lower:
-                _web_log(text)
-            elif "modules transformed" in lower:
-                _web_log(text)
-            elif "built in" in lower:
-                _web_log(text)
+
+    def build_cmd(extra: list[str]) -> list[str]:
+        args = ["--", *extra] if extra else []
+        if manager == "pnpm":
+            return ["pnpm", "build", *args]
+        if manager == "yarn":
+            return ["yarn", "build", *args]
+        return ["npm", "run", "build", *args]
+
+    if ssr:
+        rc, lines = _run_command_capture(build_cmd(["--ssrManifest"]), str(out_dir))
+        _summarize_build_lines(lines)
+        if rc != 0:
+            raise RuntimeError("Vite build failed.")
+        rc, lines = _run_command_capture(
+            build_cmd(["--ssr", ssr_entry, "--outDir", ssr_out_dir]), str(out_dir)
+        )
+        _summarize_build_lines(lines)
+        if rc != 0:
+            raise RuntimeError("Vite SSR build failed.")
+        return
+
+    rc, lines = _run_command_capture(build_cmd([]), str(out_dir))
+    _summarize_build_lines(lines)
     if rc != 0:
         raise RuntimeError("Vite build failed.")
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import libcst as cst
 
 from nestipy.web.config import WebConfig
 from .compile_components import compile_component_module, component_import_path
@@ -232,9 +233,10 @@ def build_routes(
         routes_tsx = "\n".join(
             [
                 *header,
-                "export const router = createBrowserRouter([",
+                "export const routes = [",
                 ",\n".join(flat_entries),
-                "]);",
+                "];",
+                "export const router = createBrowserRouter(routes);",
                 "",
             ]
         )
@@ -264,9 +266,10 @@ def build_routes(
         routes_tsx = "\n".join(
             [
                 *header,
-                "export const router = createBrowserRouter([",
+                "export const routes = [",
                 ",\n".join(route_objects),
-                "]);",
+                "];",
+                "export const router = createBrowserRouter(routes);",
                 "",
             ]
         )
@@ -276,7 +279,7 @@ def build_routes(
     main_tsx = "\n".join(
         [
             "import React from 'react';",
-            "import ReactDOM from 'react-dom/client';",
+            "import { createRoot, hydrateRoot } from 'react-dom/client';",
             "import { RouterProvider } from 'react-router-dom';",
             "import { fetchCsrfToken } from './actions';",
             "import { router } from './routes';",
@@ -284,16 +287,44 @@ def build_routes(
             "",
             "void fetchCsrfToken().catch(() => undefined);",
             "",
-            "ReactDOM.createRoot(document.getElementById('root')!).render(",
+            "const rootEl = document.getElementById('root');",
+            "const app = (",
             "  <React.StrictMode>",
             "    <RouterProvider router={router} />",
             "  </React.StrictMode>",
             ");",
+            "if (rootEl) {",
+            "  if (rootEl.hasChildNodes()) {",
+            "    hydrateRoot(rootEl, app);",
+            "  } else {",
+            "    createRoot(rootEl).render(app);",
+            "  }",
+            "}",
             "",
         ]
     )
 
     (src_dir / "main.tsx").write_text(main_tsx, encoding="utf-8")
+
+    entry_server_tsx = "\n".join(
+        [
+            "import React from 'react';",
+            "import { renderToString } from 'react-dom/server';",
+            "import { RouterProvider, createMemoryRouter } from 'react-router-dom';",
+            "import { routes } from './routes';",
+            "",
+            "export function render(url: string) {",
+            "  const router = createMemoryRouter(routes, { initialEntries: [url] });",
+            "  const html = renderToString(<RouterProvider router={router} />);",
+            "  return { html };",
+            "}",
+            "",
+            "export default { render };",
+            "",
+        ]
+    )
+
+    (src_dir / "entry-server.tsx").write_text(entry_server_tsx, encoding="utf-8")
 
 
 def _compile_layouts(
@@ -498,6 +529,7 @@ def discover_routes(app_dir: Path, pages_dir: Path) -> list[RouteInfo]:
         rel = source.relative_to(app_dir)
         route = route_from_relative(rel)
         out_path, import_path = output_for_relative(rel, pages_dir)
+        ssr_flag = _extract_ssr_flag(source)
         routes.append(
             RouteInfo(
                 route=route,
@@ -505,6 +537,7 @@ def discover_routes(app_dir: Path, pages_dir: Path) -> list[RouteInfo]:
                 output=out_path,
                 import_path=import_path,
                 component_name="Page",
+                ssr=ssr_flag,
             )
         )
     if not routes:
@@ -528,6 +561,47 @@ def route_from_relative(rel: Path) -> str:
         else:
             segments.append(part)
     return "/" + "/".join(segments)
+
+
+def _extract_ssr_flag(path: Path) -> bool | None:
+    """Read `__ssr__ = True/False` from a module, if present."""
+    try:
+        code = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        module = cst.parse_module(code)
+    except Exception:
+        return None
+    for stmt in module.body:
+        statements = []
+        if isinstance(stmt, cst.SimpleStatementLine):
+            statements = list(stmt.body)
+        else:
+            statements = [stmt]
+        for inner in statements:
+            target = None
+            value = None
+            if isinstance(inner, cst.Assign) and len(inner.targets) == 1:
+                target = inner.targets[0].target
+                value = inner.value
+            elif isinstance(inner, cst.AnnAssign):
+                target = inner.target
+                value = inner.value
+            if not isinstance(target, cst.Name) or target.value != "__ssr__":
+                continue
+            if isinstance(value, cst.Name):
+                if value.value == "True":
+                    return True
+                if value.value == "False":
+                    return False
+            if isinstance(value, cst.SimpleString):
+                literal = value.value.strip("\"'").lower()
+                if literal in {"true", "1", "yes", "on"}:
+                    return True
+                if literal in {"false", "0", "no", "off"}:
+                    return False
+    return None
 
 
 def output_for_relative(rel: Path, pages_dir: Path) -> tuple[Path, str]:

@@ -604,6 +604,29 @@ wheels = [
 ]
 
 [[package]]
+name = "jsrun"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/99/5ed5e4934a2924a7697375ac9de18db9b2745b0fb7c80c31054c67f9e8e2/jsrun-0.1.0.tar.gz", hash = "sha256:b363e2cc9666859e2c3b46d97b7463c17c992c6f49a3d8c00d10eee4f040b9ae", size = 231862, upload-time = "2025-11-17T00:39:31.172Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/f2/47a920807a8f32ca8e6deac77d3243f57af9b1c967535b9621da6d0886d6/jsrun-0.1.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0e221f0ef747ea2966706e66c9134f6204b8c2976f37c60df5a21c3eb30e8565", size = 18716486, upload-time = "2025-11-17T00:38:44.476Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/8f/cd017f464dbb72722be03107dc7fae6e10359fd73191751240cafb48a05f/jsrun-0.1.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:42b6975d5c5e38f1a466f2f25f680838efdbca56d60d302267902b4cadce3310", size = 21853582, upload-time = "2025-11-17T00:38:47.062Z" },
+    { url = "https://files.pythonhosted.org/packages/69/af/aaedc3026df193089aeb5c213224e7d63e2553b6c2244786b8f643d91791/jsrun-0.1.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:cc9be776507c0af63d8720ff0a9f6b0955a99239afcba6686237f1e8e11759ce", size = 22151785, upload-time = "2025-11-17T00:38:49.842Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/bd/5691ed028bfd8684378ff0dffefec50cd53ce35092a942c0ce88d3494ad0/jsrun-0.1.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:054a66dd13e74d320b48f927128e3db06ae1de909dc917e6cb1071ea8108ee56", size = 18721814, upload-time = "2025-11-17T00:38:52.13Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/3d/1401fee4b4de4840e4e2621342b15a4f0c87b91afc73edcb8e37d8a2920f/jsrun-0.1.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:b6af73e05e932d95758e9cd219900b3ab8ea144f0cede6f820672ae6692bc7f4", size = 21851525, upload-time = "2025-11-17T00:38:54.43Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/17/a61051555d4c748a7c819fba7400265b9fb482554d0f91ea047c773eccc8/jsrun-0.1.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:d88e61dca605ccbab7fb9cc3c6ea46c67ad349b9a0eaaa1265db97d281c936e5", size = 22155060, upload-time = "2025-11-17T00:38:56.76Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/91/9f7ef3e69e0b0e72e40cb61edaeac57b7b4c06110fcd26abacd73db129d9/jsrun-0.1.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:ab8ffa6a0f70490bc2381dcc1db7be41b8e92918d52354723851a71789248fe8", size = 18723170, upload-time = "2025-11-17T00:38:59.324Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/d4/d1b2b1a9a145b7a0276d6e10861cd86a08b8816087f6057eeed7cb998cbe/jsrun-0.1.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:c763e35a5cc2fdbf3ccbf4725c28e59aa45c7183962bd01dfc24cf3589f5e0e2", size = 21850980, upload-time = "2025-11-17T00:39:02.126Z" },
+    { url = "https://files.pythonhosted.org/packages/91/29/583cc7fdf6eb9043f93e91c3cee9339d0c306b4475b213759e420b3c3466/jsrun-0.1.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:c213b0a53ba00ef29f69d9abd6bb471803e5859259ea560ea36f966a7122d258", size = 22154738, upload-time = "2025-11-17T00:39:04.935Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/d6/f62ffdb870c44e1b1f0a4b9cc711794fbec3e0433f91b87d413804de0c94/jsrun-0.1.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:2d2c0ed33a0222f83eddf7d436d702ca2a6c10d5c71e245151c36423977c1ba3", size = 21850289, upload-time = "2025-11-17T00:39:07.716Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/48/3147fa3a3f090c4987bac834b4c5cfe55c8f0b90a47465437486c93014c4/jsrun-0.1.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:32cc4e213034fa7d2f66f2969340ab6951b5300fd237cb19b59f8b2843f00588", size = 18709187, upload-time = "2025-11-17T00:39:11.161Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/30/b33363bc2f112df4b7ddbfb8656a7cdf8a523966fd1ba24362251ce521b2/jsrun-0.1.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:a3f0299c6e38c043108e3ed6796195ac0bcb2a195671602c2f76f7914a4906c5", size = 21853854, upload-time = "2025-11-17T00:39:13.5Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/66/f9e6317fd538197f5ebf7a28e658f7e199b5fdd5d5daab542df367131eb8/jsrun-0.1.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:a524f336e1a21545e584586e48714400cbbe975ebb09960fae6290211bc3cce0", size = 22157460, upload-time = "2025-11-17T00:39:15.864Z" },
+    { url = "https://files.pythonhosted.org/packages/20/f5/27ff0dfcfc8556ccc2fb83d6407586383da40b8d602095f886013b5d0d28/jsrun-0.1.0-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:a55b345c911a2a991cf3a000356c0db8c240e4c2dbb2fccd43209cfb5e68bbac", size = 21857514, upload-time = "2025-11-17T00:39:18.34Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/65/9776536278b3b3e0c4e32e59bd3d2da02b4bf18f3d4ea4731402accabdc4/jsrun-0.1.0-pp311-pypy311_pp73-manylinux_2_28_aarch64.whl", hash = "sha256:778465d75aae17704d82945488cea7b5a034ba9a086f9989c8298bb2d726daf0", size = 21856734, upload-time = "2025-11-17T00:39:21.068Z" },
+]
+
+[[package]]
 name = "libcst"
 version = "1.8.6"
 source = { registry = "https://pypi.org/simple" }
@@ -958,6 +981,11 @@ dependencies = [
     { name = "ujson" },
 ]
 
+[package.optional-dependencies]
+web-ssr = [
+    { name = "jsrun" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
@@ -986,6 +1014,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27.2,<0.28" },
     { name = "itsdangerous", specifier = ">=2.2.0,<3" },
     { name = "jinja2", specifier = ">=3.1.4,<4" },
+    { name = "jsrun", marker = "extra == 'web-ssr'" },
     { name = "libcst", specifier = ">=1.2.0,<2" },
     { name = "minijinja", specifier = ">=2.5.0,<3" },
     { name = "nats-py", specifier = ">=2.9.0,<3" },
@@ -1001,7 +1030,7 @@ requires-dist = [
     { name = "strawberry-graphql", specifier = ">=0.278.0" },
     { name = "ujson", specifier = ">=5.9.0,<6" },
 ]
-provides-extras = ["blacksheep"]
+provides-extras = ["blacksheep", "web-ssr"]
 
 [package.metadata.requires-dev]
 dev = [
