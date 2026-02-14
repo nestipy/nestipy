@@ -8,11 +8,12 @@ import json
 import hashlib
 import urllib.request
 import urllib.error
+import traceback
 from typing import Iterable, Type
 
 from nestipy.common.logger import logger
 from nestipy.web.config import WebConfig
-from nestipy.web.compiler import compile_app
+from nestipy.web.compiler import compile_app, CompilerError
 from nestipy.web.client import codegen_client, codegen_client_from_url
 from nestipy.web.actions_client import (
     write_actions_client_file,
@@ -159,7 +160,13 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         proxy=proxy,
         proxy_paths=proxy_paths_list or WebConfig().proxy_paths,
     )
-    compile_app(config)
+    try:
+        compile_app(config)
+    except CompilerError:
+        logger.exception("[WEB] compile failed")
+        if not logger.isEnabledFor(20):
+            traceback.print_exc()
+        raise
     if modules is not None:
         actions_output = parsed.get("actions_output")
         if not actions_output:
@@ -269,7 +276,13 @@ def init(args: Iterable[str]) -> None:
         )
 
     if not parsed.get("no_build"):
-        compile_app(config)
+        try:
+            compile_app(config)
+        except CompilerError:
+            logger.exception("[WEB] compile failed")
+            if not logger.isEnabledFor(20):
+                traceback.print_exc()
+            raise
 
 
 def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
@@ -359,7 +372,12 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         return state
 
     last_state = snapshot()
-    compile_app(config)
+    try:
+        compile_app(config)
+    except CompilerError:
+        logger.exception("[WEB] compile failed")
+        if not logger.isEnabledFor(20):
+            traceback.print_exc()
     _maybe_codegen_client(parsed, config)
     _maybe_codegen_actions(parsed, config, modules)
     if actions_schema_url and actions_output:
@@ -389,7 +407,12 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             time.sleep(0.5)
             current = snapshot()
             if current != last_state:
-                compile_app(config)
+                try:
+                    compile_app(config)
+                except CompilerError:
+                    logger.exception("[WEB] compile failed")
+                    if not logger.isEnabledFor(20):
+                        traceback.print_exc()
                 _maybe_codegen_client(parsed, config)
                 _maybe_codegen_actions(parsed, config, modules)
                 if actions_schema_url and actions_output:

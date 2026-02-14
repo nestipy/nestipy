@@ -11,6 +11,7 @@ PROPS_MARK_ATTR = "__nestipy_web_props__"
 class HTMLProps(TypedDict, total=False):
     """Typed HTML/SVG props accepted by the `h` helper."""
     id: str
+    key: str
     class_name: str
     class_: str
     data_: dict[str, Any]

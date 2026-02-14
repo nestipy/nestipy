@@ -50,10 +50,12 @@ def _camelize_identifier(name: str) -> str:
 def _build_name_map(
     local_names: set[str],
     externals: dict[str, object],
+    fixed_names: set[str] | None = None,
 ) -> dict[str, str]:
     """Build a stable mapping of Python identifiers to JS-friendly names."""
     name_map: dict[str, str] = {}
     used: set[str] = set()
+    fixed = fixed_names or set()
 
     for name, ext in externals.items():
         import_name = getattr(ext, "import_name", name)
@@ -63,9 +65,12 @@ def _build_name_map(
     for name in sorted(local_names):
         if name in name_map:
             continue
-        candidate = _camelize_identifier(name)
-        if candidate in used and candidate != name:
+        if name in fixed:
             candidate = name
+        else:
+            candidate = _camelize_identifier(name)
+            if candidate in used and candidate != name:
+                candidate = name
         name_map[name] = candidate
         used.add(candidate)
     return name_map

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from nestipy.web import (
     component,
     h,
@@ -5,18 +9,19 @@ from nestipy.web import (
     use_effect,
     use_context,
     external,
-    external_fn,
     new_,
 )
-from app.layout import ThemeContext
+from app.state import ThemeContext, use_app_store
+
+if TYPE_CHECKING:
+    from app.state import ThemeContextValue
 
 ApiClient = external("../../api/client", "ApiClient")
-use_app_store = external_fn("../../store", "useAppStore", alias="useAppStore")
 
 
 @component
 def Page():
-    theme = use_context(ThemeContext)
+    theme: "ThemeContextValue" = use_context(ThemeContext)
     status, set_status = use_state("Waiting...")
     shared_count = use_app_store(lambda state: state.sharedCount)
     inc_shared = use_app_store(lambda state: state.incShared)

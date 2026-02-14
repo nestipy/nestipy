@@ -5,7 +5,7 @@ from __future__ import annotations
 import libcst as cst
 
 from .errors import CompilerError
-from .parser_expr import _call_name, _eval_string, _expr_to_js
+from .parser_expr import _call_name, _eval_external_call, _eval_string, _expr_to_js
 from .parser_hooks import (
     _hook_from_statement,
     _hook_from_assignment,
@@ -27,32 +27,56 @@ def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
         else:
             statements = [stmt]
         for inner in statements:
-            if not isinstance(inner, cst.Assign):
+            target: cst.Name | None = None
+            value: cst.BaseExpression | None = None
+            if isinstance(inner, cst.Assign):
+                if len(inner.targets) != 1:
+                    continue
+                target = inner.targets[0].target if isinstance(inner.targets[0].target, cst.Name) else None
+                value = inner.value
+            elif isinstance(inner, cst.AnnAssign):
+                target = inner.target if isinstance(inner.target, cst.Name) else None
+                value = inner.value
+            if target is None or value is None:
                 continue
-            if len(inner.targets) != 1:
+            if isinstance(value, cst.Call):
+                call_name = _call_name(value)
+                if call_name == "create_context":
+                    default_expr = _get_call_arg(value, 0, ("default",))
+                    default_js = _expr_to_js(default_expr) if default_expr else "undefined"
+                    contexts.append(
+                        f"export const {target.value} = React.createContext({default_js});"
+                    )
+                    names.add(target.value)
+                    continue
+                if call_name in {"external", "external_fn"}:
+                    kind = "function" if call_name == "external_fn" else "component"
+                    ext = _eval_external_call(value, kind=kind)
+                    import_name = ext.import_name
+                    if target.value == import_name:
+                        contexts.append(f"export {{ {import_name} }};")
+                    else:
+                        contexts.append(f"export const {target.value} = {import_name};")
+                    names.add(target.value)
+                    continue
+                if call_name == "js":
+                    js_expr = _get_call_arg(value, 0, ("expr",))
+                    if js_expr is None:
+                        raise CompilerError("js() requires a string literal")
+                    contexts.append(
+                        f"const {target.value} = {_eval_string(js_expr)};"
+                    )
+                    names.add(target.value)
+                    continue
                 continue
-            target = inner.targets[0].target
-            if not isinstance(target, cst.Name):
+
+            # Emit simple module-level constants (e.g., theme_default).
+            try:
+                rendered = _expr_to_js(value)
+            except CompilerError:
                 continue
-            if not isinstance(inner.value, cst.Call):
-                continue
-            call_name = _call_name(inner.value)
-            if call_name == "create_context":
-                default_expr = _get_call_arg(inner.value, 0, ("default",))
-                default_js = _expr_to_js(default_expr) if default_expr else "undefined"
-                contexts.append(
-                    f"export const {target.value} = React.createContext({default_js});"
-                )
-                names.add(target.value)
-                continue
-            if call_name == "js":
-                js_expr = _get_call_arg(inner.value, 0, ("expr",))
-                if js_expr is None:
-                    raise CompilerError("js() requires a string literal")
-                contexts.append(
-                    f"const {target.value} = {_eval_string(js_expr)};"
-                )
-                names.add(target.value)
+            contexts.append(f"const {target.value} = {rendered};")
+            names.add(target.value)
     return contexts, names
 
 

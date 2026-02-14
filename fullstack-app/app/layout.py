@@ -1,9 +1,7 @@
-from nestipy.web import component, h, Slot, create_context, external, external_fn
+from nestipy.web import component, h, Slot, external
+from app.state import ThemeContext, use_app_store
 
 Link = external("react-router-dom", "Link")
-use_app_store = external_fn("../store", "useAppStore", alias="useAppStore")
-
-ThemeContext = create_context({"theme": "light", "toggle": None})
 
 
 @component

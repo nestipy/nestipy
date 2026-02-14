@@ -183,6 +183,8 @@ def _eval_expr(
                     )
                 return JSExpr(_expr_to_js(expr, name_map, bindings))
 
+        return JSExpr(_expr_to_js(expr, name_map, bindings))
+
     if isinstance(expr, cst.IfExp):
         test_expr = JSExpr(_expr_to_js(expr.test, name_map, bindings))
         consequent = _eval_expr(expr.body, externals, component_names, local_names, bound_values, name_map)
@@ -203,6 +205,9 @@ def _eval_expr(
 
     if isinstance(expr, cst.FormattedString):
         return JSExpr(_format_fstring(expr, name_map, bindings))
+
+    if isinstance(expr, cst.Lambda):
+        return JSExpr(_expr_to_js(expr, name_map, bindings))
 
     if isinstance(expr, cst.Subscript):
         return JSExpr(_expr_to_js(expr, name_map, bindings))

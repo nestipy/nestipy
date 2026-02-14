@@ -30,34 +30,39 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | Exte
         else:
             statements = [stmt]
         for inner in statements:
+            target: cst.Name | None = None
+            value: cst.BaseExpression | None = None
             if isinstance(inner, cst.Assign):
                 if len(inner.targets) != 1:
                     continue
-                target = inner.targets[0].target
-                if not isinstance(target, cst.Name):
-                    continue
+                target = inner.targets[0].target if isinstance(inner.targets[0].target, cst.Name) else None
                 value = inner.value
-                if isinstance(value, cst.Call):
-                    call_name = _call_name(value)
-                    if call_name == "external":
-                        ext = _eval_external_call(value)
-                        if ext.alias and "_" in ext.alias and "_" not in ext.name:
-                            ext = ExternalComponent(
-                                module=ext.module,
-                                name=ext.name,
-                                default=ext.default,
-                                alias=None,
-                            )
-                        externals[target.value] = ext
-                    elif call_name == "external_fn":
-                        ext = _eval_external_call(value, kind="function")
-                        if ext.alias and "_" in ext.alias and "_" not in ext.name:
-                            ext = ExternalFunction(
-                                module=ext.module,
-                                name=ext.name,
-                                alias=None,
-                            )
-                        externals[target.value] = ext
+            elif isinstance(inner, cst.AnnAssign):
+                target = inner.target if isinstance(inner.target, cst.Name) else None
+                value = inner.value
+            if target is None or value is None:
+                continue
+            if isinstance(value, cst.Call):
+                call_name = _call_name(value)
+                if call_name == "external":
+                    ext = _eval_external_call(value)
+                    if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                        ext = ExternalComponent(
+                            module=ext.module,
+                            name=ext.name,
+                            default=ext.default,
+                            alias=None,
+                        )
+                    externals[target.value] = ext
+                elif call_name == "external_fn":
+                    ext = _eval_external_call(value, kind="function")
+                    if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                        ext = ExternalFunction(
+                            module=ext.module,
+                            name=ext.name,
+                            alias=None,
+                        )
+                    externals[target.value] = ext
     return externals
 
 

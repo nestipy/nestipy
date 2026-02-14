@@ -51,15 +51,20 @@ def parse_component_file(
         props=props_specs,
     )
     module_prelude, module_names = _collect_module_prelude(module)
-    target = _select_component(parsed.functions, target_names)
-    if target is None:
+    imported_names = {imp.alias for imp in imports if imp.path is not None}
+    module_names.update(imported_names)
+    target_list = tuple(target_names)
+    target = _select_component(parsed.functions, target_list)
+    if target is None and target_list:
         raise CompilerError(f"No component found in {path}")
 
     decorated = {fn.name.value for fn in parsed.functions if _has_component_decorator(fn)}
     component_names = set(decorated)
-    component_names.add(target.name.value)
-    imported_names = {imp.alias for imp in imports if imp.path is not None}
-    component_names.update(imported_names)
+    if target is not None:
+        component_names.add(target.name.value)
+    component_names.update(
+        name for name in imported_names if name[:1].isupper()
+    )
 
     components: dict[str, Node] = {}
     hooks: dict[str, list[str]] = {}
@@ -68,7 +73,7 @@ def parse_component_file(
         if fn.name.value not in component_names:
             continue
         locals_map = _collect_locals(fn, module_names)
-        name_map = _build_name_map(locals_map, parsed.externals)
+        name_map = _build_name_map(locals_map, parsed.externals, fixed_names=imported_names)
         return_value = _extract_return_value(
             fn, parsed.externals, component_names, locals_map, name_map
         )
@@ -89,8 +94,10 @@ def parse_component_file(
 
     component_props = _collect_component_props(parsed.functions, props_specs)
 
+    primary_name = target.name.value if target is not None else ""
+
     return ParsedFile(
-        primary=target.name.value,
+        primary=primary_name,
         components=components,
         imports=imports,
         props=props_specs,

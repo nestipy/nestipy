@@ -695,10 +695,24 @@ def _extract_module_exports(module_prelude: list[str]) -> set[str]:
     exports: set[str] = set()
     for line in module_prelude:
         stripped = line.strip()
-        if not stripped.startswith("export const "):
+        if stripped.startswith("export const "):
+            remainder = stripped[len("export const "):]
+            name = remainder.split("=", 1)[0].strip().rstrip(";")
+            if name:
+                exports.add(name)
             continue
-        remainder = stripped[len("export const "):]
-        name = remainder.split("=", 1)[0].strip().rstrip(";")
-        if name:
-            exports.add(name)
+        if stripped.startswith("export {") and stripped.endswith("};"):
+            inner = stripped[len("export {"):-2].strip()
+            if not inner:
+                continue
+            for chunk in inner.split(","):
+                part = chunk.strip()
+                if not part:
+                    continue
+                if " as " in part:
+                    alias = part.split(" as ", 1)[1].strip()
+                    if alias:
+                        exports.add(alias)
+                else:
+                    exports.add(part)
     return exports

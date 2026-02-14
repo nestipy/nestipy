@@ -1,6 +1,11 @@
+import React from 'react';
+import type { JSX } from 'react';
 import { Link, isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
 
+export { Link };
+export const use_route_error = useRouteError;
+export const is_route_error_response = isRouteErrorResponse;
 
 
 export function Error(): JSX.Element {
