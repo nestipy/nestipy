@@ -1,3 +1,5 @@
+from typing import Any
+from typing import Callable
 from nestipy.web import (
     component,
     h,
@@ -9,16 +11,16 @@ from nestipy.web import (
 )
 from app.layout import ThemeContext
 
-use_app_store = external_fn("../../store", "useAppStore", alias="useAppStore")
+use_app_store: Callable[[Callable[[Any], Any]], Any] = external_fn("../../store", "useAppStore", alias="useAppStore")
 
 
 @component
 def Page():
-    theme = use_context(ThemeContext)
+    theme: dict[str, str] = use_context(ThemeContext)
     count, set_count = use_state(0)
-    shared_count = use_app_store(lambda state: state.sharedCount)
-    inc_shared = use_app_store(lambda state: state.incShared)
-    dec_shared = use_app_store(lambda state: state.decShared)
+    shared_count: int = use_app_store(lambda state: state.sharedCount)
+    inc_shared: Callable[[int], None] = use_app_store(lambda state: state.incShared)
+    dec_shared: Callable[[int], None] = use_app_store(lambda state: state.decShared)
 
     def increment():
         set_count(count + 1)

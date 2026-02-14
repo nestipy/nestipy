@@ -3,6 +3,7 @@
 from .config import WebConfig
 from .compiler import compile_app, build_routes, CompilerError
 from .ui import (
+    Context,
     component,
     h,
     external,
@@ -59,6 +60,7 @@ __all__ = [
     "props",
     "Fragment",
     "Slot",
+    "Context",
     "use_state",
     "use_effect",
     "use_effect_async",

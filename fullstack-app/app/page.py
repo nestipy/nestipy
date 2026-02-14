@@ -20,7 +20,7 @@ use_app_store = external_fn("../store", "useAppStore", alias="useAppStore")
 
 @component
 def Page():
-    theme = use_context(ThemeContext)
+    theme: dict[str, str] = use_context(ThemeContext)
     shared_count = use_app_store(lambda state: state.sharedCount)
     inc_shared = use_app_store(lambda state: state.incShared)
     message, set_message = use_state("Loading...")

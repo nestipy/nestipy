@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Protocol, TypedDict
+from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar, Generic
 
 COMPONENT_MARK_ATTR = "__nestipy_web_component__"
 COMPONENT_NAME_ATTR = "__nestipy_web_component_name__"
@@ -267,6 +267,18 @@ class _Slot:
 Fragment = _Fragment()
 Slot = _Slot()
 
+TContext = TypeVar("TContext")
+
+
+class Context(Generic[TContext]):
+    """Lightweight placeholder for React contexts (compile-time only)."""
+
+    Provider: Any = object()
+    Consumer: Any = object()
+
+    def __init__(self, default: TContext | None = None) -> None:
+        self.default = default
+
 
 Child = Node | str | int | float | bool | None | JSExpr
 
@@ -292,7 +304,7 @@ def external(module: str, name: str, *, default: bool = False, alias: str | None
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
 
 
-def external_fn(module: str, name: str, *, alias: str | None = None) -> ExternalFunction:
+def external_fn(module: str, name: str, *, alias: str | None = None) -> Type[ExternalFunction]:
     """Create a reference to an external function import."""
     return ExternalFunction(module=module, name=name, alias=alias)
 
@@ -310,32 +322,32 @@ def props(cls: type) -> type:
     return cls
 
 
-def use_state(initial: Any = None) -> tuple[Any, Any]:
+def use_state(initial: Any = None) -> tuple[Any, Callable[[Any | Callable[[Any], Any]], None]]:
     """Declare a React useState hook (compile-time only)."""
     raise RuntimeError("use_state is a compile-time hook and cannot run at runtime.")
 
 
-def use_effect(effect: Any, deps: Any | None = None) -> None:
+def use_effect(effect: Callable[[], None], deps: Any | None = None) -> None:
     """Declare a React useEffect hook (compile-time only)."""
     raise RuntimeError("use_effect is a compile-time hook and cannot run at runtime.")
 
 
-def use_effect_async(effect: Any, deps: Any | None = None) -> None:
+def use_effect_async(effect: Callable[[], None], deps: Any | None = None) -> None:
     """Declare an async React useEffect hook (compile-time only)."""
     raise RuntimeError("use_effect_async is a compile-time hook and cannot run at runtime.")
 
 
-def use_memo(factory: Any, deps: Any | None = None) -> Any:
+def use_memo(factory: Callable[[], Any], deps: Any | None = None) -> Any:
     """Declare a React useMemo hook (compile-time only)."""
     raise RuntimeError("use_memo is a compile-time hook and cannot run at runtime.")
 
 
-def use_callback(callback: Any, deps: Any | None = None) -> Any:
+def use_callback(callback: Callable[..., Any], deps: list[Any] | None = None) -> Callable[..., Any]:
     """Declare a React useCallback hook (compile-time only)."""
     raise RuntimeError("use_callback is a compile-time hook and cannot run at runtime.")
 
 
-def use_context(context: Any) -> Any:
+def use_context(context: Context[TContext]) -> dict[str, Any]:
     """Declare a React useContext hook (compile-time only)."""
     raise RuntimeError("use_context is a compile-time hook and cannot run at runtime.")
 
@@ -345,7 +357,7 @@ def use_ref(initial: Any = None) -> Any:
     raise RuntimeError("use_ref is a compile-time hook and cannot run at runtime.")
 
 
-def create_context(default: Any = None) -> Any:
+def create_context(default: TContext | None = None) -> Context[TContext]:
     """Declare a React context at module scope (compile-time only)."""
     raise RuntimeError("create_context is a compile-time helper and cannot run at runtime.")
 
@@ -443,6 +455,7 @@ __all__ = [
     "LocalComponent",
     "Fragment",
     "Slot",
+    "Context",
     "HTMLProps",
     "Child",
     "TagCallable",
