@@ -5,7 +5,12 @@ import json
 import urllib.request
 import os
 
-from nestipy.router import build_router_spec, write_client_file, write_typescript_client_file
+from nestipy.router import (
+    build_router_spec,
+    write_client_file,
+    write_typescript_client_file,
+    router_spec_from_dict,
+)
 
 
 def codegen_client(
@@ -31,11 +36,12 @@ def codegen_client_from_url(
     """Generate a typed API client file from a router spec URL."""
     with urllib.request.urlopen(url) as response:
         data = json.loads(response.read().decode("utf-8"))
+    router_spec = router_spec_from_dict(data)
     _ensure_parent(output)
     if language in {"ts", "typescript"}:
-        write_typescript_client_file(data, output, class_name=class_name)
+        write_typescript_client_file(router_spec, output, class_name=class_name)
     else:
-        write_client_file(data, output, class_name=class_name, async_client=False)
+        write_client_file(router_spec, output, class_name=class_name, async_client=False)
 
 
 def _ensure_parent(output: str) -> None:

@@ -326,6 +326,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     router_output: str | None = None
     router_poll_interval = float(os.getenv("NESTIPY_WEB_ROUTER_POLL", "2.0") or 2.0)
     last_router_poll = 0.0
+    router_hash: str | None = None
 
     if parsed.get("actions"):
         spec_url = parsed.get("spec")
@@ -348,6 +349,8 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         )
         if actions_watch:
             actions_watch_paths = [p.strip() for p in actions_watch.split(",") if p.strip()]
+        if actions_watch_paths and "NESTIPY_WEB_ACTIONS_POLL" not in os.environ:
+            actions_poll_interval = 0.0
 
     router_spec_url = (
         str(parsed.get("router_spec") or os.getenv("NESTIPY_WEB_ROUTER_SPEC_URL") or "")
@@ -360,6 +363,8 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         or os.getenv("NESTIPY_WEB_ROUTER_OUTPUT")
         or config.resolve_src_dir() / "api" / "client.ts"
     )
+    if actions_watch_paths and "NESTIPY_WEB_ROUTER_POLL" not in os.environ:
+        router_poll_interval = 0.0
 
     def snapshot() -> dict[str, float]:
         """Capture modification times for app source files."""
@@ -402,12 +407,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         if not logger.isEnabledFor(20):
             traceback.print_exc()
     if router_spec_url and router_output:
-        try:
-            codegen_client_from_url(router_spec_url, router_output, language="ts", class_name="ApiClient")
-        except Exception:
-            logger.exception("[WEB] router client generation failed")
-            if not logger.isEnabledFor(20):
-                traceback.print_exc()
+        router_hash = _maybe_codegen_router_spec(router_spec_url, router_output, router_hash)
     _maybe_codegen_client(parsed, config)
     _maybe_codegen_actions(parsed, config, modules)
     if actions_schema_url and actions_output:
@@ -455,29 +455,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_etag,
                     )
                 if router_spec_url and router_output:
-                    try:
-                        codegen_client_from_url(
-                            router_spec_url,
-                            router_output,
-                            language="ts",
-                            class_name="ApiClient",
-                        )
-                    except Exception:
-                        logger.exception("[WEB] router client generation failed")
-                        if not logger.isEnabledFor(20):
-                            traceback.print_exc()
-                last_state = current
-            if actions_schema_url and actions_output and not actions_watch_paths:
-                now = time.monotonic()
-                if now - last_actions_poll >= actions_poll_interval:
-                    actions_hash, actions_etag = _maybe_codegen_actions_schema(
-                        actions_schema_url,
-                        actions_output,
-                        actions_hash,
-                        actions_etag,
+                    router_hash = _maybe_codegen_router_spec(
+                        router_spec_url, router_output, router_hash
                     )
-                    last_actions_poll = now
-            elif actions_schema_url and actions_output and actions_watch_paths:
+                last_state = current
+            if actions_schema_url and actions_output and actions_watch_paths:
                 current_actions_state = snapshot_actions(actions_watch_paths)
                 if current_actions_state != (last_actions_state or {}):
                     actions_hash, actions_etag = _maybe_codegen_actions_schema(
@@ -487,33 +469,36 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_etag,
                     )
                     last_actions_state = current_actions_state
+                    last_actions_poll = time.monotonic()
                     if router_spec_url and router_output:
-                        try:
-                            codegen_client_from_url(
-                                router_spec_url,
-                                router_output,
-                                language="ts",
-                                class_name="ApiClient",
-                            )
-                        except Exception:
-                            logger.exception("[WEB] router client generation failed")
-                            if not logger.isEnabledFor(20):
-                                traceback.print_exc()
-            if router_spec_url and router_output and not actions_watch_paths:
-                now = time.monotonic()
-                if now - last_router_poll >= router_poll_interval:
-                    try:
-                        codegen_client_from_url(
-                            router_spec_url,
-                            router_output,
-                            language="ts",
-                            class_name="ApiClient",
+                        router_hash = _maybe_codegen_router_spec(
+                            router_spec_url, router_output, router_hash
                         )
-                    except Exception:
-                        logger.exception("[WEB] router client generation failed")
-                        if not logger.isEnabledFor(20):
-                            traceback.print_exc()
-                    last_router_poll = now
+                    last_router_poll = time.monotonic()
+            now = time.monotonic()
+            if (
+                actions_schema_url
+                and actions_output
+                and actions_poll_interval > 0.0
+                and now - last_actions_poll >= actions_poll_interval
+            ):
+                actions_hash, actions_etag = _maybe_codegen_actions_schema(
+                    actions_schema_url,
+                    actions_output,
+                    actions_hash,
+                    actions_etag,
+                )
+                last_actions_poll = now
+            if (
+                router_spec_url
+                and router_output
+                and router_poll_interval > 0.0
+                and now - last_router_poll >= router_poll_interval
+            ):
+                router_hash = _maybe_codegen_router_spec(
+                    router_spec_url, router_output, router_hash
+                )
+                last_router_poll = now
     except KeyboardInterrupt:
         if vite_process is not None:
             vite_process.terminate()
@@ -610,8 +595,7 @@ def _maybe_codegen_actions(
     if modules is None:
         if spec_url:
             codegen_actions_from_url(str(spec_url), str(output))
-            return
-        raise RuntimeError("Modules are required to generate actions client")
+        return
     endpoint = str(parsed.get("actions_endpoint", "/_actions"))
     write_actions_client_file(modules, str(output), endpoint=endpoint)
 
@@ -644,7 +628,36 @@ def _maybe_codegen_actions_schema(
     os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
     with open(output, "w", encoding="utf-8") as f:
         f.write(code)
+    logger.info("[WEB] Actions client updated")
     return digest, (etag or last_etag)
+
+
+def _hash_file(path: str) -> str | None:
+    """Hash a file's content for change detection."""
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except FileNotFoundError:
+        return None
+
+
+def _maybe_codegen_router_spec(
+    url: str,
+    output: str,
+    last_hash: str | None,
+) -> str | None:
+    """Fetch the router spec and update the client file if it changed."""
+    try:
+        codegen_client_from_url(url, output, language="ts", class_name="ApiClient")
+    except Exception:
+        logger.exception("[WEB] router client generation failed")
+        if not logger.isEnabledFor(20):
+            traceback.print_exc()
+        return last_hash
+    digest = _hash_file(output)
+    if digest and digest != last_hash:
+        logger.info("[WEB] API client updated")
+    return digest or last_hash
 
 
 def _start_vite(config: WebConfig) -> subprocess.Popen[str]:

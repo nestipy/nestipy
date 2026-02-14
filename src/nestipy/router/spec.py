@@ -146,6 +146,96 @@ def _type_to_str(tp: typing.Any) -> str:
     return str(tp)
 
 
+def _split_type_args(value: str) -> list[str]:
+    args: list[str] = []
+    depth = 0
+    start = 0
+    for idx, ch in enumerate(value):
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            args.append(value[start:idx].strip())
+            start = idx + 1
+    last = value[start:].strip()
+    if last:
+        args.append(last)
+    return args
+
+
+def _parse_type_str(value: typing.Any) -> typing.Any:
+    if not isinstance(value, str):
+        return typing.Any
+    text = value.strip()
+    if not text:
+        return typing.Any
+    basic = {
+        "str": str,
+        "int": int,
+        "float": float,
+        "bool": bool,
+        "dict": dict,
+        "list": list,
+        "set": set,
+        "tuple": tuple,
+        "Any": typing.Any,
+        "None": type(None),
+    }
+    if text in basic:
+        return basic[text]
+    if text.startswith("Optional[") and text.endswith("]"):
+        inner = _parse_type_str(text[len("Optional[") : -1])
+        return typing.Optional[inner]
+    if text.startswith("Union[") and text.endswith("]"):
+        inner = text[len("Union[") : -1]
+        parts = [_parse_type_str(p) for p in _split_type_args(inner)]
+        return typing.Union[tuple(parts)]
+    if text.startswith("List[") and text.endswith("]"):
+        inner = _parse_type_str(text[len("List[") : -1])
+        return list[inner]
+    if text.startswith("Dict[") and text.endswith("]"):
+        inner = _split_type_args(text[len("Dict[") : -1])
+        if len(inner) >= 2:
+            return dict[_parse_type_str(inner[0]), _parse_type_str(inner[1])]
+        return dict
+    if text.startswith("Tuple[") and text.endswith("]"):
+        inner = [_parse_type_str(p) for p in _split_type_args(text[len("Tuple[") : -1])]
+        return tuple[tuple(inner)]
+    return typing.Any
+
+
+def router_spec_from_dict(data: dict) -> RouterSpec:
+    prefix = str(data.get("prefix") or "")
+    routes: list[RouteSpec] = []
+    for route in data.get("routes", []) or []:
+        params: list[RouteParamSpec] = []
+        for param in route.get("params", []) or []:
+            params.append(
+                RouteParamSpec(
+                    name=str(param.get("name") or ""),
+                    source=str(param.get("source") or ""),
+                    type=_parse_type_str(param.get("type")),
+                    required=bool(param.get("required", True)),
+                    token=param.get("token"),
+                )
+            )
+        routes.append(
+            RouteSpec(
+                path=str(route.get("path") or ""),
+                methods=list(route.get("methods") or []),
+                controller=str(route.get("controller") or ""),
+                handler=str(route.get("handler") or ""),
+                operation_id=str(route.get("operation_id") or ""),
+                params=params,
+                return_type=_parse_type_str(route.get("return_type")),
+                version=route.get("version"),
+                cache=route.get("cache"),
+            )
+        )
+    return RouterSpec(prefix=prefix, routes=routes)
+
+
 def router_spec_to_dict(spec: RouterSpec) -> dict:
     return {
         "prefix": spec.prefix,
