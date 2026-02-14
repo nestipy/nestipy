@@ -31,6 +31,9 @@ from .client import codegen_client, codegen_client_from_url
 from .compiler import CompilerError, build_routes, compile_app
 from .config import WebConfig
 from .ui import (
+    Context,
+    StoreHook,
+    StoreSelector,
     Fragment,
     Slot,
     component,
@@ -76,6 +79,9 @@ __all__: list[str] = [
     "build_routes",
     "compile_app",
     "WebConfig",
+    "Context",
+    "StoreHook",
+    "StoreSelector",
     "Fragment",
     "Slot",
     "component",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar
-from typing import Final, NotRequired, Unpack,Type
+from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar, Generic
+from typing import Final, NotRequired, Unpack, Type
 
 COMPONENT_MARK_ATTR: Final[str]
 COMPONENT_NAME_ATTR: Final[str]
@@ -31,6 +31,8 @@ class LocalComponent:
     def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ...
 
 TContext = TypeVar("TContext")
+TState = TypeVar("TState")
+TValue = TypeVar("TValue")
 class Context(Generic[TContext]):
     """Lightweight placeholder for React contexts (compile-time only)."""
 
@@ -39,6 +41,18 @@ class Context(Generic[TContext]):
 
     def __init__(self, default: TContext | None = None) -> None:
         self.default = default
+
+
+class StoreSelector(Protocol[TState, TValue]):
+    """Typed selector for client-side stores (compile-time only)."""
+
+    def __call__(self, state: TState) -> TValue: ...
+
+
+class StoreHook(Protocol[TState]):
+    """Typed store hook wrapper (compile-time only)."""
+
+    def __call__(self, selector: StoreSelector[TState, TValue]) -> TValue: ...
 
 
 
@@ -63,7 +77,7 @@ def use_effect(effect: Callable[[], None], deps: list[Any] | None = None) -> Non
 def use_effect_async(effect: Callable[[], None], deps: list[Any] | None = None) -> None: ...
 def use_memo(factory: Callable[[], Any], deps: list[Any] | None = None) -> Any: ...
 def use_callback(callback: Callable[..., Any], deps: list[Any] | None = None) -> Callable[..., Any]: ...
-def use_context(context: TContext) -> dict[str, Any]: ...
+def use_context(context: Context[TContext]) -> TContext: ...
 def use_ref(initial: Any = None) -> Any: ...
 def create_context(default: TContext | None = None) -> Context[TContext]: ...
 
@@ -411,4 +425,3 @@ class H:
 h: H
 
 __all__: list[str]
-

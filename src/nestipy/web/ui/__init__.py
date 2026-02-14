@@ -268,6 +268,8 @@ Fragment = _Fragment()
 Slot = _Slot()
 
 TContext = TypeVar("TContext")
+TState = TypeVar("TState")
+TValue = TypeVar("TValue")
 
 
 class Context(Generic[TContext]):
@@ -278,6 +280,18 @@ class Context(Generic[TContext]):
 
     def __init__(self, default: TContext | None = None) -> None:
         self.default = default
+
+
+class StoreSelector(Protocol[TState, TValue]):
+    """Typed selector for client-side stores (compile-time only)."""
+
+    def __call__(self, state: TState) -> TValue: ...
+
+
+class StoreHook(Protocol[TState]):
+    """Typed store hook wrapper (compile-time only)."""
+
+    def __call__(self, selector: StoreSelector[TState, TValue]) -> TValue: ...
 
 
 Child = Node | str | int | float | bool | None | JSExpr
@@ -347,7 +361,7 @@ def use_callback(callback: Callable[..., Any], deps: list[Any] | None = None) ->
     raise RuntimeError("use_callback is a compile-time hook and cannot run at runtime.")
 
 
-def use_context(context: Context[TContext]) -> dict[str, Any]:
+def use_context(context: Context[TContext]) -> TContext:
     """Declare a React useContext hook (compile-time only)."""
     raise RuntimeError("use_context is a compile-time hook and cannot run at runtime.")
 

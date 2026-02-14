@@ -4,6 +4,8 @@ from .config import WebConfig
 from .compiler import compile_app, build_routes, CompilerError
 from .ui import (
     Context,
+    StoreHook,
+    StoreSelector,
     component,
     h,
     external,
@@ -61,6 +63,8 @@ __all__ = [
     "Fragment",
     "Slot",
     "Context",
+    "StoreHook",
+    "StoreSelector",
     "use_state",
     "use_effect",
     "use_effect_async",
