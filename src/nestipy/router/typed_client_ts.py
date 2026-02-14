@@ -98,7 +98,7 @@ def _unique_group_name(base: str, used: set[str]) -> str:
         used.add(base)
         return base
     idx = 2
-    while f"{base}{idx}" in used:
+    while f"{base}{idx}" in used: 
         idx += 1
     final = f"{base}{idx}"
     used.add(final)
@@ -223,11 +223,11 @@ def generate_typescript_client_code(
                 option_fields.append(f"cookies?: {cookies_type}")
 
             if option_fields:
-                options_type = "{ " + "; ".join(option_fields) + " }"
+                options_type = "{ " + "; ".join(option_fields) + " , query: Record<string, unknown>; headers: Record<string, string>; cookies: Record<string, string>}"
                 signature = f"options?: {options_type}"
             else:
                 # Always include options so generated code can safely reference it.
-                signature = "options?: {}"
+                signature = "options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}"
 
             return_hint = _ts_type(route.return_type, custom_types)
             method_name = _unique_name(route.handler, used_method_names, "route")

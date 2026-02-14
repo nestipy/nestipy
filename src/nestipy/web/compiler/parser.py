@@ -37,6 +37,7 @@ def parse_component_file(
     *,
     target_names: Iterable[str],
     app_dir: Path | None = None,
+    export_prelude: bool = True,
 ) -> ParsedFile:
     """Parse a Python component file into renderable nodes and metadata."""
     code = path.read_text(encoding="utf-8")
@@ -50,7 +51,9 @@ def parse_component_file(
         imports=imports,
         props=props_specs,
     )
-    module_prelude, module_names = _collect_module_prelude(module)
+    module_prelude, module_names = _collect_module_prelude(
+        module, export_values=export_prelude
+    )
     imported_names = {imp.alias for imp in imports if imp.path is not None}
     module_names.update(imported_names)
     target_list = tuple(target_names)

@@ -35,7 +35,9 @@ def render_page_tree(
     target_names: tuple[str, ...] = ("Page", "page", "default"),
 ) -> ParsedFile:
     """Parse a Python component file into a renderable tree."""
-    return parse_component_file(source, target_names=target_names, app_dir=root)
+    return parse_component_file(
+        source, target_names=target_names, app_dir=root, export_prelude=False
+    )
 
 
 def build_page_tsx(

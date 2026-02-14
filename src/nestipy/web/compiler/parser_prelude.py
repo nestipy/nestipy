@@ -16,7 +16,9 @@ from .parser_hooks import (
 from .parser_hooks import _get_call_arg
 
 
-def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
+def _collect_module_prelude(
+    module: cst.Module, *, export_values: bool = True
+) -> tuple[list[str], set[str]]:
     """Collect module-level declarations for generated TSX."""
     contexts: list[str] = []
     names: set[str] = set()
@@ -44,8 +46,9 @@ def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
                 if call_name == "create_context":
                     default_expr = _get_call_arg(value, 0, ("default",))
                     default_js = _expr_to_js(default_expr) if default_expr else "undefined"
+                    prefix = "export " if export_values else ""
                     contexts.append(
-                        f"export const {target.value} = React.createContext({default_js});"
+                        f"{prefix}const {target.value} = React.createContext({default_js});"
                     )
                     names.add(target.value)
                     continue
@@ -53,10 +56,14 @@ def _collect_module_prelude(module: cst.Module) -> tuple[list[str], set[str]]:
                     kind = "function" if call_name == "external_fn" else "component"
                     ext = _eval_external_call(value, kind=kind)
                     import_name = ext.import_name
-                    if target.value == import_name:
-                        contexts.append(f"export {{ {import_name} }};")
+                    if export_values:
+                        if target.value == import_name:
+                            contexts.append(f"export {{ {import_name} }};")
+                        else:
+                            contexts.append(f"export const {target.value} = {import_name};")
                     else:
-                        contexts.append(f"export const {target.value} = {import_name};")
+                        if target.value != import_name:
+                            contexts.append(f"const {target.value} = {import_name};")
                     names.add(target.value)
                     continue
                 if call_name == "js":
