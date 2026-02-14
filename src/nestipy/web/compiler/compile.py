@@ -690,6 +690,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                         "react": "^18.2.0",
                         "react-dom": "^18.2.0",
                         "react-router-dom": "^6.26.2",
+                        "zustand": "^4.5.2",
                     },
                     "devDependencies": {
                         "@types/react": "^18.2.70",
@@ -732,6 +733,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                 if not isinstance(dev_deps, dict):
                     dev_deps = {}
                     data["devDependencies"] = dev_deps
+                if "zustand" not in deps:
+                    deps["zustand"] = "^4.5.2"
+                    updated = True
                 tailwind_version = dev_deps.get("tailwindcss")
                 if not tailwind_version or str(tailwind_version).startswith("^3"):
                     dev_deps["tailwindcss"] = "^4.0.0"

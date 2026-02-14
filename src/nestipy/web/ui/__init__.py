@@ -320,6 +320,11 @@ def use_effect(effect: Any, deps: Any | None = None) -> None:
     raise RuntimeError("use_effect is a compile-time hook and cannot run at runtime.")
 
 
+def use_effect_async(effect: Any, deps: Any | None = None) -> None:
+    """Declare an async React useEffect hook (compile-time only)."""
+    raise RuntimeError("use_effect_async is a compile-time hook and cannot run at runtime.")
+
+
 def use_memo(factory: Any, deps: Any | None = None) -> Any:
     """Declare a React useMemo hook (compile-time only)."""
     raise RuntimeError("use_memo is a compile-time hook and cannot run at runtime.")
@@ -433,6 +438,7 @@ h = H()
 __all__ = [
     "Node",
     "ExternalComponent",
+    "ExternalFunction",
     "JSExpr",
     "LocalComponent",
     "Fragment",
@@ -444,12 +450,15 @@ __all__ = [
     "COMPONENT_NAME_ATTR",
     "PROPS_MARK_ATTR",
     "js",
+    "new_",
     "external",
+    "external_fn",
     "props",
     "component",
     "h",
     "use_state",
     "use_effect",
+    "use_effect_async",
     "use_memo",
     "use_callback",
     "use_context",

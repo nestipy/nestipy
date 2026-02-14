@@ -151,6 +151,23 @@ use_effect(lambda: api.ping().then(lambda value: set_status(f"Ping: {value}")), 
 Lambdas compile to JS arrow functions. Complex lambdas with default values or `*args/**kwargs`
 are not supported.
 
+### Async Effects
+
+React effects must return **sync** cleanups, but you can call async work inside.
+Nestipy provides `use_effect_async()` which wraps this pattern:
+
+```py
+from nestipy.web import use_effect_async
+
+async def load():
+    # async work
+    ...
+
+use_effect_async(load, deps=[])
+```
+
+If your async function returns a cleanup, it will be called on unmount.
+
 ## Action Guards
 
 Actions are providers, so HTTP guards don't apply. Use action guards instead:
@@ -674,6 +691,31 @@ Install the dependency:
 ```bash
 npm install zustand
 ```
+
+## What Python Code Can Run in `app/`
+
+Nestipy Web **compiles** Python to TSX. Your `app/` code does **not** execute
+at runtime in the browser, so only compile‑time Python is supported.
+
+### ✅ Allowed (compile‑time only)
+
+- Pure constants and simple literal expressions
+- `if/elif/else` that assign the same variables in all branches
+- `for` loops that build JSX lists via `items.append(h.div(...))`
+- f‑strings for string formatting
+- Simple arithmetic or comparisons
+
+### ❌ Not allowed (runtime/system)
+
+- `datetime.now()`, `time.time()`, `os`, `pathlib`, `sys`, `subprocess`
+- File IO, environment variables, network calls, database access
+- Anything that depends on runtime state inside the browser
+
+### How to do runtime things
+
+- **In the browser:** use `js("...")` or `external_fn()` to call JS APIs.
+  - Example: `js("new Date().toISOString()")`
+- **From the backend:** expose an action/API and fetch it.
 
 ## Hot Reload
 

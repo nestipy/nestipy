@@ -627,6 +627,37 @@ def _hook_from_call(
         if deps is None:
             return f"React.useEffect({effect_js});"
         return f"React.useEffect({effect_js}, {_expr_to_js(deps, name_map)});"
+    if name == "use_effect_async":
+        if target_names:
+            raise CompilerError("use_effect_async cannot be assigned to a name")
+        effect = _get_call_arg(call, 0, ("effect",))
+        if effect is None:
+            raise CompilerError("use_effect_async requires an effect callback")
+        deps = _get_call_arg(call, 1, ("deps", "dependencies"))
+        effect_js = _expr_to_js(effect, name_map)
+        body = [
+            "React.useEffect(() => {",
+            "  let active = true;",
+            "  let cleanup;",
+            "  (async () => {",
+            f"    cleanup = await ({effect_js})();",
+            "    if (!active && typeof cleanup === 'function') {",
+            "      cleanup();",
+            "    }",
+            "  })();",
+            "  return () => {",
+            "    active = false;",
+            "    if (typeof cleanup === 'function') {",
+            "      cleanup();",
+            "    }",
+            "  };",
+            "}",
+        ]
+        if deps is None:
+            body.append(");")
+        else:
+            body.append(f", {_expr_to_js(deps, name_map)});")
+        return "\n".join(body)
 
     hook_map = {
         "use_state": "useState",
