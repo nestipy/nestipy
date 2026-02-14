@@ -368,6 +368,7 @@ def generate_typescript_client_code(
             f"export function createApiClient(options: Partial<ClientOptions> = {{}}): {class_name} {{",
             f"  return new {class_name}({{ baseUrl: \"\", ...options }});",
             "}",
+            "export const create_api_client = createApiClient;",
         ]
     )
 

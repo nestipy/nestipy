@@ -55,6 +55,12 @@ def _parse_args(args: Iterable[str]) -> dict[str, str | bool]:
         elif arg == "--proxy-paths" and i + 1 < len(args_list):
             parsed["proxy_paths"] = args_list[i + 1]
             i += 1
+        elif arg == "--router-spec" and i + 1 < len(args_list):
+            parsed["router_spec"] = args_list[i + 1]
+            i += 1
+        elif arg == "--router-output" and i + 1 < len(args_list):
+            parsed["router_output"] = args_list[i + 1]
+            i += 1
         elif arg == "--no-build":
             parsed["no_build"] = True
         elif arg in {"--dev", "-D"}:
@@ -316,6 +322,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     actions_watch_paths: list[str] = []
     last_actions_state: dict[str, float] | None = None
 
+    router_spec_url: str | None = None
+    router_output: str | None = None
+    router_poll_interval = float(os.getenv("NESTIPY_WEB_ROUTER_POLL", "2.0") or 2.0)
+    last_router_poll = 0.0
+
     if parsed.get("actions"):
         spec_url = parsed.get("spec")
         if spec_url:
@@ -337,6 +348,18 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         )
         if actions_watch:
             actions_watch_paths = [p.strip() for p in actions_watch.split(",") if p.strip()]
+
+    router_spec_url = (
+        str(parsed.get("router_spec") or os.getenv("NESTIPY_WEB_ROUTER_SPEC_URL") or "")
+        or None
+    )
+    if not router_spec_url and os.getenv("NESTIPY_ROUTER_SPEC") and proxy:
+        router_spec_url = proxy.rstrip("/") + "/_router/spec"
+    router_output = str(
+        parsed.get("router_output")
+        or os.getenv("NESTIPY_WEB_ROUTER_OUTPUT")
+        or config.resolve_src_dir() / "api" / "client.ts"
+    )
 
     def snapshot() -> dict[str, float]:
         """Capture modification times for app source files."""
@@ -378,6 +401,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         logger.exception("[WEB] compile failed")
         if not logger.isEnabledFor(20):
             traceback.print_exc()
+    if router_spec_url and router_output:
+        try:
+            codegen_client_from_url(router_spec_url, router_output, language="ts", class_name="ApiClient")
+        except Exception:
+            logger.exception("[WEB] router client generation failed")
+            if not logger.isEnabledFor(20):
+                traceback.print_exc()
     _maybe_codegen_client(parsed, config)
     _maybe_codegen_actions(parsed, config, modules)
     if actions_schema_url and actions_output:
@@ -424,6 +454,18 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_hash,
                         actions_etag,
                     )
+                if router_spec_url and router_output:
+                    try:
+                        codegen_client_from_url(
+                            router_spec_url,
+                            router_output,
+                            language="ts",
+                            class_name="ApiClient",
+                        )
+                    except Exception:
+                        logger.exception("[WEB] router client generation failed")
+                        if not logger.isEnabledFor(20):
+                            traceback.print_exc()
                 last_state = current
             if actions_schema_url and actions_output and not actions_watch_paths:
                 now = time.monotonic()
@@ -445,6 +487,33 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_etag,
                     )
                     last_actions_state = current_actions_state
+                    if router_spec_url and router_output:
+                        try:
+                            codegen_client_from_url(
+                                router_spec_url,
+                                router_output,
+                                language="ts",
+                                class_name="ApiClient",
+                            )
+                        except Exception:
+                            logger.exception("[WEB] router client generation failed")
+                            if not logger.isEnabledFor(20):
+                                traceback.print_exc()
+            if router_spec_url and router_output and not actions_watch_paths:
+                now = time.monotonic()
+                if now - last_router_poll >= router_poll_interval:
+                    try:
+                        codegen_client_from_url(
+                            router_spec_url,
+                            router_output,
+                            language="ts",
+                            class_name="ApiClient",
+                        )
+                    except Exception:
+                        logger.exception("[WEB] router client generation failed")
+                        if not logger.isEnabledFor(20):
+                            traceback.print_exc()
+                    last_router_poll = now
     except KeyboardInterrupt:
         if vite_process is not None:
             vite_process.terminate()
