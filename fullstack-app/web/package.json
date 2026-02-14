@@ -11,7 +11,8 @@
   "dependencies": {
     "react": "latest",
     "react-dom": "latest",
-    "react-router-dom": "latest"
+    "react-router-dom": "latest",
+    "zustand": "latest"
   },
   "devDependencies": {
     "@types/react": "latest",

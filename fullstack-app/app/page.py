@@ -7,6 +7,7 @@ from nestipy.web import (
     use_callback,
     use_context,
     external,
+    external_fn,
     new_,
 )
 from app.layout import ThemeContext
@@ -14,11 +15,14 @@ from app.layout import ThemeContext
 Link = external("react-router-dom", "Link")
 create_actions = external("../actions.client", "createActions", alias="createActions")
 ApiClient = external("../api/client", "ApiClient")
+use_app_store = external_fn("../store", "useAppStore", alias="useAppStore")
 
 
 @component
 def Page():
     theme = use_context(ThemeContext)
+    shared_count = use_app_store(lambda state: state.sharedCount)
+    inc_shared = use_app_store(lambda state: state.incShared)
     message, set_message = use_state("Loading...")
     ping, set_ping = use_state("Loading...")
 
@@ -83,6 +87,7 @@ def Page():
     stats = []
     for item in [
         {"label": "Theme", "value": theme_name},
+        {"label": "Shared", "value": f"#{shared_count}"},
         {"label": "Action", "value": "Live" if message != "Loading..." else "Booting"},
         {"label": "API", "value": "Ready" if ping != "Loading..." else "Syncing"},
     ]:
@@ -116,7 +121,7 @@ def Page():
         h.div(
             h.a(
                 h.img(src="/nestipy.png", alt="Nestipy logo", class_name="logo nestipy"),
-                href="https://github.com/nestipy/nestipy",
+                href="https://nestipy.vercel.app",
                 target="_blank",
                 rel="noreferrer",
                 class_name="logo-link",
@@ -147,6 +152,7 @@ def Page():
             h.div(
                 h.button("Reload Action", on_click=reload_action, class_name="btn btn-primary"),
                 h.button("Reload API", on_click=reload_ping, class_name="btn"),
+                h.button("Inc Shared", on_click=inc_shared, class_name="btn btn-outline"),
                 class_name="home-actions",
             ),
             class_name="card status-card",

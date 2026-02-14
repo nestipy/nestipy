@@ -5,14 +5,20 @@ from nestipy.web import (
     use_memo,
     use_callback,
     use_context,
+    external_fn,
 )
 from app.layout import ThemeContext
+
+use_app_store = external_fn("../../store", "useAppStore", alias="useAppStore")
 
 
 @component
 def Page():
     theme = use_context(ThemeContext)
     count, set_count = use_state(0)
+    shared_count = use_app_store(lambda state: state.sharedCount)
+    inc_shared = use_app_store(lambda state: state.incShared)
+    dec_shared = use_app_store(lambda state: state.decShared)
 
     def increment():
         set_count(count + 1)
@@ -60,6 +66,19 @@ def Page():
                 class_name="home-actions",
             ),
             h.p(title, class_name="card-subtitle"),
+            class_name="card counter-card",
+        ),
+        h.div(
+            h.div(
+                h.span("Shared count", class_name="stat-label"),
+                h.span(shared_count, class_name="counter-display"),
+                class_name="counter-stack",
+            ),
+            h.div(
+                h.button("-1", on_click=dec_shared, class_name="btn"),
+                h.button("+1", on_click=inc_shared, class_name="btn btn-outline"),
+                class_name="home-actions",
+            ),
             class_name="card counter-card",
         ),
         h.div(

@@ -1,18 +1,16 @@
-from nestipy.web import component, h, Slot, use_state, use_callback, create_context, external
+from nestipy.web import component, h, Slot, create_context, external, external_fn
 
 Link = external("react-router-dom", "Link")
+use_app_store = external_fn("../store", "useAppStore", alias="useAppStore")
 
 ThemeContext = create_context({"theme": "light", "toggle": None})
 
 
 @component
 def Layout():
-    theme, set_theme = use_state("light")
-
-    def toggle_theme():
-        set_theme("dark" if theme == "light" else "light")
-
-    toggle_handler = use_callback(toggle_theme, deps=[theme])
+    theme = use_app_store(lambda state: state.theme)
+    toggle_handler = use_app_store(lambda state: state.toggleTheme)
+    shared_count = use_app_store(lambda state: state.sharedCount)
 
     nav_links = []
     for item in [
@@ -60,6 +58,10 @@ def Layout():
                         toggle_label,
                         on_click=toggle_handler,
                         class_name="btn btn-ghost",
+                    ),
+                    h.span(
+                        f"Shared {shared_count}",
+                        class_name="shared-pill",
                     ),
                     h.span(
                         theme_label,

@@ -36,6 +36,16 @@ web/                 # Vite project (generated/managed)
   src/api/client.ts      # Typed HTTP client (RouterSpec, generated)
 ```
 
+## Module Map (Compiler)
+
+- `compiler/compile.py`: Orchestrates the full compile (`compile_app`), delegates to routes + components + assets.
+- `compiler/compile_routes.py`: Route discovery, nested layouts, notfound/error routing, writes `routes.tsx` + `main.tsx`.
+- `compiler/compile_components.py`: Parses and emits component/page TSX, resolves imports, validates props.
+- `compiler/compile_render.py`: JSX rendering helpers used by component/page generation.
+- `compiler/compile_assets.py`: Ensures Vite/Tailwind scaffold and action runtime client exist.
+- `compiler/parser.py`: Parser orchestrator (LibCST → component AST).
+- `compiler/parser_*`: Specialized parser helpers (imports, props, hooks, control flow, expressions).
+
 ## Compiler Pipeline (Core)
 
 - `compile_app()`

@@ -168,6 +168,16 @@ a {
   letter-spacing: 0.12em;
 }
 
+.shared-pill {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(193, 14, 14, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(193, 14, 14, 0.3);
+  font-weight: 600;
+}
+
 .container {
   width: min(1100px, calc(100% - 2.5rem));
   margin: 0 auto;
