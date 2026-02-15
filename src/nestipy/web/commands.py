@@ -187,16 +187,6 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         logger.exception("[WEB] compile failed")
         if not logger.isEnabledFor(20):
             traceback.print_exc()
-    if parsed.get("ssr") and parsed.get("vite"):
-        ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
-        ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
-        try:
-            _build_vite(config, ssr=True, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir)
-        except Exception:
-            logger.exception("[WEB] SSR build failed")
-            if not logger.isEnabledFor(20):
-                traceback.print_exc()
-        return
     if modules is not None:
         actions_output = parsed.get("actions_output")
         if not actions_output:
@@ -435,6 +425,17 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             traceback.print_exc()
     if router_spec_url and router_output:
         router_hash = _maybe_codegen_router_spec(router_spec_url, router_output, router_hash)
+    elif modules is not None:
+        client_language = str(parsed.get("lang", "ts"))
+        class_name = str(parsed.get("class_name", "ApiClient"))
+        prefix = str(parsed.get("prefix", ""))
+        codegen_client(
+            modules,
+            str(router_output),
+            language=client_language,
+            class_name=class_name,
+            prefix=prefix,
+        )
     _maybe_codegen_client(parsed, config)
     _maybe_codegen_actions(parsed, config, modules)
     if actions_schema_url and actions_output:
@@ -501,6 +502,17 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                     router_hash = _maybe_codegen_router_spec(
                         router_spec_url, router_output, router_hash
                     )
+                elif modules is not None:
+                    client_language = str(parsed.get("lang", "ts"))
+                    class_name = str(parsed.get("class_name", "ApiClient"))
+                    prefix = str(parsed.get("prefix", ""))
+                    codegen_client(
+                        modules,
+                        str(router_output),
+                        language=client_language,
+                        class_name=class_name,
+                        prefix=prefix,
+                    )
                 last_state = current
             if actions_schema_url and actions_output and actions_watch_paths:
                 current_actions_state = snapshot_actions(actions_watch_paths)
@@ -516,6 +528,17 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                     if router_spec_url and router_output:
                         router_hash = _maybe_codegen_router_spec(
                             router_spec_url, router_output, router_hash
+                        )
+                    elif modules is not None:
+                        client_language = str(parsed.get("lang", "ts"))
+                        class_name = str(parsed.get("class_name", "ApiClient"))
+                        prefix = str(parsed.get("prefix", ""))
+                        codegen_client(
+                            modules,
+                            str(router_output),
+                            language=client_language,
+                            class_name=class_name,
+                            prefix=prefix,
                         )
                     last_router_poll = time.monotonic()
             now = time.monotonic()

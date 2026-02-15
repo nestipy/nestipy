@@ -119,14 +119,18 @@ export class ApiClient {
   private _fetcher: FetchLike;
   private _headers: Record<string, string>;
   public readonly App: AppApi;
+  public readonly AppController: AppApi;
   public readonly Actions: ActionsApi;
+  public readonly ActionsController: ActionsApi;
 
   constructor(options: ClientOptions) {
     this._baseUrl = options.baseUrl.replace(/\/+$/, "");
     this._fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     this._headers = options.headers ?? {};
     this.App = new AppApi(this._request.bind(this));
+    this.AppController = this.App;
     this.Actions = new ActionsApi(this._request.bind(this));
+    this.ActionsController = this.Actions;
   }
 
   private _joinUrl(path: string): string {

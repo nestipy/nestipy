@@ -31,7 +31,7 @@ def Page():
     api = create_api_client()
 
     def load_ping():
-        api.App.ping().then(lambda value: set_status(f"API ping: {value}"))
+        api.AppController.ping().then(lambda value: set_status(f"API ping: {value}"))
 
     use_effect(load_ping, deps=[])
 

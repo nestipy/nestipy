@@ -91,6 +91,15 @@ def _controller_group_name(controller: str) -> str:
     return name or "App"
 
 
+def _controller_alias_name(controller: str) -> str | None:
+    if controller.endswith("Controller"):
+        base = controller[: -len("Controller")]
+        alias = _pascal_case(base)
+        if alias and alias != _pascal_case(controller):
+            return alias
+    return None
+
+
 def _unique_group_name(base: str, used: set[str]) -> str:
     if base not in used:
         used.add(base)
@@ -165,6 +174,20 @@ def generate_typescript_client_code(
             used_group_classes.add(class_base)
         group_props[ctrl] = prop_name
         group_names[ctrl] = class_base
+
+    aliases: list[tuple[str, str, str]] = []
+    for ctrl in controller_order:
+        alias = _controller_alias_name(ctrl)
+        if not alias:
+            continue
+        if alias in used_group_props:
+            continue
+        if alias == group_props[ctrl]:
+            continue
+        if alias in {"constructor"}:
+            continue
+        used_group_props.add(alias)
+        aliases.append((alias, group_props[ctrl], group_names[ctrl]))
 
     grouped_routes: dict[str, list[RouteSpec]] = {}
     for route in router_spec.routes:
@@ -295,6 +318,8 @@ def generate_typescript_client_code(
         if prop_name in {"constructor"}:
             prop_name += "_"
         lines.append(f"  public readonly {prop_name}: {group_names[ctrl]};")
+    for alias, _origin, class_name_ref in aliases:
+        lines.append(f"  public readonly {alias}: {class_name_ref};")
     lines.extend(
         [
             "",
@@ -309,6 +334,8 @@ def generate_typescript_client_code(
         if prop_name in {"constructor"}:
             prop_name += "_"
         lines.append(f"    this.{prop_name} = new {group_names[ctrl]}(this._request.bind(this));")
+    for alias, origin, _class_name_ref in aliases:
+        lines.append(f"    this.{alias} = this.{origin};")
     lines.extend(
         [
             "  }",

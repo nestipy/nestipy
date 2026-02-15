@@ -73,6 +73,15 @@ def _controller_group_name(controller: str) -> str:
     return name or "App"
 
 
+def _controller_alias_name(controller: str) -> str | None:
+    if controller.endswith("Controller"):
+        base = controller[: -len("Controller")]
+        alias = _pascal_case(base)
+        if alias and alias != _pascal_case(controller):
+            return alias
+    return None
+
+
 def _unique_group_name(base: str, used: set[str]) -> str:
     if base not in used:
         used.add(base)
@@ -205,6 +214,18 @@ def generate_client_code(
         group_props[ctrl] = prop_name
         group_classes[ctrl] = class_base
 
+    aliases: list[tuple[str, str]] = []
+    for ctrl in controller_order:
+        alias = _controller_alias_name(ctrl)
+        if not alias:
+            continue
+        if alias in used_props:
+            continue
+        if alias == group_props[ctrl]:
+            continue
+        used_props.add(alias)
+        aliases.append((alias, group_props[ctrl]))
+
     for ctrl in controller_order:
         ctrl_class = group_classes[ctrl]
         lines.extend(
@@ -332,6 +353,8 @@ def generate_client_code(
     for ctrl in controller_order:
         prop_name = group_props[ctrl]
         lines.append(f"        self.{prop_name} = {group_classes[ctrl]}(self)")
+    for alias, origin in aliases:
+        lines.append(f"        self.{alias} = self.{origin}")
     lines.extend(
         [
             "",

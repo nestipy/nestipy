@@ -30,7 +30,7 @@ export default function Page(): JSX.Element {
     actions.AppActions.hello({"name": "Nestipy"}).then(onAction);
   };
   const loadPing = () => {
-    api.App.ping().then(onPing);
+    api.AppController.ping().then(onPing);
   };
   const features = [];
   const stats = [];

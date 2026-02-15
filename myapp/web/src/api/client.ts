@@ -64,7 +64,7 @@ export class ActionsControllerApi {
     this._request = request;
   }
 
-  async csrf(options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}): Promise<unknown> {
+  async csrf(options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}): Promise<Record<string, unknown>> {
     let path = "/_actions/csrf";
     const queryParams = options?.query;
     const headerParams = options?.headers;
@@ -77,10 +77,10 @@ export class ActionsControllerApi {
         .join("; ");
       if (cookieHeader) mergedHeaders["Cookie"] = cookieHeader;
     }
-    return this._request<unknown>("GET", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
+    return this._request<Record<string, unknown>>("GET", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
   }
 
-  async handle(options?: { body?: ActionsControllerHandleBody , query: Record<string, unknown>; headers: Record<string, string>; cookies: Record<string, string>}): Promise<unknown> {
+  async handle(options?: { body?: ActionsControllerHandleBody , query: Record<string, unknown>; headers: Record<string, string>; cookies: Record<string, string>}): Promise<Record<string, unknown>> {
     let path = "/_actions";
     const queryParams = options?.query;
     const headerParams = options?.headers;
@@ -93,10 +93,10 @@ export class ActionsControllerApi {
         .join("; ");
       if (cookieHeader) mergedHeaders["Cookie"] = cookieHeader;
     }
-    return this._request<unknown>("POST", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
+    return this._request<Record<string, unknown>>("POST", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
   }
 
-  async schema(options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}): Promise<unknown> {
+  async schema(options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}): Promise<Record<string, unknown>> {
     let path = "/_actions/schema";
     const queryParams = options?.query;
     const headerParams = options?.headers;
@@ -109,7 +109,7 @@ export class ActionsControllerApi {
         .join("; ");
       if (cookieHeader) mergedHeaders["Cookie"] = cookieHeader;
     }
-    return this._request<unknown>("GET", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
+    return this._request<Record<string, unknown>>("GET", path, { query: queryParams, json: jsonBody, headers: mergedHeaders });
   }
 
 }
@@ -120,6 +120,8 @@ export class ApiClient {
   private _headers: Record<string, string>;
   public readonly AppController: AppControllerApi;
   public readonly ActionsController: ActionsControllerApi;
+  public readonly App: AppControllerApi;
+  public readonly Actions: ActionsControllerApi;
 
   constructor(options: ClientOptions) {
     this._baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -127,6 +129,8 @@ export class ApiClient {
     this._headers = options.headers ?? {};
     this.AppController = new AppControllerApi(this._request.bind(this));
     this.ActionsController = new ActionsControllerApi(this._request.bind(this));
+    this.App = this.AppController;
+    this.Actions = this.ActionsController;
   }
 
   private _joinUrl(path: string): string {

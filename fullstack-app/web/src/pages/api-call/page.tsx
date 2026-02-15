@@ -15,7 +15,7 @@ export default function Page(): JSX.Element {
   const incShared = use_app_store((state) => state.incShared);
   const api = createApiClient();
   const loadPing = () => {
-    api.App.ping().then((value) => setStatus(`API ping: ${value}`));
+    api.AppController.ping().then((value) => setStatus(`API ping: ${value}`));
   };
   React.useEffect(loadPing, []);
   return (

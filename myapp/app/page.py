@@ -46,7 +46,7 @@ def Page():
         actions.AppActions.hello({"name": "Nestipy"}).then(on_action)
 
     def load_ping():
-        api.App.ping().then(on_ping)
+        api.AppController.ping().then(on_ping)
 
     reload_action = use_callback(load_action, deps=[])
     reload_ping = use_callback(load_ping, deps=[])
