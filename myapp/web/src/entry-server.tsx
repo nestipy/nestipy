@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderToString } from 'react-dom/server';
+import { renderToString } from 'react-dom/server.browser';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { routes } from './routes';
 

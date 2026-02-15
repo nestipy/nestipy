@@ -34,6 +34,8 @@ class JSRUNRenderer(SSRRenderer):
 
         self._module_name = module_name
         self._exports: Optional[Dict[str, Any]] = None
+        self._shim_loaded = False
+        self._shim_module: Optional[str] = None
         self._runtime = getattr(jsrun, "Runtime", None)
         if self._runtime is None:
             raise ImportError("jsrun.Runtime not found. Please update jsrun.")
@@ -41,12 +43,42 @@ class JSRUNRenderer(SSRRenderer):
         code = entry_file.read_text(encoding="utf-8")
         if hasattr(self._runtime, "add_static_module"):
             self._runtime.add_static_module(self._module_name, code)
+            shim_code = "\n".join(
+                [
+                    "if (typeof globalThis.process === 'undefined') {",
+                    "  globalThis.process = { env: { NODE_ENV: 'production' } };",
+                    "} else {",
+                    "  globalThis.process.env = globalThis.process.env || {};",
+                    "  if (!('NODE_ENV' in globalThis.process.env)) {",
+                    "    globalThis.process.env.NODE_ENV = 'production';",
+                    "  }",
+                    "}",
+                    "if (typeof globalThis.global === 'undefined') {",
+                    "  globalThis.global = globalThis;",
+                    "}",
+                ]
+            )
+            self._shim_module = "nestipy-ssr-shim"
+            self._runtime.add_static_module(self._shim_module, shim_code)
         else:
             raise ImportError("jsrun.Runtime.add_static_module not available.")
+
+    async def _ensure_shim(self) -> None:
+        if self._shim_loaded or not self._shim_module:
+            return
+        runtime = self._runtime
+        if hasattr(runtime, "eval_module_async"):
+            await runtime.eval_module_async(self._shim_module)
+        elif hasattr(runtime, "eval_module"):
+            runtime.eval_module(self._shim_module)
+        else:
+            raise ImportError("jsrun.Runtime.eval_module_async not available.")
+        self._shim_loaded = True
 
     async def _ensure_exports(self) -> Dict[str, Any]:
         if self._exports is not None:
             return self._exports
+        await self._ensure_shim()
         runtime = self._runtime
         if hasattr(runtime, "eval_module_async"):
             exports = await runtime.eval_module_async(self._module_name)

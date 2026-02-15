@@ -69,8 +69,6 @@ def _pascal_case(value: str) -> str:
 
 def _controller_group_name(controller: str) -> str:
     base = controller or "App"
-    if base.endswith("Controller"):
-        base = base[: -len("Controller")]
     name = _pascal_case(base)
     return name or "App"
 

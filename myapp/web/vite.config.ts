@@ -7,6 +7,9 @@ const backend = process.env.NESTIPY_WEB_PROXY ?? 'http://127.0.0.1:8000';
 
 export default defineConfig({
   plugins: [react(), tailwind()],
+  ssr: {
+    noExternal: true,
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

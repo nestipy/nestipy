@@ -4,8 +4,23 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 
 from nestipy.web.config import WebConfig
+
+
+def _dedupe_api_client_stub(content: str) -> str:
+    """Remove duplicate createApiClient stubs from placeholder files."""
+    pattern = (
+        r"export function createApiClient\\(.*?\\)\\s*:\\s*ApiClient\\s*\\{[\\s\\S]*?"
+        r"export const create_api_client\\s*=\\s*createApiClient;\\s*"
+    )
+    match = re.search(pattern, content)
+    if not match:
+        return content
+    start, end = match.span()
+    tail = re.sub(pattern, "", content[end:])
+    return content[:start] + match.group(0) + tail
 
 
 def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
@@ -134,6 +149,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "",
                     "export default defineConfig({",
                     "  plugins: [react(), tailwind()],",
+                    "  ssr: {",
+                    "    noExternal: true,",
+                    "  },",
                     *proxy_lines,
                     "});",
                     "",
@@ -146,7 +164,8 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             existing = vite_config.read_text(encoding="utf-8")
         except OSError:
             existing = ""
-        if "@tailwindcss/vite" not in existing and "plugins: [react()]" in existing:
+        updated_existing = existing
+        if "@tailwindcss/vite" not in updated_existing and "plugins: [react()]" in updated_existing:
             lines = existing.splitlines()
             new_lines: list[str] = []
             inserted = False
@@ -157,13 +176,28 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     inserted = True
             if not inserted and lines:
                 new_lines.insert(1, "import tailwind from '@tailwindcss/vite';")
-            updated = "\n".join(new_lines)
-            updated = updated.replace("plugins: [react()],", "plugins: [react(), tailwind()],")
-            if updated != existing:
-                vite_config.write_text(
-                    updated + ("\n" if not updated.endswith("\n") else ""),
-                    encoding="utf-8",
-                )
+            updated_existing = "\n".join(new_lines)
+            updated_existing = updated_existing.replace("plugins: [react()],", "plugins: [react(), tailwind()],")
+
+        if "ssr:" not in updated_existing:
+            lines = updated_existing.splitlines()
+            new_lines: list[str] = []
+            inserted = False
+            for line in lines:
+                new_lines.append(line)
+                if "plugins:" in line and not inserted:
+                    new_lines.append("  ssr: {")
+                    new_lines.append("    noExternal: true,")
+                    new_lines.append("  },")
+                    inserted = True
+            if inserted:
+                updated_existing = "\n".join(new_lines)
+
+        if updated_existing != existing:
+            vite_config.write_text(
+                updated_existing + ("\n" if not updated_existing.endswith("\n") else ""),
+                encoding="utf-8",
+            )
 
     tsconfig = out_dir / "tsconfig.json"
     if not tsconfig.exists():
@@ -379,6 +413,29 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             ),
             encoding="utf-8",
         )
+
+    api_client = src_dir / "api" / "client.ts"
+    if api_client.exists():
+        try:
+            content = api_client.read_text(encoding="utf-8")
+        except OSError:
+            content = ""
+        if "Generated placeholder" in content:
+            updated = _dedupe_api_client_stub(content)
+            if "createApiClient" not in updated:
+                stub = "\n".join(
+                    [
+                        "",
+                        "export function createApiClient(options: Partial<ClientOptions> = {}): ApiClient {",
+                        "  return new ApiClient({ baseUrl: \"\", ...options });",
+                        "}",
+                        "export const create_api_client = createApiClient;",
+                        "",
+                    ]
+                )
+                updated = updated + stub
+            if updated != content:
+                api_client.write_text(updated, encoding="utf-8")
     else:
         existing = actions_client.read_text(encoding="utf-8")
         updated = existing

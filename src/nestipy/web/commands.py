@@ -762,6 +762,22 @@ def _summarize_build_lines(lines: list[str]) -> None:
             _web_log(text)
 
 
+def _log_build_failure(lines: list[str], tail: int = 200) -> None:
+    """Emit useful error context from build output."""
+    if not lines:
+        _web_log("Build failed with no output.")
+        return
+    lower_lines = [line for line in lines if "error" in line.lower() or "failed" in line.lower()]
+    if lower_lines:
+        _web_log("Build errors:")
+        for line in lower_lines[-tail:]:
+            _web_log(line)
+        return
+    _web_log("Build failed. Last output:")
+    for line in lines[-tail:]:
+        _web_log(line)
+
+
 def _build_vite(
     config: WebConfig,
     *,
@@ -785,18 +801,21 @@ def _build_vite(
         rc, lines = _run_command_capture(build_cmd(["--ssrManifest"]), str(out_dir))
         _summarize_build_lines(lines)
         if rc != 0:
+            _log_build_failure(lines)
             raise RuntimeError("Vite build failed.")
         rc, lines = _run_command_capture(
             build_cmd(["--ssr", ssr_entry, "--outDir", ssr_out_dir]), str(out_dir)
         )
         _summarize_build_lines(lines)
         if rc != 0:
+            _log_build_failure(lines)
             raise RuntimeError("Vite SSR build failed.")
         return
 
     rc, lines = _run_command_capture(build_cmd([]), str(out_dir))
     _summarize_build_lines(lines)
     if rc != 0:
+        _log_build_failure(lines)
         raise RuntimeError("Vite build failed.")
 
 

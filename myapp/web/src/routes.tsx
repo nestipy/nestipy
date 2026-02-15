@@ -21,9 +21,9 @@ export const routes = [
     children: [
       { index: true, element: <Page1 /> }
     ],
-  },,
+  },
       { path: '*', element: <NotFound /> }
     ],
-  },
+  }
 ];
 export const router = createBrowserRouter(routes);

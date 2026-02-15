@@ -208,10 +208,10 @@ def build_routes(
             entry_lines.append(f"    errorElement: {error_element},")
         entry_lines.extend(
             [
-            "    children: [",
-            ",\n".join(children_lines),
-            "    ],",
-            "  },",
+                "    children: [",
+                ",\n".join(children_lines),
+                "    ],",
+                "  }",
             ]
         )
         entries.append("\n".join(entry_lines))
@@ -259,7 +259,7 @@ def build_routes(
                             "  {",
                             f"    path: '{path}',",
                             f"    element: {element},",
-                            "  },",
+                            "  }",
                         ]
                     )
                 )
@@ -309,7 +309,7 @@ def build_routes(
     entry_server_tsx = "\n".join(
         [
             "import React from 'react';",
-            "import { renderToString } from 'react-dom/server';",
+            "import { renderToString } from 'react-dom/server.browser';",
             "import { RouterProvider, createMemoryRouter } from 'react-router-dom';",
             "import { routes } from './routes';",
             "",

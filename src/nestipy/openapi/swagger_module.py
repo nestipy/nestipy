@@ -98,8 +98,9 @@ class SwaggerModule:
                 return response
 
             http_adapter = app.get_adapter()
-            http_adapter.get("/openapi.json", openapi_json_handler, {})
-            http_adapter.get("/openapi.yml", openapi_yml_handler, {})
-            http_adapter.get(api_path, openapi_swagger_handler, {})
+            raw_meta = {"raw": True}
+            http_adapter.get("/openapi.json", openapi_json_handler, raw_meta)
+            http_adapter.get("/openapi.yml", openapi_yml_handler, raw_meta)
+            http_adapter.get(api_path, openapi_swagger_handler, raw_meta)
 
         Reflect.set_metadata(app, OPENAPI_HANDLER_METADATA, register_open_api)

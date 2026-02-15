@@ -16,7 +16,7 @@ export type RequestOptions = {
 
 export type RequestFn = <T>(method: string, path: string, options?: RequestOptions) => Promise<T>;
 
-export class AppApi {
+export class AppControllerApi {
   private _request: RequestFn;
 
   constructor(request: RequestFn) {
@@ -57,7 +57,7 @@ export class AppApi {
 
 }
 
-export class ActionsApi {
+export class ActionsControllerApi {
   private _request: RequestFn;
 
   constructor(request: RequestFn) {
@@ -118,15 +118,15 @@ export class ApiClient {
   private _baseUrl: string;
   private _fetcher: FetchLike;
   private _headers: Record<string, string>;
-  public readonly App: AppApi;
-  public readonly Actions: ActionsApi;
+  public readonly AppController: AppControllerApi;
+  public readonly ActionsController: ActionsControllerApi;
 
   constructor(options: ClientOptions) {
     this._baseUrl = options.baseUrl.replace(/\/+$/, "");
     this._fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     this._headers = options.headers ?? {};
-    this.App = new AppApi(this._request.bind(this));
-    this.Actions = new ActionsApi(this._request.bind(this));
+    this.AppController = new AppControllerApi(this._request.bind(this));
+    this.ActionsController = new ActionsControllerApi(this._request.bind(this));
   }
 
   private _joinUrl(path: string): string {

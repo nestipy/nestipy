@@ -31,6 +31,7 @@ from nestipy.common.logger import logger, console
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.common.utils import uniq_list
+from nestipy.common.http_ import Request, Response
 from nestipy.core.providers.background import BackgroundTasks
 from nestipy.core.providers.discover import DiscoverService
 from nestipy.core.template import MinimalJinjaTemplateEngine
@@ -241,6 +242,7 @@ class NestipyApplication:
         self._granian_log_access = config.granian_log_access
         self._granian_log_access_format = config.granian_log_access_format
         self._log_bootstrap = config.log_bootstrap
+        self._web_static_try: Optional[Callable[["Request", "Response", bool], typing.Awaitable[bool]]] = None
         env_router_spec = os.getenv("NESTIPY_ROUTER_SPEC", "").lower() in {
             "1",
             "true",
@@ -614,8 +616,9 @@ class NestipyApplication:
         )
         if not static_route.startswith("/"):
             static_route = "/" + static_route
-        self._http_adapter.get(static_route, devtools_static_handler, {})
-        self._http_adapter.head(static_route, devtools_static_handler, {})
+        raw_meta = {"raw": True}
+        self._http_adapter.get(static_route, devtools_static_handler, raw_meta)
+        self._http_adapter.head(static_route, devtools_static_handler, raw_meta)
 
         async def devtools_static_fallback(req: "Request", res: "Response", _next_fn):
             path = req.path or ""
@@ -647,8 +650,8 @@ class NestipyApplication:
         fallback_route = self._http_adapter.create_wichard("_devtools", name="path")
         if not fallback_route.startswith("/"):
             fallback_route = "/" + fallback_route
-        self._http_adapter.get(fallback_route, devtools_static_fallback, {})
-        self._http_adapter.head(fallback_route, devtools_static_fallback, {})
+        self._http_adapter.get(fallback_route, devtools_static_fallback, raw_meta)
+        self._http_adapter.head(fallback_route, devtools_static_fallback, raw_meta)
 
     def _register_web_static(self) -> None:
         dist_dir = os.getenv("NESTIPY_WEB_DIST") or ""
@@ -887,15 +890,15 @@ class NestipyApplication:
                 template = template.replace("</head>", f"{tags}\n</head>")
             return template
 
-        async def web_static_handler(req: "Request", res: "Response", _next_fn):
+        async def _try_web_static(req: "Request", res: "Response", allow_fallback: bool) -> bool:
             rel_path = _resolve_rel_path(req.path)
             if rel_path is None:
-                return await res.status(404).send("Not found")
+                return False
             if ssr_renderer is not None and _accepts_html(req):
                 try:
                     query = req.scope.get("query_string") or b""
                     qs = query.decode() if isinstance(query, (bytes, bytearray)) else str(query)
-                    route_path = req.path
+                    route_path = req.path or "/"
                     if static_path != "/" and route_path.startswith(static_path):
                         route_path = route_path[len(static_path):] or "/"
                     if not _should_ssr(route_path):
@@ -906,7 +909,8 @@ class NestipyApplication:
                         if cached:
                             ts, payload = cached
                             if ssr_cache_ttl <= 0 or (time.time() - ts) <= ssr_cache_ttl:
-                                return await res.header("Content-Type", "text/html").send(payload)
+                                await res.header("Content-Type", "text/html").send(payload)
+                                return True
                             ssr_cache.pop(url, None)
                     rendered = await typing.cast(Any, ssr_renderer).render(url)
                     if rendered:
@@ -919,8 +923,10 @@ class NestipyApplication:
                             res.header("Content-Type", "text/html")
                             async def _stream():
                                 yield payload
-                            return await res.stream(_stream)
-                        return await res.header("Content-Type", "text/html").send(payload)
+                            await res.stream(_stream)
+                            return True
+                        await res.header("Content-Type", "text/html").send(payload)
+                        return True
                 except SSRRenderError as exc:
                     message = str(exc)
                     if "disabled for route" not in message.lower():
@@ -929,37 +935,45 @@ class NestipyApplication:
                     logger.exception("[WEB] SSR render crashed")
             file_path = os.path.realpath(os.path.join(static_dir, rel_path))
             if not file_path.startswith(static_dir):
-                return await res.status(404).send("Not found")
+                return False
             if os.path.isdir(file_path):
                 file_path = os.path.join(file_path, index_name)
             if not os.path.isfile(file_path):
-                if fallback_enabled and _accepts_html(req):
+                if allow_fallback and fallback_enabled and _accepts_html(req):
                     file_path = os.path.join(static_dir, index_name)
                 if not os.path.isfile(file_path):
-                    return await res.status(404).send("Not found")
+                    return False
             mime_type, _ = mimetypes.guess_type(file_path)
             mime_type = mime_type or "application/octet-stream"
             async with aiofiles.open(file_path, "rb") as f:
                 payload = await f.read()
             res.header("Content-Type", mime_type)
             await res._write(payload)
-            return res
+            return True
 
+        async def web_static_handler(req: "Request", res: "Response", _next_fn):
+            handled = await _try_web_static(req, res, allow_fallback=True)
+            if handled:
+                return res
+            return await res.status(404).send("Not found")
+
+        self._web_static_try = _try_web_static
+        raw_meta = {"raw": True}
         logger.info("[WEB] Serving static from %s at %s", static_dir, static_path)
         if static_path == "/":
-            self._http_adapter.get("/", web_static_handler, {})
-            self._http_adapter.head("/", web_static_handler, {})
+            self._http_adapter.get("/", web_static_handler, raw_meta)
+            self._http_adapter.head("/", web_static_handler, raw_meta)
             static_route = self._http_adapter.create_wichard("", name="path")
         else:
-            self._http_adapter.get(static_path, web_static_handler, {})
-            self._http_adapter.head(static_path, web_static_handler, {})
+            self._http_adapter.get(static_path, web_static_handler, raw_meta)
+            self._http_adapter.head(static_path, web_static_handler, raw_meta)
             static_route = self._http_adapter.create_wichard(
                 static_path.strip("/"), name="path"
             )
         if not static_route.startswith("/"):
             static_route = "/" + static_route
-        self._http_adapter.get(static_route, web_static_handler, {})
-        self._http_adapter.head(static_route, web_static_handler, {})
+        self._http_adapter.get(static_route, web_static_handler, raw_meta)
+        self._http_adapter.head(static_route, web_static_handler, raw_meta)
     def _register_devtools_graph(self) -> None:
         root_path = self._devtools_static_path
         if root_path.endswith("/static"):
@@ -1007,8 +1021,9 @@ class NestipyApplication:
             )
             return await res.header("Content-Type", "text/html; charset=utf-8").send(html)
 
-        self._http_adapter.get(graph_path, graph_html_handler, {})
-        self._http_adapter.get(graph_json_path, graph_json_handler, {})
+        raw_meta = {"raw": True}
+        self._http_adapter.get(graph_path, graph_html_handler, raw_meta)
+        self._http_adapter.get(graph_json_path, graph_json_handler, raw_meta)
 
     def _register_router_spec(self) -> None:
         if not self._router_spec_enabled:
@@ -1028,7 +1043,7 @@ class NestipyApplication:
             spec = self.get_router_spec()
             return await res.json(router_spec_to_dict(spec))
 
-        self._http_adapter.get(path, router_spec_handler, {})
+        self._http_adapter.get(path, router_spec_handler, {"raw": True})
 
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
@@ -1330,7 +1345,8 @@ class NestipyApplication:
                             return await self._router_proxy.render_not_found(
                                 req, res, _next_fn
                             )
-                        if not _accepts_html(req):
+                        is_index_request = path in {"/", static_path}
+                        if not _accepts_html(req) and not is_index_request:
                             return await self._router_proxy.render_not_found(
                                 req, res, _next_fn
                             )
@@ -1357,7 +1373,7 @@ class NestipyApplication:
                     self._http_adapter,
                     custom_callback=custom_not_found,
                 ),
-                {},
+                {"raw": True},
             )
 
             await self._http_adapter.start()
@@ -1430,7 +1446,7 @@ class NestipyApplication:
             await self.get_adapter()(scope, receive, send)
             return
 
-        if scope.get("type") != "http" or not self._http_log_enabled:
+        if scope.get("type") != "http":
             await self.get_adapter()(scope, receive, send)
             return
 
@@ -1453,8 +1469,12 @@ class NestipyApplication:
                 )
             await send(message)
 
+        send_fn = send_wrapper if self._http_log_enabled else send
+        if await self._maybe_handle_web_static(scope, receive, send_fn):
+            return
+
         try:
-            await self.get_adapter()(scope, receive, send_wrapper)
+            await self.get_adapter()(scope, receive, send_fn)
         except Exception:
             if status_code is None:
                 duration_ms = (time.perf_counter() - start) * 1000
@@ -1465,6 +1485,44 @@ class NestipyApplication:
                     duration_ms,
                 )
             raise
+
+    async def _send_response(self, res: "Response", send_fn: Callable):
+        headers = [
+            (k.encode(), v.encode())
+            for k, v in typing.cast(set[tuple[str, str]], res.headers())
+        ]
+        await send_fn(
+            {"type": "http.response.start", "status": res.status_code(), "headers": headers}
+        )
+        if res.is_stream():
+            async for chunk in typing.cast(Any, res.stream_content)():
+                payload = chunk.encode() if isinstance(chunk, str) else chunk
+                await send_fn({"type": "http.response.body", "body": payload, "more_body": True})
+            await send_fn({"type": "http.response.body", "body": b"", "more_body": False})
+            return
+        payload = res.content() or b""
+        await send_fn({"type": "http.response.body", "body": payload, "more_body": False})
+
+    async def _maybe_handle_web_static(self, scope: dict, receive: Callable, send_fn: Callable) -> bool:
+        if self._web_static_try is None:
+            return False
+        path = scope.get("path") or "/"
+        accept = ""
+        for key, value in scope.get("headers", []) or []:
+            if key.lower() == b"accept":
+                accept = value.decode()
+                break
+        wants_html = "text/html" in accept or "application/xhtml+xml" in accept
+        has_extension = "." in os.path.basename(path.rstrip("/"))
+        if not (wants_html or has_extension or path == "/"):
+            return False
+        req = Request(scope, receive, send_fn)
+        res = Response(template_engine=self._http_adapter.get_state(TemplateKey.MetaEngine))
+        handled = await self._web_static_try(req, res, allow_fallback=True)
+        if not handled:
+            return False
+        await self._send_response(res, send_fn)
+        return True
 
     def use(self, *middleware: Union[Type[NestipyMiddleware], Callable]):
         for m in middleware:
