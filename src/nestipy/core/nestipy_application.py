@@ -426,7 +426,7 @@ class NestipyApplication:
     # ------------------------------------------------------------------
     # Server
     # ------------------------------------------------------------------
-    def listen(self, target: Optional[str] = None, **options: Unpack[GranianOptions]):
+    def listen(self, target: Optional[str] = "main:app", **options: Unpack[GranianOptions]):
         """
         Run the app with Granian.
 

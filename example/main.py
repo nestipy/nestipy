@@ -97,4 +97,4 @@ async def startup():
 # app.generate_typescript_client("clients/api_client.ts", class_name="ApiClient")
 
 if __name__ == "__main__":
-    app.listen("main:app", address="0.0.0.0", port=8001, interface=Interfaces.ASGI, reload=True)
+    app.listen(address="0.0.0.0", port=8001, interface=Interfaces.ASGI, reload=True)

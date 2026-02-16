@@ -8,7 +8,6 @@ app = NestipyFactory.create(AppModule)
 
 if __name__ == "__main__":
     app.listen(
-        target="main:app",
         address="0.0.0.0",
         port=8001,
         interface=Interfaces.ASGI,
