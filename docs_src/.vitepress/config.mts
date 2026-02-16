@@ -11,15 +11,7 @@ export default withMermaid(defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     logo: '/images/nestipy.png',
     
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Overview', link: '/overview/first-step' },
-      { text: 'Fundamentals', link: '/fundamental/custom-provider' },
-      { text: 'Techniques', link: '/technique/configuration' },
-      { text: 'GraphQL', link: '/graphql/quick-start' },
-      { text: 'Websockets', link: '/websocket/gateway' },
-      { text: 'Microservices', link: '/microservice/overview' },
-    ],
+    nav: [],
 
     sidebar: [
       {
@@ -37,7 +29,6 @@ export default withMermaid(defineConfig({
           { text: 'Scopes + Pipes + Lifecycle', link: '/overview/scopes-pipes-lifecycle' },
           { text: 'Devtools Graph', link: '/overview/devtools' },
           { text: 'Typed Client', link: '/overview/typed-client' },
-          { text: 'Web (Vite)', link: '/overview/web' },
           { text: 'Custom decorators', link: '/overview/custom-decorator' },
         ]
       },
@@ -90,6 +81,22 @@ export default withMermaid(defineConfig({
           { text: 'NATS', link: '/microservice/nats' },
           { text: 'RabbitMQ', link: '/microservice/rabbitmq' },
           { text: 'GRPC', link: '/microservice/grpc' },
+        ]
+      },
+      {
+        text: 'Web',
+        items: [
+          { text: 'Overview', link: '/web/' },
+          { text: 'Getting Started', link: '/web/getting-started' },
+          { text: 'Routing + Layouts', link: '/web/routing-layouts' },
+          { text: 'Components + UI', link: '/web/components' },
+          { text: 'Actions (RPC)', link: '/web/actions' },
+          { text: 'Typed Clients', link: '/web/typed-clients' },
+          { text: 'CLI', link: '/web/cli' },
+          { text: 'Environment', link: '/web/environment' },
+          { text: 'Production', link: '/web/production' },
+          { text: 'SSR', link: '/web/ssr' },
+          { text: 'Troubleshooting', link: '/web/troubleshooting' },
         ]
       },
       { text: 'OpenAPI', link: '/openapi/start' },
