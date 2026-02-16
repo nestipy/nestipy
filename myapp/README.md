@@ -72,12 +72,3 @@ Then generate the typed client:
 nestipy run web:build --spec http://127.0.0.1:8000/_router/spec --lang ts --output web/src/api/client.ts
 ```
 
-
-
-Optional SSR (jsrun)
-
-```bash
-pip install "nestipy[web-ssr]"
-nestipy run web:build --vite --ssr
-nestipy start --web --ssr --ssr-runtime jsrun
-```

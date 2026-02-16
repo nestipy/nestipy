@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__ssr__ = True
+
 
 from typing import TYPE_CHECKING
 
@@ -46,22 +46,20 @@ def Page():
             class_name="page-header",
         ),
         h.div(
-            h.p(status, class_name="card-title"),
+            h.span("Latest response", class_name="simple-label"),
+            h.p(status, class_name="simple-status"),
             h.button("Reload API", on_click=load_ping, class_name="btn btn-primary"),
-            class_name="card api-card",
+            class_name="simple-panel",
         ),
         h.div(
-            h.div(
-                h.span("Shared count", class_name="stat-label"),
-                h.span(shared_count, class_name="stat-value"),
-                class_name="stat-card",
-            ),
+            h.span("Shared count", class_name="simple-label"),
+            h.span(shared_count, class_name="simple-value"),
             h.button("Inc Shared", on_click=inc_shared, class_name="btn btn-outline"),
-            class_name="stat-row",
+            class_name="simple-panel",
         ),
         h.p(
             f"Theme: {theme['theme']}",
-            class_name="card-subtitle",
+            class_name="simple-note",
         ),
-        class_name="page",
+        class_name="page page-centered",
     )

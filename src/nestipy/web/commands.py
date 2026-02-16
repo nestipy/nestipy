@@ -554,6 +554,18 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         if parsed.get("install"):
             _install_deps(config)
         vite_process = _start_vite(config)
+        if vite_process.stdout is not None:
+            def _stream_vite_logs() -> None:
+                for raw in iter(vite_process.stdout.readline, ""):
+                    line = raw.strip()
+                    if line:
+                        _web_log(line)
+                code = vite_process.wait()
+                if code != 0:
+                    _web_log(f"Vite dev server exited (code={code}).")
+            import threading
+
+            threading.Thread(target=_stream_vite_logs, daemon=True).start()
         if parsed.get("ssr"):
             _web_log("SSR build enabled for dev (will rebuild on changes).")
     if backend_cmd:
@@ -839,7 +851,14 @@ def _start_vite(config: WebConfig) -> subprocess.Popen[str]:
         cmd = ["yarn", "dev"]
     else:
         cmd = ["npm", "run", "dev"]
-    return subprocess.Popen(cmd, cwd=str(out_dir))
+    return subprocess.Popen(
+        cmd,
+        cwd=str(out_dir),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
 
 
 def _web_build_log_mode() -> str:

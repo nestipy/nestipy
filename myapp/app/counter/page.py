@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__ssr__ = True
+
 
 from typing import TYPE_CHECKING
 
@@ -62,39 +62,33 @@ def Page():
         ),
         h.div(
             h.div(
-                h.span("Local count", class_name="stat-label"),
+                h.span("Local count", class_name="simple-label"),
                 h.span(count, class_name="counter-display"),
                 parity,
-                class_name="counter-stack",
+                h.div(
+                    h.button("-1", on_click=dec, class_name="btn"),
+                    h.button("+1", on_click=inc, class_name="btn btn-primary"),
+                    class_name="home-actions",
+                ),
+                h.p(title, class_name="simple-note"),
+                class_name="simple-panel",
             ),
             h.div(
-                h.button("-1", on_click=dec, class_name="btn"),
-                h.button("+1", on_click=inc, class_name="btn btn-primary"),
-                class_name="home-actions",
-            ),
-            h.p(title, class_name="card-subtitle"),
-            class_name="card counter-card",
-        ),
-        h.div(
-            h.div(
-                h.span("Shared count", class_name="stat-label"),
+                h.span("Shared count", class_name="simple-label"),
                 h.span(shared_count, class_name="counter-display"),
-                class_name="counter-stack",
+                h.div(
+                    h.button("-1", on_click=dec_shared, class_name="btn"),
+                    h.button("+1", on_click=inc_shared, class_name="btn btn-outline"),
+                    class_name="home-actions",
+                ),
+                class_name="simple-panel",
             ),
-            h.div(
-                h.button("-1", on_click=dec_shared, class_name="btn"),
-                h.button("+1", on_click=inc_shared, class_name="btn btn-outline"),
-                class_name="home-actions",
-            ),
-            class_name="card counter-card",
+            class_name="simple-grid",
         ),
         h.div(
-            h.div(
-                h.span("Theme", class_name="stat-label"),
-                h.span(theme_name, class_name="stat-value"),
-                class_name="stat-card",
-            ),
-            class_name="stat-row",
+            h.span("Theme", class_name="simple-label"),
+            h.span(theme_name, class_name="simple-value"),
+            class_name="simple-row",
         ),
-        class_name="page",
+        class_name="page page-centered",
     )

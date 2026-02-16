@@ -15,15 +15,30 @@ def Error():
     message = js(
         "error?.message ?? 'Something went wrong while rendering this page.'"
     )
+    details = js("error?.stack ?? ''")
 
     return h.section(
         h.div(
-            h.span("Runtime error", class_name="pill pill-accent"),
-            h.span(status, class_name="error-code"),
-            h.h1(title, class_name="error-title"),
-            h.p(message, class_name="error-message"),
-            Link("Back home", to="/", class_name="btn btn-primary"),
-            class_name="error-card",
+            h.div(
+                h.span(status, class_name="error-minimal-code"),
+                h.div(class_name="error-minimal-divider"),
+                h.div(
+                    h.h1(title, class_name="error-minimal-title"),
+                    h.p(message, class_name="error-minimal-message"),
+                    class_name="error-minimal-text",
+                ),
+                class_name="error-minimal-row",
+            ),
+            h.div(
+                h.h2("Details", class_name="error-details-title"),
+                h.pre(details, class_name="error-details-body"),
+                class_name="error-details",
+            ),
+            h.div(
+                Link("Back to home", to="/", class_name="error-minimal-link"),
+                class_name="error-minimal-actions",
+            ),
+            class_name="error-minimal-content",
         ),
-        class_name="error-page",
+        class_name="error-minimal",
     )

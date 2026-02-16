@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__ssr__ = True
+
 
 from typing import TYPE_CHECKING
 
@@ -28,7 +28,6 @@ create_api_client = external_fn("../api/client", "createApiClient", alias="creat
 @component
 def Page():
     theme: "ThemeContextValue" = use_context(ThemeContext)
-    shared_count = use_app_store(lambda state: state.sharedCount)
     inc_shared = use_app_store(lambda state: state.incShared)
     message, set_message = use_state("Loading...")
     ping, set_ping = use_state("Loading...")
@@ -65,104 +64,112 @@ def Page():
     else:
         theme_name = "Light"
 
-    features = []
+    if theme["theme"] == "dark":
+        toggle_label = "Switch to light"
+    else:
+        toggle_label = "Switch to dark"
+
+    toggle_handler = theme["toggle"]
+    if toggle_handler:
+        toggle_button = h.button(
+            toggle_label,
+            on_click=toggle_handler,
+            class_name="ghost-btn",
+        )
+    else:
+        toggle_button = h.span(theme_name, class_name="theme-chip")
+
+    link_cards = []
     for item in [
         {
-            "title": "Python-first components",
-            "desc": "Compose UI in Python and compile to TSX for Vite.",
+            "title": "Docs",
+            "desc": "Find in-depth guides for the Nestipy stack.",
+            "href": "https://nestipy.vercel.app",
+            "external": True,
         },
         {
-            "title": "Typed actions + API",
-            "desc": "Generate clients for providers and HTTP routes automatically.",
+            "title": "Counter",
+            "desc": "Explore hooks and shared state updates.",
+            "href": "/counter",
         },
         {
-            "title": "Instant feedback loop",
-            "desc": "Hot reload + schema regen keeps the stack synchronized.",
+            "title": "API Playground",
+            "desc": "Call typed HTTP clients from Python UI.",
+            "href": "/api-call",
+        },
+        {
+            "title": "Actions",
+            "desc": "Trigger typed RPC actions instantly.",
+            "href": "/api-call",
         },
     ]:
-        features.append(
-            h.div(
-                h.h3(item["title"], class_name="feature-title"),
-                h.p(item["desc"], class_name="feature-desc"),
-                class_name="card feature-card",
-                key=item["title"],
-            )
+        card = h.div(
+            h.h3(f"{item['title']} →", class_name="link-title"),
+            h.p(item["desc"], class_name="link-desc"),
+            class_name="link-card",
         )
-   
-    stats = []
-    for item in [
-        {"label": "Theme", "value": theme_name},
-        {"label": "Shared", "value": f"#{shared_count}"},
-        {"label": "Action", "value": "Live" if message != "Loading..." else "Booting"},
-        {"label": "API", "value": "Ready" if ping != "Loading..." else "Syncing"},
-    ]:
-        stats.append(
-            h.div(
-                h.span(item["label"], class_name="stat-label"),
-                h.span(item["value"], class_name="stat-value"),
-                class_name="stat-card",
-                key=item["label"],
+        if "external" in item and item["external"]:
+            link_cards.append(
+                h.a(
+                    card,
+                    href=item["href"],
+                    target="_blank",
+                    rel="noreferrer",
+                    class_name="link-card-wrap",
+                    key=item["title"],
+                )
             )
-        )
+        else:
+            link_cards.append(
+                Link(
+                    card,
+                    to=item["href"],
+                    class_name="link-card-wrap",
+                    key=item["title"],
+                )
+            )
 
     return h.section(
         h.div(
+            h.span("Get started by editing app/page.py", class_name="start-pill"),
             h.div(
-                h.span("Fullstack starter", class_name="pill"),
-                h.span("Nestipy + React + Vite", class_name="pill pill-accent"),
-                class_name="pill-row",
+                toggle_button,
+                h.span("By", class_name="byline"),
+                h.span("Nestipy", class_name="byline byline-accent"),
+                class_name="top-right",
             ),
-            h.h1("Build modern web experiences in Python.", class_name="hero-title"),
-            h.p(
-                "Nestipy Web turns Python UI into React, ships typed actions and API clients, and keeps everything hot in Vite.",
-                class_name="hero-subtitle",
-            ),
-            h.div(
-                Link("View Counter", to="/counter", class_name="btn btn-primary"),
-                Link("API Playground", to="/api-call", class_name="btn btn-outline"),
-                class_name="hero-actions",
-            ),
-            class_name="hero-card",
-        ),
-        h.div(
-            h.a(
-                h.img(src="/nestipy.png", alt="Nestipy logo", class_name="logo nestipy"),
-                href="https://nestipy.vercel.app",
-                target="_blank",
-                rel="noreferrer",
-                class_name="logo-link",
-            ),
-            h.a(
-                h.img(src="/react.svg", alt="React logo", class_name="logo react"),
-                href="https://react.dev",
-                target="_blank",
-                rel="noreferrer",
-                class_name="logo-link",
-            ),
-            h.a(
-                h.img(src="/vite.svg", alt="Vite logo", class_name="logo vite"),
-                href="https://vitejs.dev",
-                target="_blank",
-                rel="noreferrer",
-                class_name="logo-link",
-            ),
-            class_name="logo-row",
+            class_name="top-row",
         ),
         h.div(
             h.div(
-                h.p(action_label, class_name="card-title"),
-                h.p(ping_status, class_name="card-subtitle"),
-                class_name="card-content",
+                h.h1("NESTIPY", class_name="hero-logo"),
+                h.p(
+                    "Full-stack Python framework with typed actions and React UI.",
+                    class_name="hero-sub",
+                ),
+                class_name="hero-center",
+            ),
+            class_name="hero-wrap",
+        ),
+        h.div(
+            h.div(
+                h.span("Action", class_name="status-label"),
+                h.span(action_label, class_name="status-value"),
+                class_name="status-item",
             ),
             h.div(
-                h.button("Reload Action", on_click=reload_action, class_name="btn btn-primary"),
-                h.button("Reload API", on_click=reload_ping, class_name="btn"),
-                h.button("Inc Shared", on_click=inc_shared, class_name="btn btn-outline"),
-                class_name="home-actions",
+                h.span("API", class_name="status-label"),
+                h.span(ping_status, class_name="status-value"),
+                class_name="status-item",
             ),
-            class_name="card status-card",
+            class_name="status-row",
         ),
-        h.div(stats, class_name="stat-grid"),
-        h.div(features, class_name="feature-grid"),
-        class_name="home",
+        h.div(
+            h.button("Reload Action", on_click=reload_action, class_name="ghost-btn"),
+            h.button("Reload API", on_click=reload_ping, class_name="ghost-btn"),
+            h.button("Inc Shared", on_click=inc_shared, class_name="ghost-btn"),
+            class_name="status-actions",
+        ),
+        h.div(link_cards, class_name="link-grid"),
+        class_name="home-next",
     )

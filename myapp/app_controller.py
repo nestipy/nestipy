@@ -11,7 +11,7 @@ from app_service import AppService
 class AppController:
     service: Annotated[AppService, Inject()]
 
-    @Get("/ping2")
+    @Get("/ping")
     async def ping(self) -> str:
         from_service = await self.service.get()
         return "pong - " + from_service

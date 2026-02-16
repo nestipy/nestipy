@@ -14,5 +14,5 @@ def Layout():
             class_name="panel-header",
         ),
         h.div(h(Slot), class_name="panel-body"),
-        class_name="panel",
+        class_name="panel panel-plain",
     )
