@@ -34,15 +34,12 @@ class JSRUNRenderer(SSRRenderer):
 
         self._module_name = module_name
         self._exports: Optional[Dict[str, Any]] = None
-        self._shim_loaded = False
-        self._shim_module: Optional[str] = None
         self._runtime = getattr(jsrun, "Runtime", None)
         if self._runtime is None:
             raise ImportError("jsrun.Runtime not found. Please update jsrun.")
         self._runtime = self._runtime()
-        code = entry_file.read_text(encoding="utf-8")
+        entry_code = entry_file.read_text(encoding="utf-8")
         if hasattr(self._runtime, "add_static_module"):
-            self._runtime.add_static_module(self._module_name, code)
             shim_code = "\n".join(
                 [
                     "if (typeof globalThis.process === 'undefined') {",
@@ -56,29 +53,47 @@ class JSRUNRenderer(SSRRenderer):
                     "if (typeof globalThis.global === 'undefined') {",
                     "  globalThis.global = globalThis;",
                     "}",
+                    "if (typeof globalThis.queueMicrotask === 'undefined') {",
+                    "  globalThis.queueMicrotask = (cb) => Promise.resolve().then(cb);",
+                    "}",
+                    "if (typeof globalThis.MessageChannel === 'undefined') {",
+                    "  class MessagePort {",
+                    "    constructor() { this.onmessage = null; this._other = null; }",
+                    "    postMessage(data) {",
+                    "      const handler = this._other && this._other.onmessage;",
+                    "      if (!handler) return;",
+                    "      const event = { data };",
+                    "      if (typeof globalThis.queueMicrotask === 'function') {",
+                    "        globalThis.queueMicrotask(() => handler(event));",
+                    "      } else if (typeof setTimeout === 'function') {",
+                    "        setTimeout(() => handler(event), 0);",
+                    "      } else {",
+                    "        handler(event);",
+                    "      }",
+                    "    }",
+                    "    start() {}",
+                    "    close() {}",
+                    "  }",
+                    "  class MessageChannel {",
+                    "    constructor() {",
+                    "      this.port1 = new MessagePort();",
+                    "      this.port2 = new MessagePort();",
+                    "      this.port1._other = this.port2;",
+                    "      this.port2._other = this.port1;",
+                    "    }",
+                    "  }",
+                    "  globalThis.MessageChannel = MessageChannel;",
+                    "}",
                 ]
             )
-            self._shim_module = "nestipy-ssr-shim"
-            self._runtime.add_static_module(self._shim_module, shim_code)
+            code = shim_code + "\n" + entry_code
+            self._runtime.add_static_module(self._module_name, code)
         else:
             raise ImportError("jsrun.Runtime.add_static_module not available.")
-
-    async def _ensure_shim(self) -> None:
-        if self._shim_loaded or not self._shim_module:
-            return
-        runtime = self._runtime
-        if hasattr(runtime, "eval_module_async"):
-            await runtime.eval_module_async(self._shim_module)
-        elif hasattr(runtime, "eval_module"):
-            runtime.eval_module(self._shim_module)
-        else:
-            raise ImportError("jsrun.Runtime.eval_module_async not available.")
-        self._shim_loaded = True
 
     async def _ensure_exports(self) -> Dict[str, Any]:
         if self._exports is not None:
             return self._exports
-        await self._ensure_shim()
         runtime = self._runtime
         if hasattr(runtime, "eval_module_async"):
             exports = await runtime.eval_module_async(self._module_name)

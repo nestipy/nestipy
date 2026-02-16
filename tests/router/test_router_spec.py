@@ -69,7 +69,7 @@ def test_generate_client_code_contains_methods():
     spec = build_router_spec([CatsModule])
     code = generate_client_code(spec, class_name="CatsClient")
     assert "class CatsClient" in code
-    assert "class CatsApi" in code
+    assert "class CatsControllerApi" in code
     assert "def get_cat" in code
     assert "def create_cat" in code
     assert 'path = "/cats/{id}"' in code
@@ -94,6 +94,6 @@ def test_generate_typescript_client_code():
     spec = build_router_spec([CatsModule])
     code = generate_typescript_client_code(spec, class_name="CatsClient")
     assert "class CatsClient" in code
-    assert "class CatsApi" in code
+    assert "class CatsControllerApi" in code
     assert "fetch" in code
     assert "any" not in code

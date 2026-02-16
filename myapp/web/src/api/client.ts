@@ -40,7 +40,7 @@ export class AppControllerApi {
   }
 
   async ping(options?: {query: Record<string, unknown>; headers: Record<string, string>; body: unknown; cookies: Record<string, string>}): Promise<string> {
-    let path = "/api/ping";
+    let path = "/api/ping2";
     const queryParams = options?.query;
     const headerParams = options?.headers;
     const jsonBody = options?.body;
