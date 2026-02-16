@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
 from nestipy.common.logger import logger
+
+
+if TYPE_CHECKING:
+    from nestipy.core.nestipy_application import NestipyApplication
 
 
 class AsgiHandler:
     """Central ASGI entrypoint helper with optional HTTP logging and web-static handling."""
 
-    def __init__(self, app: object) -> None:
+    def __init__(self, app: "NestipyApplication") -> None:
         self._app = app
 
     async def handle(self, scope: dict, receive: Callable, send: Callable) -> None:

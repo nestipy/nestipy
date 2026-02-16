@@ -4,12 +4,13 @@ from typing import Literal, Union
 
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.core.template import MinimalJinjaTemplateEngine
+from nestipy.core.adapter.http_adapter import HttpAdapter
 
 
 class ViewManager:
     """Manage static assets and template rendering configuration."""
 
-    def __init__(self, http_adapter: object) -> None:
+    def __init__(self, http_adapter: HttpAdapter) -> None:
         self._http_adapter = http_adapter
 
     def use_static_assets(self, assets_path: str, url: str = "/static", *args, **kwargs) -> None:

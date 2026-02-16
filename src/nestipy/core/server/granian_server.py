@@ -3,14 +3,17 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from nestipy.common.logger import DEFAULT_LOG_FORMAT, build_granian_log_dictconfig, logger
+
+if TYPE_CHECKING:
+    from nestipy.core.nestipy_application import NestipyApplication
 
 
 class GranianServerRunner:
     """Launch Granian with Nestipy-specific defaults and web flags."""
-    def __init__(self, app: object) -> None:
+    def __init__(self, app: "NestipyApplication") -> None:
         self._app = app
 
     def serve(self, target: Optional[str] = None, **options) -> None:

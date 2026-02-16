@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import mimetypes
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Type
 
 import aiofiles
 
@@ -11,6 +11,8 @@ from nestipy.common.logger import logger
 from nestipy.common.http_ import Request, Response
 from nestipy.ioc import NestipyContainer
 from nestipy.metadata import ModuleMetadata, Reflect
+from nestipy.router.spec import RouterSpec
+from nestipy.core.adapter.http_adapter import HttpAdapter
 
 
 def resolve_devtools_static_path(config_path: Optional[str]) -> str:
@@ -38,14 +40,14 @@ class DevtoolsRegistrar:
     def __init__(
         self,
         *,
-        http_adapter: Any,
+        http_adapter: HttpAdapter,
         devtools_static_path: str,
         devtools_graph_renderer: str,
         router_spec_enabled: bool,
         router_spec_path: str,
         router_spec_token: Optional[str],
-        get_router_spec: Callable[[], Any],
-        get_root_module: Callable[[], Any],
+        get_router_spec: Callable[[], RouterSpec],
+        get_root_module: Callable[[], Optional[Type]],
     ) -> None:
         self._http_adapter = http_adapter
         self._devtools_static_path = devtools_static_path

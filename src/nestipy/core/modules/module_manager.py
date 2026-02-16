@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Type, Union
+from typing import Callable, Type, Union, TYPE_CHECKING
 
 from nestipy.common.constant import (
     NESTIPY_SCOPE_ATTR,
@@ -22,10 +22,14 @@ from nestipy.core.meta.module_metadata_creator import ModuleMetadataCreator
 from nestipy.core.meta.provider_metadata_creator import ProviderMetadataCreator
 
 
+if TYPE_CHECKING:
+    from nestipy.core.nestipy_application import NestipyApplication
+
+
 class ModuleManager:
     """Handle root module registration and metadata initialization."""
 
-    def __init__(self, app: object) -> None:
+    def __init__(self, app: "NestipyApplication") -> None:
         self._app = app
 
     @staticmethod

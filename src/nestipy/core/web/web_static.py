@@ -16,25 +16,27 @@ from nestipy.common.logger import logger
 from nestipy.common.template import TemplateKey
 from nestipy.web.ssr import (
     SSRRenderError,
+    SSRRenderer,
     create_ssr_renderer,
     env_ssr_enabled,
     env_ssr_runtime,
     resolve_ssr_entry,
 )
+from nestipy.core.adapter.http_adapter import HttpAdapter
 
 
 class WebStaticHandler:
     """Serve built web assets (and optional SSR) before adapter routing."""
     def __init__(
         self,
-        http_adapter: Any,
+        http_adapter: HttpAdapter,
         *,
-        on_ssr_renderer: Optional[Callable[[Optional[object]], None]] = None,
+        on_ssr_renderer: Optional[Callable[[Optional[SSRRenderer]], None]] = None,
     ) -> None:
         self._http_adapter = http_adapter
         self._on_ssr_renderer = on_ssr_renderer
         self._try_handler: Optional[Callable[[Request, Response, bool], typing.Awaitable[bool]]] = None
-        self._ssr_renderer: Optional[object] = None
+        self._ssr_renderer: Optional[SSRRenderer] = None
 
     def register(self) -> None:
         """Register static/SSR handlers on the HTTP adapter."""
@@ -76,7 +78,7 @@ class WebStaticHandler:
             return
 
         ssr_enabled = env_ssr_enabled()
-        ssr_renderer: Optional[object] = None
+        ssr_renderer: Optional[SSRRenderer] = None
         ssr_cache_size = int(os.getenv("NESTIPY_WEB_SSR_CACHE", "0") or 0)
         ssr_cache_ttl = float(os.getenv("NESTIPY_WEB_SSR_CACHE_TTL", "0") or 0)
         ssr_cache: "collections.OrderedDict[str, tuple[float, str]]" = collections.OrderedDict()

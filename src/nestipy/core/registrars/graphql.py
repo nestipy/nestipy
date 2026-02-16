@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Type, Union
+from typing import Type
 
 from nestipy.graphql.graphql_proxy import GraphqlProxy
+from nestipy.graphql.graphql_adapter import GraphqlAdapter
+from nestipy.core.adapter.http_adapter import HttpAdapter
 
 
 class GraphqlRegistrar:
     """Apply GraphQL resolvers through the configured adapter."""
 
-    def __init__(self, http_adapter: Any, graphql_adapter: Any) -> None:
+    def __init__(self, http_adapter: HttpAdapter, graphql_adapter: GraphqlAdapter) -> None:
         self._http_adapter = http_adapter
         self._graphql_adapter = graphql_adapter
 
-    async def apply(self, graphql_module_instance: object, modules: list[Type]) -> None:
+    async def apply(self, graphql_module_instance: object, modules: list[Type | object]) -> None:
         await GraphqlProxy(self._http_adapter, self._graphql_adapter).apply_resolvers(
             graphql_module_instance,
             modules,

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from nestipy.core.nestipy_application import NestipyApplication
+    from nestipy.core.nestipy_application import NestipyConfig
 
 class ConfigManager:
     """Handle runtime configuration application and HTTP logging toggle."""
 
-    def __init__(self, app: object) -> None:
+    def __init__(self, app: "NestipyApplication") -> None:
         self._app = app
 
-    def process_config(self, config: object) -> None:
+    def process_config(self, config: "NestipyConfig") -> None:
         if getattr(config, "cors", None) is not None:
             self.enable_cors()
         debug = getattr(config, "debug", False)

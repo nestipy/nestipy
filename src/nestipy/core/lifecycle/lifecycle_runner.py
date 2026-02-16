@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from nestipy.common.logger import logger
 from nestipy.ioc import NestipyContainer
 
 
+if TYPE_CHECKING:
+    from nestipy.core.instance_loader import InstanceLoader
+    from nestipy.core.providers.background import BackgroundTasks
+
+
 class LifecycleRunner:
     """Handle application startup/shutdown hooks and resource cleanup."""
-    def __init__(self, background_tasks: Any, instance_loader: Any) -> None:
+    def __init__(self, background_tasks: "BackgroundTasks", instance_loader: "InstanceLoader") -> None:
         self._background_tasks = background_tasks
         self._instance_loader = instance_loader
 

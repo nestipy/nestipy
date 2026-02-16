@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nestipy.core.nestipy_application import NestipyApplication
 
 from nestipy.metadata import Reflect
 
@@ -8,7 +11,7 @@ from nestipy.metadata import Reflect
 class OpenApiRegistrar:
     """Register the lazy OpenAPI handler when configured."""
 
-    def __init__(self, owner: Any) -> None:
+    def __init__(self, owner: "NestipyApplication") -> None:
         self._owner = owner
 
     def register(self) -> None:

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import typing
-from typing import Type, Union
+from typing import Type, Union, TYPE_CHECKING
 
 from nestipy.ioc import ModuleProviderDict
+from nestipy.core.adapter.http_adapter import HttpAdapter
+from nestipy.core.modules import ModuleManager
 
 
 class GlobalEnhancerManager:
     """Manage global interceptors, filters, guards, and pipes."""
 
-    def __init__(self, http_adapter: object, modules: object) -> None:
+    def __init__(self, http_adapter: HttpAdapter, modules: ModuleManager) -> None:
         self._http_adapter = http_adapter
         self._modules = modules
 
