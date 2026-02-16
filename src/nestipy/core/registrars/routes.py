@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Type, Union
+from typing import Callable, Type
 
 from nestipy.core.router.router_proxy import RouterProxy
 from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
+from nestipy.core.types import JsonValue, ModuleRef
+from nestipy.common.cache import CachePolicy
 
 
 class RouteRegistrar:
@@ -21,11 +23,15 @@ class RouteRegistrar:
 
     def apply(
         self,
-        modules: list[Type | object],
+        modules: list[ModuleRef],
         *,
         build_openapi: bool,
         register_routes: bool,
-    ) -> tuple[dict[Any, PathItem], dict[str, Schema | Reference], list[dict[str, Any]]]:
+    ) -> tuple[
+        dict[str, PathItem],
+        dict[str, Schema | Reference],
+        list[dict[str, JsonValue | CachePolicy]],
+    ]:
         prefix = self._prefix_getter() or ""
         return self._router_proxy.apply_routes(
             modules,

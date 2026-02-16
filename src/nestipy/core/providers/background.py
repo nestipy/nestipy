@@ -16,6 +16,7 @@ else:
 from starlette.concurrency import run_in_threadpool
 
 P = ParamSpec("P")
+R = typing.TypeVar("R")
 
 
 class TaskStatus(str, Enum):
@@ -26,7 +27,7 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-def is_async_callable(obj: typing.Any) -> typing.Any:
+def is_async_callable(obj: typing.Callable[..., R | typing.Awaitable[R]]) -> bool:
     while isinstance(obj, functools.partial):
         obj = obj.func
     return asyncio.iscoroutinefunction(obj) or (
@@ -37,7 +38,7 @@ def is_async_callable(obj: typing.Any) -> typing.Any:
 class BackgroundTask:
     def __init__(
         self,
-        func: typing.Callable[P, typing.Any],
+        func: typing.Callable[P, R | typing.Awaitable[R]],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
@@ -74,7 +75,7 @@ class BackgroundTasks:
 
     def add_task(
         self,
-        func: typing.Callable[P, typing.Any],
+        func: typing.Callable[P, R | typing.Awaitable[R]],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> str:
@@ -107,7 +108,7 @@ class BackgroundTasks:
             self.worker_task.cancel()
         await self.queue.join()
 
-    def get_status(self, task_id: str) -> typing.Optional[dict[str, typing.Any]]:
+    def get_status(self, task_id: str) -> dict[str, str | TaskStatus | None]:
         task = self.tasks.get(task_id)
         if task:
             return {
@@ -121,7 +122,7 @@ class BackgroundTasks:
             "error": "Task not found",
         }
 
-    def all_tasks(self) -> list[dict[str, typing.Any]]:
+    def all_tasks(self) -> list[dict[str, str | TaskStatus | None]]:
         return [
             {
                 "id": task.task_id,

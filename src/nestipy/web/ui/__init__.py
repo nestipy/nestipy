@@ -211,7 +211,7 @@ class ExternalFunction:
         """Return the name to use in import statements."""
         return self.alias or self.name
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> object:
         """Disallow runtime execution (compile-time only)."""
         raise RuntimeError("external_fn is compile-time only and cannot run at runtime.")
 

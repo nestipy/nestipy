@@ -7,13 +7,14 @@ import os
 import sys
 import time
 import typing
-from typing import Any, Callable, Optional
+from typing import Callable, Optional, Awaitable
 
 import aiofiles
 
 from nestipy.common.http_ import Request, Response
 from nestipy.common.logger import logger
 from nestipy.common.template import TemplateKey
+from nestipy.core.types import JsonValue
 from nestipy.web.ssr import (
     SSRRenderError,
     SSRRenderer,
@@ -35,7 +36,7 @@ class WebStaticHandler:
     ) -> None:
         self._http_adapter = http_adapter
         self._on_ssr_renderer = on_ssr_renderer
-        self._try_handler: Optional[Callable[[Request, Response, bool], typing.Awaitable[bool]]] = None
+        self._try_handler: Optional[Callable[[Request, Response, bool], Awaitable[bool]]] = None
         self._ssr_renderer: Optional[SSRRenderer] = None
 
     def register(self) -> None:
@@ -89,7 +90,7 @@ class WebStaticHandler:
             "on",
         }
         ssr_manifest_path = os.getenv("NESTIPY_WEB_SSR_MANIFEST")
-        manifest_cache: dict[str, Any] | None = None
+        manifest_cache: dict[str, JsonValue] | None = None
         manifest_mtime: float | None = None
         manifest_tags_cache: str | None = None
         ssr_allow_routes: list[str] = []
@@ -141,7 +142,7 @@ class WebStaticHandler:
                 return index_name
             return rel
 
-        def _load_manifest() -> dict[str, Any] | None:
+        def _load_manifest() -> dict[str, JsonValue] | None:
             nonlocal manifest_cache, manifest_mtime, manifest_tags_cache
             candidates = [
                 ssr_manifest_path,
@@ -302,7 +303,7 @@ class WebStaticHandler:
                                 await res.header("Content-Type", "text/html").send(payload)
                                 return True
                             ssr_cache.pop(url, None)
-                    rendered = await typing.cast(Any, ssr_renderer).render(url)
+                    rendered = await ssr_renderer.render(url)
                     if rendered:
                         payload = _render_ssr_payload(rendered)
                         if ssr_cache_size > 0:
@@ -436,7 +437,11 @@ class WebStaticHandler:
             {"type": "http.response.start", "status": res.status_code(), "headers": headers}
         )
         if res.is_stream():
-            async for chunk in typing.cast(Any, res.stream_content)():
+            stream_content = typing.cast(
+                Callable[[], typing.AsyncIterator[bytes | str]],
+                res.stream_content,
+            )
+            async for chunk in stream_content():
                 payload = chunk.encode() if isinstance(chunk, str) else chunk
                 await send_fn({"type": "http.response.body", "body": payload, "more_body": True})
             await send_fn({"type": "http.response.body", "body": b"", "more_body": False})

@@ -4,7 +4,6 @@ import os
 import sys
 import traceback
 import typing
-from typing import Type, Union
 
 from pydantic import BaseModel
 
@@ -21,6 +20,7 @@ from nestipy.core.interceptor import RequestInterceptor
 from nestipy.core.pipes.processor import PipeProcessor
 from nestipy.core.middleware import MiddlewareExecutor
 from nestipy.core.template import TemplateRendererProcessor
+from nestipy.core.types import ModuleRef, JsonValue
 from nestipy.ioc import NestipyContainer, NestipyIContainer
 from nestipy.ioc import RequestContextContainer
 from nestipy.openapi.openapi_docs.v3 import Operation, PathItem, Response as ApiResponse
@@ -57,7 +57,7 @@ class RouterProxy:
 
     def apply_routes(
         self,
-        modules: list[Union[Type, object]],
+        modules: list[ModuleRef],
         prefix: str = "",
         build_openapi: bool = True,
         register_routes: bool = True,
@@ -108,7 +108,7 @@ class RouterProxy:
                 if register_routes:
                     handler = self.create_request_handler(
                         self.router,
-                        typing.cast(Type, module_ref),
+                        typing.cast(type, module_ref),
                         controller,
                         method_name,
                         cache_policy=cache_policy,
@@ -152,11 +152,11 @@ class RouterProxy:
     def create_request_handler(
         cls,
         http_adapter: "HttpAdapter",
-        module_ref: typing.Optional[Type] = None,
-        controller: typing.Optional[Union[object, Type]] = None,
+        module_ref: type | None = None,
+        controller: type | None = None,
         method_name: typing.Optional[str] = None,
         custom_callback: typing.Optional[
-            typing.Callable[["Request", "Response", NextFn], typing.Any]
+            typing.Callable[["Request", "Response", NextFn], JsonValue | Response | None]
         ] = None,
         cache_policy: typing.Optional[CachePolicy] = None,
         container: typing.Optional[NestipyIContainer] = None,
@@ -185,7 +185,7 @@ class RouterProxy:
             handler_response: Response
             try:
 
-                async def next_fn_interceptor(ex: typing.Any = None):
+                async def next_fn_interceptor(ex: Exception | None = None):
                     nonlocal interceptor_called
                     interceptor_called = True
                     if ex is not None:
@@ -197,11 +197,11 @@ class RouterProxy:
                         else:
                             return callback_res
                     return await container.get(
-                        typing.cast(typing.Union[typing.Type, str], controller),
+                        typing.cast(type | str, controller),
                         typing.cast(str, method_name),
                     )
 
-                async def next_fn_middleware(ex: typing.Any = None):
+                async def next_fn_middleware(ex: Exception | None = None):
                     if ex is not None:
                         raise ex
                     g_processor: GuardProcessor = typing.cast(
@@ -262,16 +262,14 @@ class RouterProxy:
 
     @classmethod
     async def _ensure_response(
-        cls, res: "Response", result: Union["Response", str, dict, list]
+        cls, res: "Response", result: "Response | JsonValue | None"
     ) -> "Response":
         if isinstance(result, (str, int, float)):
             return await res.send(content=str(result))
         elif isinstance(result, (list, dict)):
             return await res.json(content=result)
         elif dataclasses.is_dataclass(result):
-            return await res.json(
-                content=dataclasses.asdict(typing.cast(typing.Any, result)),
-            )
+            return await res.json(content=dataclasses.asdict(result))
         elif isinstance(result, BaseModel):
             return await res.json(content=result.model_dump(mode="json"))
         elif isinstance(result, Response):
@@ -367,9 +365,7 @@ class RouterProxy:
         exception_handler = typing.cast(
             ExceptionFilterHandler, await container.get(ExceptionFilterHandler)
         )
-        result = await typing.cast(typing.Any, exception_handler).catch(
-            ex, execution_context
-        )
+        result = await exception_handler.catch(ex, execution_context)
         response = typing.cast(Response, execution_context.get_response())
         if result:
             handler_response = await cls._ensure_response(response, result)
@@ -379,7 +375,7 @@ class RouterProxy:
 
     @classmethod
     def get_full_traceback_details(
-        cls, req: typing.Optional[Request], exception: typing.Any, file_path: str
+        cls, req: typing.Optional[Request], exception: str, file_path: str
     ):
         exc_type, exc_value, exc_tb = sys.exc_info()
         traceback_details = []

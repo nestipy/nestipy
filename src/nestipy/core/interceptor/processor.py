@@ -1,5 +1,5 @@
 import typing
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.helpers import SpecialProviderExtractor
@@ -28,11 +28,13 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
         handler_class = context.get_class()
         handler = context.get_handler()
 
-        global_interceptors = (
-            typing.cast(Any, context.get_adapter()).get_global_interceptors()
-            if is_http
-            else []
-        )
+        if is_http:
+            adapter = context.get_adapter()
+            global_interceptors = (
+                adapter.get_global_interceptors() if adapter is not None else []
+            )
+        else:
+            global_interceptors = []
         module_interceptors = self.extract_special_providers(
             typing.cast(typing.Type, handler_module_class),
             NestipyInterceptor,

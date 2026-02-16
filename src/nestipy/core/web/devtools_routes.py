@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import mimetypes
-from typing import Any, Callable, Optional, Type
+from typing import Callable, Optional, Type
 
 import aiofiles
 
@@ -13,6 +13,7 @@ from nestipy.ioc import NestipyContainer
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.router.spec import RouterSpec
 from nestipy.core.adapter.http_adapter import HttpAdapter
+from nestipy.core.types import JsonValue, ModuleRef, ProviderToken, TokenProvider
 
 
 def resolve_devtools_static_path(config_path: Optional[str]) -> str:
@@ -63,6 +64,7 @@ class DevtoolsRegistrar:
         static_dir = os.path.realpath(
             os.path.join(
                 os.path.dirname(__file__),
+                "..",
                 "..",
                 "devtools",
                 "frontend",
@@ -167,6 +169,7 @@ class DevtoolsRegistrar:
                 os.path.join(
                     os.path.dirname(__file__),
                     "..",
+                    "..",
                     "devtools",
                     "frontend",
                     "templates",
@@ -210,43 +213,42 @@ class DevtoolsRegistrar:
 
         self._http_adapter.get(path, router_spec_handler, {"raw": True})
 
-    def _build_module_graph(self) -> dict[str, Any]:
+    def _build_module_graph(self) -> dict[str, JsonValue]:
         root_module = self._get_root_module()
         if root_module is None:
             return {"root": None, "nodes": [], "edges": []}
 
-        def module_name(mod: Any) -> str:
+        def module_name(mod: ModuleRef) -> str:
             return getattr(mod, "__name__", str(mod))
 
-        def module_id(mod: Any) -> str:
+        def module_id(mod: ModuleRef) -> str:
             return f"module:{module_name(mod)}"
 
-        def token_name(token: Any) -> str:
+        def token_name(token: ProviderToken | None) -> str:
             if token is None:
                 return "Unknown"
             if hasattr(token, "__name__"):
                 return token.__name__
             return str(token)
 
-        def provider_name(provider: Any) -> str:
-            token = getattr(provider, "token", None)
-            if token is not None:
-                return token_name(token)
+        def provider_name(provider: ProviderToken | TokenProvider) -> str:
+            if hasattr(provider, "token"):
+                return token_name(provider.token)
             return token_name(provider)
 
-        nodes: list[dict[str, Any]] = []
-        edges: list[dict[str, Any]] = []
-        module_seen: set[Any] = set()
+        nodes: list[dict[str, JsonValue]] = []
+        edges: list[dict[str, JsonValue]] = []
+        module_seen: set[type] = set()
         node_ids: set[str] = set()
 
-        def add_node(node: dict[str, Any]) -> None:
+        def add_node(node: dict[str, JsonValue]) -> None:
             node_id = node["id"]
             if node_id in node_ids:
                 return
             node_ids.add(node_id)
             nodes.append(node)
 
-        def visit(module_ref: Any) -> None:
+        def visit(module_ref: ModuleRef) -> None:
             module = module_ref.module if hasattr(module_ref, "module") else module_ref
             if module is None:
                 return

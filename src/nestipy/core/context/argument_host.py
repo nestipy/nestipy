@@ -1,25 +1,26 @@
 from abc import ABC, abstractmethod
-from typing import Type, Union, Callable, TYPE_CHECKING, Optional, Any
-
-if TYPE_CHECKING:
-    from nestipy.core.adapter.http_adapter import HttpAdapter
-    from nestipy.common.http_ import Request, Response
-
+from nestipy.core.types import (
+    HandlerFn,
+    HttpAdapterLike,
+    JsonValue,
+    SocketClientLike,
+    SocketServerLike,
+)
 
 class ArgumentHost(ABC):
     def __init__(
         self,
-        adapter: Union["HttpAdapter", None],
-        module: Union[Type, object],
-        class_handler: Union[Type, object],
-        handler: Callable,
-        req: Union["Request", None],
-        res: Union["Response", None],
-        graphql_args: Optional[dict] = None,
-        graphql_context: Optional[Any] = None,
-        socket_server: Optional[Any] = None,
-        socket_client: Optional[Any] = None,
-        socket_data: Optional[Any] = None,
+        adapter: HttpAdapterLike | None,
+        module: type | None,
+        class_handler: type | None,
+        handler: HandlerFn,
+        req: "Request | None",
+        res: "Response | None",
+        graphql_args: dict[str, JsonValue] | None = None,
+        graphql_context: dict[str, JsonValue] | None = None,
+        socket_server: SocketServerLike | None = None,
+        socket_client: SocketClientLike | None = None,
+        socket_data: JsonValue | None = None,
     ):
         self._adapter = adapter
         self._module = module
@@ -33,22 +34,22 @@ class ArgumentHost(ABC):
         self._socket_client = socket_client
         self._socket_data = socket_data
 
-    def get_adapter(self) -> Union["HttpAdapter", None]:
+    def get_adapter(self) -> HttpAdapterLike | None:
         return self._adapter
 
-    def get_module(self) -> Union[Type, object, None]:
+    def get_module(self) -> type | None:
         return self._module
 
-    def get_request(self) -> Union["Request", None]:
+    def get_request(self) -> "Request | None":
         return self._req
 
-    def get_response(self) -> Union["Response", None]:
+    def get_response(self) -> "Response | None":
         return self._res
 
-    def get_class(self) -> Union[Type, object, None]:
+    def get_class(self) -> type | None:
         return self._class_handler
 
-    def get_handler(self) -> Union[Callable, None]:
+    def get_handler(self) -> HandlerFn | None:
         return self._handler
 
     @abstractmethod

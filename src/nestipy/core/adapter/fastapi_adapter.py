@@ -3,7 +3,6 @@ import typing
 from fastapi import Response as FResponse, FastAPI, WebSocket as FastAPIWebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse as FStreamingResponse
-from starlette.middleware import _MiddlewareFactory
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp
 
@@ -132,7 +131,7 @@ class FastApiAdapter(HttpAdapter):
 
     def enable_cors(self) -> None:
         self.instance.add_middleware(
-            typing.cast(_MiddlewareFactory[typing.Any], CORSMiddleware),
+            CORSMiddleware,
             allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],

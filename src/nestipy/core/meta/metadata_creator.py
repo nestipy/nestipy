@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Type, Union
+from typing import Type
 
 from nestipy.common.utils import uniq_list
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer
 from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflect
+from nestipy.core.types import ModuleRef
 
 
 class MetadataCreator(ABC):
@@ -51,7 +52,7 @@ class MetadataCreator(ABC):
         )
 
     @classmethod
-    def _dynamic_module_to_module(cls, im: Union[Type, object]):
+    def _dynamic_module_to_module(cls, im: ModuleRef) -> Type:
         if isinstance(im, DynamicModule):
             Reflect.set_metadata(im.module, ModuleMetadata.Providers, im.providers)
             Reflect.set_metadata(im.module, ModuleMetadata.Controllers, im.controllers)

@@ -5,7 +5,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Any, Callable, Union, Type, TYPE_CHECKING, AsyncIterator, overload, Literal
+from typing import Callable, Union, Type, TYPE_CHECKING, AsyncIterator, overload, Literal
 from contextlib import asynccontextmanager
 from nestipy.common import Response
 from nestipy.common.exception.http import HttpException
@@ -15,6 +15,16 @@ from nestipy.common.template import TemplateKey
 from nestipy.common.template.interface import TemplateEngine
 from nestipy.core.router.router_proxy import RouterProxy
 from nestipy.core.template import MinimalJinjaTemplateEngine
+from nestipy.core.types import (
+    ASGIApp,
+    FilterLike,
+    GuardLike,
+    InterceptorLike,
+    PipeLike,
+    StateKey,
+    StateValue,
+    JsonValue,
+)
 from nestipy.metadata import SetMetadata, Reflect
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
 from nestipy.websocket.adapter import IoAdapter
@@ -33,10 +43,10 @@ class HttpAdapter(ABC):
 
     STATE_KEY: str = "__state__"
 
-    _global_interceptors: list = []
-    _global_filters: list = []
-    _global_guards: list = []
-    _global_pipes: list = []
+    _global_interceptors: list[InterceptorLike] = []
+    _global_filters: list[FilterLike] = []
+    _global_guards: list[GuardLike] = []
+    _global_pipes: list[PipeLike] = []
 
     startup_hooks: list = []
     shutdown_hook: list = []
@@ -46,7 +56,7 @@ class HttpAdapter(ABC):
     _http_logging_enabled: bool = False
 
     @abstractmethod
-    def get_instance(self) -> Any:
+    def get_instance(self) -> ASGIApp:
         pass
 
     async def start(self):
@@ -195,7 +205,7 @@ class HttpAdapter(ABC):
                 hook()
 
     @asynccontextmanager
-    async def lifespan(self, _app: Any) -> AsyncIterator[None]:
+    async def lifespan(self, _app: ASGIApp) -> AsyncIterator[None]:
         """
         Lifespan context manager for the application.
         Handles startup and shutdown events.
@@ -231,9 +241,9 @@ class HttpAdapter(ABC):
     ) -> None: ...
 
     @overload
-    def set(self, key: str, value: Any = None) -> None: ...
+    def set(self, key: StateKey, value: StateValue = None) -> None: ...
 
-    def set(self, key: str, value: Any = None) -> None:
+    def set(self, key: StateKey, value: StateValue = None) -> None:
         SetMetadata(self.STATE_KEY, {key: value}, as_dict=True)(self)
 
     @overload
@@ -245,37 +255,37 @@ class HttpAdapter(ABC):
     ) -> str | None: ...
 
     @overload
-    def get_state(self, key: str) -> Any: ...
+    def get_state(self, key: StateKey) -> StateValue: ...
 
-    def get_state(self, key: str) -> Any:
+    def get_state(self, key: StateKey) -> StateValue:
         meta: dict = Reflect.get_metadata(self, self.STATE_KEY, {})
         if key in meta.keys():
             return meta[key]
         else:
             return None
 
-    def add_global_interceptors(self, *interceptors: Union["NestipyInterceptor", Type]):
+    def add_global_interceptors(self, *interceptors: InterceptorLike):
         self._global_interceptors = self._global_interceptors + list(interceptors)
 
-    def get_global_interceptors(self):
+    def get_global_interceptors(self) -> list[InterceptorLike]:
         return self._global_interceptors
 
-    def add_global_filters(self, *filters: Union["ExceptionFilter", Type]):
+    def add_global_filters(self, *filters: FilterLike):
         self._global_filters = self._global_filters + list(filters)
 
-    def get_global_filters(self):
+    def get_global_filters(self) -> list[FilterLike]:
         return self._global_filters
 
-    def add_global_guards(self, *guards: Union["CanActivate", Type]):
+    def add_global_guards(self, *guards: GuardLike):
         self._global_guards = self._global_guards + list(guards)
 
-    def get_global_guards(self):
+    def get_global_guards(self) -> list[GuardLike]:
         return self._global_guards
 
-    def add_global_pipes(self, *pipes: Union[Type, object]):
+    def add_global_pipes(self, *pipes: PipeLike):
         self._global_pipes = self._global_pipes + list(pipes)
 
-    def get_global_pipes(self):
+    def get_global_pipes(self) -> list[PipeLike]:
         return self._global_pipes
 
     def get_template_engine(self) -> TemplateEngine:
@@ -310,7 +320,7 @@ class HttpAdapter(ABC):
         return Websocket(self.scope, self.receive, self.send)
 
     async def process_callback(
-        self, callback: CallableHandler, metadata: typing.Optional[dict] = None
+        self, callback: CallableHandler, metadata: dict[str, JsonValue] | None = None
     ) -> Response:
         req = Request(self.scope, self.receive, self.send)
         res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))

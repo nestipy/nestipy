@@ -13,7 +13,6 @@ from typing import (
     Callable,
     Literal,
     Union,
-    Any,
     TYPE_CHECKING,
     Optional,
     Dict,
@@ -57,6 +56,9 @@ from nestipy.core.registrars import (
     WebsocketRegistrar,
     OpenApiRegistrar,
 )
+from nestipy.core.types import ASGIScope, ASGIReceive, ASGISend, JsonValue, ModuleRef, PipeLike
+from nestipy.graphql.graphql_module import GraphqlModule
+from nestipy.web.ssr import SSRRenderer
 
 if TYPE_CHECKING:
     from nestipy.common.exception.interface import ExceptionFilter
@@ -97,7 +99,7 @@ class GranianOptions(TypedDict, total=False):
     http2_settings: Optional["HTTP2Settings"]
     log_enabled: bool
     log_level: "LogLevels"
-    log_dictconfig: Optional[dict[str, Any]]
+    log_dictconfig: Optional[dict[str, JsonValue]]
     log_access: bool
     log_access_format: Optional[str]
     ssl_cert: Optional[Path]
@@ -214,7 +216,7 @@ class NestipyApplication:
     _router_spec_token: Optional[str] = None
     _router_detect_conflicts: bool = True
     _devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
-    _web_ssr_renderer: Optional[object] = None
+    _web_ssr_renderer: Optional[SSRRenderer] = None
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -499,7 +501,7 @@ class NestipyApplication:
                 total_elapsed = (time.perf_counter() - setup_start) * 1000
                 logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
-    async def _init_di(self, modules: list[Type]) -> tuple[float, float, object | None]:
+    async def _init_di(self, modules: list[ModuleRef]) -> tuple[float, float, GraphqlModule | None]:
         """Create instances, precompute dependency graph, and return DI timing."""
         di_elapsed = 0.0
         routes_elapsed = 0.0
@@ -543,7 +545,7 @@ class NestipyApplication:
         if self._profile:
             routes_start = time.perf_counter()
         self._openapi_paths, self._openapi_schemas, self._list_routes = self._registrars.routes.apply(
-            typing.cast(list[Union[Type, object]], modules),
+            modules,
             build_openapi=False,
             register_routes=True,
         )
@@ -556,18 +558,18 @@ class NestipyApplication:
         """Routes are registered during DI init; kept for explicit flow."""
         _ = modules
 
-    async def _apply_graphql(self, graphql_module_instance: object, modules: list[Type]) -> None:
+    async def _apply_graphql(
+        self, graphql_module_instance: GraphqlModule, modules: list[ModuleRef]
+    ) -> None:
         """Register GraphQL resolvers when enabled."""
         await self._registrars.graphql.apply(
             graphql_module_instance,
-            typing.cast(list[Union[Type, object]], modules),
+            modules,
         )
 
-    def _apply_websockets(self, modules: list[Type]) -> None:
+    def _apply_websockets(self, modules: list[ModuleRef]) -> None:
         """Register websocket routes when an IO adapter is configured."""
-        self._registrars.websockets.apply(
-            typing.cast(list[Union[Type, object]], modules)
-        )
+        self._registrars.websockets.apply(modules)
 
     def _register_openapi_handler(self) -> None:
         """Register the lazy OpenAPI handler if configured."""
@@ -627,7 +629,7 @@ class NestipyApplication:
             typing.cast(Type, self._root_module)
         )
         self._openapi_paths, self._openapi_schemas, _ = self._registrars.routes.apply(
-            typing.cast(list[Union[Type, object]], modules),
+            modules,
             build_openapi=True,
             register_routes=False,
         )
@@ -641,7 +643,7 @@ class NestipyApplication:
     # ------------------------------------------------------------------
     # Web SSR Hook
     # ------------------------------------------------------------------
-    def _set_web_ssr_renderer(self, renderer: Optional[object]) -> None:
+    def _set_web_ssr_renderer(self, renderer: Optional[SSRRenderer]) -> None:
         self._web_ssr_renderer = renderer
 
     # ------------------------------------------------------------------
@@ -653,7 +655,7 @@ class NestipyApplication:
     def get_graphql_adapter(self) -> GraphqlAdapter:
         return self._graphql_adapter
 
-    def get_openapi_paths(self) -> dict[Any, PathItem]:
+    def get_openapi_paths(self) -> dict[str, PathItem]:
         self.build_openapi()
         return self._openapi_paths
 
@@ -664,7 +666,7 @@ class NestipyApplication:
     # ------------------------------------------------------------------
     # ASGI Entry
     # ------------------------------------------------------------------
-    async def __call__(self, scope: dict, receive: Callable, send: Callable):
+    async def __call__(self, scope: ASGIScope, receive: ASGIReceive, send: ASGISend):
         await self._asgi.handle(scope, receive, send)
 
     # ------------------------------------------------------------------
@@ -711,7 +713,7 @@ class NestipyApplication:
     def use_global_guards(self, *guards: Union[Type, "CanActivate"]):
         self._enhancers.use_global_guards(*guards)
 
-    def use_global_pipes(self, *pipes: Union[Type, object]):
+    def use_global_pipes(self, *pipes: PipeLike):
         self._enhancers.use_global_pipes(*pipes)
 
     def use_global_prefix(self, prefix: str = ""):

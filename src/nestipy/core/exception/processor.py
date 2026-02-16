@@ -1,5 +1,5 @@
 import typing
-from typing import Union, Any, Callable
+from typing import Union, Callable
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.exception.http import HttpException
@@ -9,6 +9,7 @@ from nestipy.common.helpers import SpecialProviderExtractor
 from nestipy.common.utils import uniq_list
 from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
+from nestipy.core.types import HandlerReturn
 from nestipy.ioc import NestipyContainer
 from nestipy.metadata import Reflect, ClassMetadata
 
@@ -24,16 +25,16 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
 
     async def catch(
         self, exception: HttpException, context: ArgumentHost, is_http: bool = True
-    ) -> Union[Any, None]:
+    ) -> HandlerReturn | None:
         self.context = context
         handler_module_class = self.context.get_module()
         handler_class = self.context.get_class()
         handler = self.context.get_handler()
-        global_filters = (
-            typing.cast(Any, context.get_adapter()).get_global_filters() or []
-            if is_http
-            else []
-        )
+        if is_http:
+            adapter = context.get_adapter()
+            global_filters = adapter.get_global_filters() if adapter is not None else []
+        else:
+            global_filters = []
         module_filters = self.extract_special_providers(
             typing.cast(typing.Type, handler_module_class), ExceptionFilter, APP_FILTER
         )
@@ -56,7 +57,11 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         return await self._apply_exception_filter(exception, 0, all_filters, None)
 
     async def _apply_exception_filter(
-        self, exception: "HttpException", index: int, all_filters: list, result: Any
+        self,
+        exception: "HttpException",
+        index: int,
+        all_filters: list,
+        result: HandlerReturn | None,
     ):
         if len(all_filters) > index:
             exception_filter = all_filters[index]
@@ -81,7 +86,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         exception: "HttpException",
         index: int,
         all_exception_to_catch: list,
-        result: Any,
+        result: HandlerReturn | None,
     ):
         if len(all_exception_to_catch) > index:
             exception_to_catch = all_exception_to_catch[index]

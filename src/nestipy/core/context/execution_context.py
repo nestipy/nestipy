@@ -1,7 +1,8 @@
 import typing
-from typing import Type, Callable, Union
+from typing import Callable
 
 from nestipy.common.http_ import Response, Request
+from nestipy.core.types import HandlerFn
 from .argument_host import ArgumentHost
 from .graphql_argument_host import GraphqlArgumentHost
 from .http_argument_host import HttpArgumentHost
@@ -18,9 +19,7 @@ class ExecutionContext(ArgumentHost):
 
     def get_args(
         self,
-    ) -> tuple[
-        Union[Type, object, None], Callable, Union[Request, None], Union[Response, None]
-    ]:
+    ) -> tuple[type | None, HandlerFn, Request | None, Response | None]:
         """
         Get the core arguments of the execution context.
         :return: A tuple of (controller_class, handler_func, request, response).

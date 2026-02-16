@@ -1,9 +1,10 @@
 from inspect import isfunction, getmembers
-from typing import List, Type, Union
+from typing import List
 
 from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation
 
 from nestipy.common.utils import deep_merge
+from nestipy.core.types import ModuleRef
 from nestipy.ioc import MiddlewareContainer
 from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from nestipy.openapi.explorer import OpenApiExplorer
@@ -52,7 +53,7 @@ class RouteExplorer:
         cls._version_prefix = prefix or ""
 
     @classmethod
-    def explore(cls, module_ref: Union[Type, object], include_openapi: bool = True):
+    def explore(cls, module_ref: ModuleRef, include_openapi: bool = True):
         """
         Explore a module for controllers and their routes.
         :param module_ref: The module class or instance to explore.
@@ -68,7 +69,7 @@ class RouteExplorer:
             routes = routes + controller_routes
         return routes
 
-    def explore_controller(self, controller: Type, include_openapi: bool = True) -> List[dict]:
+    def explore_controller(self, controller: type, include_openapi: bool = True) -> List[dict]:
         """
         Explore a controller class for route methods decorated with @Route, @Get, etc.
         :param controller: The controller class to explore.

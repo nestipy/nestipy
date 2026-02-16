@@ -1,8 +1,9 @@
-from typing import Union, Callable, Any, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 from nestipy.metadata import Reflect
 
 from nestipy.common.template import TemplateEngine, TemplateKey
+from nestipy.core.types import JsonValue
 from .minimal_jinja import MinimalJinjaTemplateEngine
 
 if TYPE_CHECKING:
@@ -14,10 +15,10 @@ class TemplateRendererProcessor:
         self.template = None
         self.adapter = adapter
         self.template_engine = None
-        self.context = {}
+        self.context: dict[str, JsonValue] = {}
 
-    def can_process(self, method: Callable, context: Any) -> bool:
-        self.template_engine: Union[TemplateEngine, None] = self.adapter.get_state(
+    def can_process(self, method: Callable, context: dict[str, JsonValue]) -> bool:
+        self.template_engine: TemplateEngine | None = self.adapter.get_state(
             TemplateKey.MetaEngine
         )
         self.template = Reflect.get_metadata(method, TemplateKey.MetaRender, None)
@@ -30,8 +31,8 @@ class TemplateRendererProcessor:
         else:
             return True
 
-    def render(self) -> Union[str, None]:
-        template_engine: Union[TemplateEngine, None] = self.adapter.get_state(
+    def render(self) -> str | None:
+        template_engine: TemplateEngine | None = self.adapter.get_state(
             TemplateKey.MetaEngine
         )
         if template_engine is None:

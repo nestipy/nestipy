@@ -6,6 +6,7 @@ from typing import Type, Union, TYPE_CHECKING
 from nestipy.ioc import ModuleProviderDict
 from nestipy.core.adapter.http_adapter import HttpAdapter
 from nestipy.core.modules import ModuleManager
+from nestipy.core.types import FilterLike, GuardLike, InterceptorLike, PipeLike
 
 
 class GlobalEnhancerManager:
@@ -15,22 +16,22 @@ class GlobalEnhancerManager:
         self._http_adapter = http_adapter
         self._modules = modules
 
-    def use_global_interceptors(self, *interceptors: Union[Type, "NestipyInterceptor"]):
+    def use_global_interceptors(self, *interceptors: InterceptorLike):
         self._http_adapter.add_global_interceptors(*interceptors)
         self._modules.add_root_module_provider(
             *typing.cast(tuple[Union[ModuleProviderDict, Type, typing.Callable]], interceptors)
         )
 
-    def use_global_filters(self, *filters: Union[Type, "ExceptionFilter"]):
+    def use_global_filters(self, *filters: FilterLike):
         self._http_adapter.add_global_filters(*filters)
         self._modules.add_root_module_provider(
             *typing.cast(tuple[Union[ModuleProviderDict, Type, typing.Callable]], filters)
         )
 
-    def use_global_guards(self, *guards: Union[Type, "CanActivate"]):
+    def use_global_guards(self, *guards: GuardLike):
         self._http_adapter.add_global_guards(*guards)
 
-    def use_global_pipes(self, *pipes: Union[Type, object]):
+    def use_global_pipes(self, *pipes: PipeLike):
         self._http_adapter.add_global_pipes(*pipes)
         self._modules.add_root_module_provider(
             *typing.cast(tuple[Union[ModuleProviderDict, Type, typing.Callable]], pipes)

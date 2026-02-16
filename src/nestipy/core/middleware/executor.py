@@ -1,10 +1,11 @@
 import inspect
 import traceback
-from typing import Callable, Any
+from typing import Callable
 
 from nestipy.common.http_ import Request, Response
 from nestipy.common.logger import logger
 from nestipy.common.middleware import NestipyMiddleware
+from nestipy.core.types import HandlerReturn
 from nestipy.ioc import MiddlewareContainer
 from nestipy.ioc.middleware import _MiddlewareEntry
 from nestipy.ioc import NestipyContainer
@@ -28,7 +29,7 @@ class MiddlewareExecutor:
         self._res = res
         self._next_fn = next_fn
 
-    async def execute(self):
+    async def execute(self) -> HandlerReturn:
         """
         Match and execute the middleware chain.
         If no middleware matches, it immediately calls the next_fn.
@@ -69,7 +70,7 @@ class MiddlewareExecutor:
 
     async def _recursively_call_middleware(
         self, index: int, middlewares: list[_MiddlewareEntry]
-    ) -> Any:
+    ) -> HandlerReturn:
         current = middlewares[index]
         to_call = await self._create_middleware_callable(current)
         if index != len(middlewares) - 1:

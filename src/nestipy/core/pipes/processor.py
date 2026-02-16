@@ -1,6 +1,6 @@
 import inspect
 import typing
-from typing import Type, Union, Any
+from typing import Type
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.helpers import SpecialProviderExtractor
@@ -18,16 +18,16 @@ class PipeProcessor(SpecialProviderExtractor):
 
     async def get_pipes(
         self, context: ExecutionContext, is_http: bool = True
-    ) -> list[Union[Type, PipeTransform]]:
+    ) -> list[Type | PipeTransform]:
         handler_module_class = context.get_module()
         handler_class = context.get_class()
         handler = context.get_handler()
 
-        global_pipes = (
-            typing.cast(Any, context.get_adapter()).get_global_pipes()
-            if is_http
-            else []
-        )
+        if is_http:
+            adapter = context.get_adapter()
+            global_pipes = adapter.get_global_pipes() if adapter is not None else []
+        else:
+            global_pipes = []
         module_pipes = self.extract_special_providers(
             typing.cast(Type, handler_module_class), PipeTransform, APP_PIPE
         )

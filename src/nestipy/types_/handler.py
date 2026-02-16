@@ -1,13 +1,17 @@
-from typing import Callable, Awaitable, Any, Union
+from typing import Callable, Awaitable
 
 from nestipy.common.http_ import Request, Response, Websocket
 
-NextFn = Callable[..., Union[Awaitable[Any]]]
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+
+HandlerResult = Response | JsonValue | None
+NextFn = Callable[..., Awaitable[HandlerResult]]
 
 CallableHandler = Callable[
-    [Request, Response, NextFn], Union[Awaitable[Response], Response, str, dict, list]
+    [Request, Response, NextFn], Awaitable[HandlerResult] | HandlerResult
 ]
 
-WebsocketHandler = Callable[[Websocket], Any]
+WebsocketHandler = Callable[[Websocket], Awaitable[HandlerResult] | HandlerResult]
 
-MountHandler = Callable[[dict, Callable, Callable], Any]
+MountHandler = Callable[[dict, Callable, Callable], Awaitable[HandlerResult] | HandlerResult]
