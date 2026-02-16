@@ -5,7 +5,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Any, Callable, Union, Type, TYPE_CHECKING, AsyncIterator
+from typing import Any, Callable, Union, Type, TYPE_CHECKING, AsyncIterator, overload, Literal
 from contextlib import asynccontextmanager
 from nestipy.common import Response
 from nestipy.common.exception.http import HttpException
@@ -220,8 +220,32 @@ class HttpAdapter(ABC):
         """
         self.shutdown_hook.append(callback)
 
+    @overload
+    def set(self, key: Literal[TemplateKey.MetaEngine], value: TemplateEngine | None) -> None: ...
+
+    @overload
+    def set(
+        self,
+        key: Literal[TemplateKey.MetaBaseView, DEVTOOLS_STATIC_PATH_KEY],
+        value: str,
+    ) -> None: ...
+
+    @overload
+    def set(self, key: str, value: Any = None) -> None: ...
+
     def set(self, key: str, value: Any = None) -> None:
         SetMetadata(self.STATE_KEY, {key: value}, as_dict=True)(self)
+
+    @overload
+    def get_state(self, key: Literal[TemplateKey.MetaEngine]) -> TemplateEngine | None: ...
+
+    @overload
+    def get_state(
+        self, key: Literal[TemplateKey.MetaBaseView, DEVTOOLS_STATIC_PATH_KEY]
+    ) -> str | None: ...
+
+    @overload
+    def get_state(self, key: str) -> Any: ...
 
     def get_state(self, key: str) -> Any:
         meta: dict = Reflect.get_metadata(self, self.STATE_KEY, {})
