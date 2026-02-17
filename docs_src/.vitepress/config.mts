@@ -48,6 +48,7 @@ export default withMermaid(defineConfig({
         text: 'Techniques',
         items: [
           { text: 'Configuration', link: '/technique/configuration' },
+          { text: 'Health Checks', link: '/technique/health' },
           { text: 'Database', link: '/technique/database' },
           { text: 'Task scheduling', link: '/technique/schedule' },
           { text: 'Background Tasks', link: '/technique/background_task' },

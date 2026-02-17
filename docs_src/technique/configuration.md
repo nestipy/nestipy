@@ -33,3 +33,21 @@ from nestipy_config import ConfigService
 class AppService:
     config_service: Annotated[ConfigService, Inject()]
 ```
+
+## Runtime Flags (Env)
+
+Nestipy also supports lightweight runtime flags without the config module:
+
+- `NESTIPY_DEBUG=1` to enable debug behavior (0/false disables).
+- `NESTIPY_SECURITY_HEADERS=0` to disable default security headers.
+- `NESTIPY_HEALTH=0` to disable built-in `/healthz` and `/readyz`.
+- `NESTIPY_CORS_ALLOW_ALL=1` to allow any origin.
+- `NESTIPY_CORS_ORIGINS=http://localhost:5173,https://example.com`
+- `NESTIPY_CORS_ALLOW_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS`
+- `NESTIPY_CORS_ALLOW_HEADERS=Content-Type,Authorization,X-Request-Id`
+- `NESTIPY_CORS_EXPOSE_HEADERS=X-Request-Id`
+- `NESTIPY_CORS_ALLOW_CREDENTIALS=1`
+- `NESTIPY_CORS_MAX_AGE=600`
+- `NESTIPY_CORS_ORIGIN_REGEX=^https?://.*\.example\.com$`
+
+For actions security defaults, see [Actions (RPC)](/web/actions).

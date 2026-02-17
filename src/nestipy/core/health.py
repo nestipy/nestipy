@@ -97,7 +97,6 @@ class HealthRegistry:
 
 @Controller("/")
 class HealthController:
-    
     registry: Annotated[HealthRegistry, Inject()]
 
     @Get("/healthz")
@@ -109,7 +108,7 @@ class HealthController:
 
     @Get("/readyz")
     async def readyz(self, res: Response = Res()) -> dict[str, JsonValue]:
-        ok, checks = await self._registry.run("readiness")
+        ok, checks = await self.registry.run("readiness")
         if res is not None:
             res.status(200 if ok else 503)
         return {"status": "ok" if ok else "error", "checks": checks}
