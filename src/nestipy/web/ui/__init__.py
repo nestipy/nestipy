@@ -6,6 +6,9 @@ from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar, Generi
 COMPONENT_MARK_ATTR = "__nestipy_web_component__"
 COMPONENT_NAME_ATTR = "__nestipy_web_component_name__"
 PROPS_MARK_ATTR = "__nestipy_web_props__"
+JS_IMPORT_MARK_ATTR = "__nestipy_web_js_import__"
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 class HTMLProps(TypedDict, total=False):
@@ -322,6 +325,20 @@ def external(module: str, name: str, *, default: bool = False, alias: str | None
 def external_fn(module: str, name: str, *, alias: str | None = None) -> Type[ExternalFunction]:
     """Create a reference to an external function import."""
     return ExternalFunction(module=module, name=name, alias=alias)
+
+
+def js_import(
+    module: str,
+    name: str | None = None,
+    *,
+    alias: str | None = None,
+) -> Callable[[F], F]:
+    """Declare a JS import for a Python-typed function (compile-time only)."""
+    def decorator(fn: F) -> F:
+        setattr(fn, JS_IMPORT_MARK_ATTR, (module, name or fn.__name__, alias))
+        return fn
+
+    return decorator
 
 
 def component(fn: Callable) -> Callable:

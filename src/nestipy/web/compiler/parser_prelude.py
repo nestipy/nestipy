@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import libcst as cst
 
+from nestipy.web.ui import ExternalFunction
 from .errors import CompilerError
 from .parser_expr import _call_name, _eval_external_call, _eval_string, _expr_to_js
 from .parser_hooks import (
@@ -23,6 +24,25 @@ def _collect_module_prelude(
     contexts: list[str] = []
     names: set[str] = set()
     for stmt in module.body:
+        if isinstance(stmt, cst.FunctionDef):
+            ext = _collect_js_import(stmt)
+            if ext:
+                if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                    ext = ExternalFunction(
+                        module=ext.module,
+                        name=ext.name,
+                        alias=None,
+                    )
+                import_name = ext.import_name
+                if export_values:
+                    if stmt.name.value == import_name:
+                        contexts.append(f"export {{ {import_name} }};")
+                    else:
+                        contexts.append(
+                            f"export const {stmt.name.value} = {import_name};"
+                        )
+                names.add(stmt.name.value)
+            continue
         statements = []
         if isinstance(stmt, cst.SimpleStatementLine):
             statements = list(stmt.body)
@@ -72,7 +92,7 @@ def _collect_module_prelude(
                     )
                     names.add(target.value)
                     continue
-                continue
+            continue
 
             # Emit simple module-level constants (e.g., theme_default).
             try:
@@ -82,6 +102,44 @@ def _collect_module_prelude(
             contexts.append(f"const {target.value} = {rendered};")
             names.add(target.value)
     return contexts, names
+
+
+def _collect_js_import(fn: cst.FunctionDef) -> ExternalFunction | None:
+    """Collect external function declarations from @js_import decorators."""
+    for deco in fn.decorators:
+        expr = deco.decorator
+        if not isinstance(expr, cst.Call):
+            continue
+        if _call_name(expr) != "js_import":
+            continue
+        return _eval_js_import(expr, fn.name.value)
+    return None
+
+
+def _eval_js_import(call: cst.Call, fallback_name: str) -> ExternalFunction:
+    """Evaluate a js_import() decorator call into an ExternalFunction."""
+    module: str | None = None
+    name: str | None = None
+    alias: str | None = None
+    for arg in call.args:
+        if arg.keyword is None:
+            if module is None:
+                module = _eval_string(arg.value)
+            elif name is None:
+                name = _eval_string(arg.value)
+        else:
+            key = arg.keyword.value
+            if key == "module":
+                module = _eval_string(arg.value)
+            elif key == "name":
+                name = _eval_string(arg.value)
+            elif key == "alias":
+                alias = _eval_string(arg.value)
+    if module is None:
+        raise CompilerError("js_import() requires a module string")
+    if name is None:
+        name = fallback_name
+    return ExternalFunction(module=module, name=name, alias=alias)
 
 
 def _collect_hook_statements(

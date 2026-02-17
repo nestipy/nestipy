@@ -17,8 +17,10 @@ from .command_build import build_vite
 from .command_codegen import (
     maybe_codegen_actions,
     maybe_codegen_actions_schema,
+    maybe_codegen_actions_types_schema,
     maybe_codegen_client,
     maybe_codegen_router_spec,
+    maybe_codegen_router_types,
 )
 from .command_pkg import install_deps
 from .command_shell import select_package_manager, web_log
@@ -48,8 +50,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     backend_process: subprocess.Popen[str] | None = None
     actions_schema_url: str | None = None
     actions_output: str | None = None
+    actions_types_output: str | None = None
     actions_hash: str | None = None
     actions_etag: str | None = None
+    actions_types_hash: str | None = None
+    actions_types_etag: str | None = None
     actions_poll_interval = float(os.getenv("NESTIPY_WEB_ACTIONS_POLL", "1.0") or 1.0)
     last_actions_poll = 0.0
     actions_watch_paths: list[str] = []
@@ -57,9 +62,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
     router_spec_url: str | None = None
     router_output: str | None = None
+    router_types_output: str | None = None
     router_poll_interval = float(os.getenv("NESTIPY_WEB_ROUTER_POLL", "2.0") or 2.0)
     last_router_poll = 0.0
     router_hash: str | None = None
+    router_types_hash: str | None = None
 
     if parsed.get("actions"):
         spec_url = parsed.get("spec")
@@ -75,6 +82,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             actions_output = str(config.resolve_src_dir() / "actions.client.ts")
         else:
             actions_output = str(output)
+        actions_types_output = str(
+            parsed.get("actions_types")
+            or os.getenv("NESTIPY_WEB_ACTIONS_TYPES_OUTPUT", "")
+            or config.resolve_app_dir() / "_generated" / "actions_types.py"
+        )
         actions_watch = str(
             parsed.get("actions_watch")
             or os.getenv("NESTIPY_WEB_ACTIONS_WATCH", "")
@@ -95,6 +107,11 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         parsed.get("router_output")
         or os.getenv("NESTIPY_WEB_ROUTER_OUTPUT")
         or config.resolve_src_dir() / "api" / "client.ts"
+    )
+    router_types_output = str(
+        parsed.get("router_types")
+        or os.getenv("NESTIPY_WEB_ROUTER_TYPES_OUTPUT", "")
+        or config.resolve_app_dir() / "_generated" / "api_types.py"
     )
     if actions_watch_paths and "NESTIPY_WEB_ROUTER_POLL" not in os.environ:
         router_poll_interval = 0.0
@@ -141,6 +158,12 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             traceback.print_exc()
     if router_spec_url and router_output:
         router_hash = maybe_codegen_router_spec(router_spec_url, router_output, router_hash)
+        if router_types_output:
+            router_types_hash = maybe_codegen_router_types(
+                router_spec_url,
+                router_types_output,
+                router_types_hash,
+            )
     elif modules is not None:
         client_language = str(parsed.get("lang", "ts"))
         class_name = str(parsed.get("class_name", "ApiClient"))
@@ -152,6 +175,15 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             class_name=class_name,
             prefix=prefix,
         )
+        if router_types_output:
+            from nestipy.web.client_types import write_client_types_file
+
+            write_client_types_file(
+                modules,
+                str(router_types_output),
+                class_name=class_name,
+                prefix=prefix,
+            )
     maybe_codegen_client(parsed, config)
     maybe_codegen_actions(parsed, config, modules)
     if actions_schema_url and actions_output:
@@ -163,6 +195,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             actions_hash,
             actions_etag,
         )
+        if actions_types_output:
+            actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
+                actions_schema_url,
+                actions_types_output,
+                actions_types_hash,
+                actions_types_etag,
+            )
     if parsed.get("vite"):
         if parsed.get("install"):
             install_deps(config)
@@ -226,10 +265,23 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_hash,
                         actions_etag,
                     )
+                    if actions_types_output:
+                        actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
+                            actions_schema_url,
+                            actions_types_output,
+                            actions_types_hash,
+                            actions_types_etag,
+                        )
                 if router_spec_url and router_output:
                     router_hash = maybe_codegen_router_spec(
                         router_spec_url, router_output, router_hash
                     )
+                    if router_types_output:
+                        router_types_hash = maybe_codegen_router_types(
+                            router_spec_url,
+                            router_types_output,
+                            router_types_hash,
+                        )
                 elif modules is not None:
                     client_language = str(parsed.get("lang", "ts"))
                     class_name = str(parsed.get("class_name", "ApiClient"))
@@ -241,6 +293,15 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         class_name=class_name,
                         prefix=prefix,
                     )
+                    if router_types_output:
+                        from nestipy.web.client_types import write_client_types_file
+
+                        write_client_types_file(
+                            modules,
+                            str(router_types_output),
+                            class_name=class_name,
+                            prefix=prefix,
+                        )
                 last_state = current
             if actions_schema_url and actions_output and actions_watch_paths:
                 current_actions_state = snapshot_actions(actions_watch_paths)
@@ -251,12 +312,25 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_hash,
                         actions_etag,
                     )
+                    if actions_types_output:
+                        actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
+                            actions_schema_url,
+                            actions_types_output,
+                            actions_types_hash,
+                            actions_types_etag,
+                        )
                     last_actions_state = current_actions_state
                     last_actions_poll = time.monotonic()
                     if router_spec_url and router_output:
                         router_hash = maybe_codegen_router_spec(
                             router_spec_url, router_output, router_hash
                         )
+                        if router_types_output:
+                            router_types_hash = maybe_codegen_router_types(
+                                router_spec_url,
+                                router_types_output,
+                                router_types_hash,
+                            )
                     elif modules is not None:
                         client_language = str(parsed.get("lang", "ts"))
                         class_name = str(parsed.get("class_name", "ApiClient"))

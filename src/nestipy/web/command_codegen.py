@@ -11,10 +11,17 @@ from typing import Iterable, Type
 from nestipy.common.logger import logger
 from nestipy.web.actions_client import (
     codegen_actions_from_url,
+    codegen_actions_types_from_url,
     generate_actions_client_code_from_schema,
+    generate_actions_types_code_from_schema,
     write_actions_client_file,
+    write_actions_types_file,
 )
 from nestipy.web.client import codegen_client, codegen_client_from_url
+from nestipy.web.client_types import (
+    codegen_client_types_from_url,
+    write_client_types_file,
+)
 from nestipy.web.config import WebConfig
 
 from .command_args import parse_args
@@ -30,28 +37,36 @@ def codegen(args: Iterable[str], modules: list[Type] | None = None) -> None:
     language = str(parsed.get("lang", "python"))
     class_name = str(parsed.get("class_name", "ApiClient"))
     prefix = str(parsed.get("prefix", ""))
+    types_output = parsed.get("router_types")
 
     spec_url = parsed.get("spec")
     if spec_url:
         codegen_client_from_url(str(spec_url), str(output), language=language, class_name=class_name)
+        if types_output:
+            codegen_client_types_from_url(str(spec_url), str(types_output), class_name=class_name)
         return
 
     if modules is None:
         raise RuntimeError("Modules are required to generate client without --spec")
 
     codegen_client(modules, str(output), language=language, class_name=class_name, prefix=prefix)
+    if types_output:
+        write_client_types_file(modules, str(types_output), class_name=class_name, prefix=prefix)
 
 
 def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> None:
     """Generate an actions client from modules or a schema URL."""
     parsed = parse_args(args)
     spec_url = parsed.get("spec")
+    types_output = parsed.get("actions_types")
     if modules is None:
         if spec_url:
             output = parsed.get("actions_output") or parsed.get("output")
             if not output:
                 output = "web/src/actions.client.ts"
             codegen_actions_from_url(str(spec_url), str(output))
+            if types_output:
+                codegen_actions_types_from_url(str(spec_url), str(types_output))
             return
         raise RuntimeError("Modules are required to generate actions client")
     output = parsed.get("actions_output") or parsed.get("output")
@@ -59,6 +74,8 @@ def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> N
         output = "web/src/actions.client.ts"
     endpoint = str(parsed.get("actions_endpoint", "/_actions"))
     write_actions_client_file(modules, str(output), endpoint=endpoint)
+    if types_output:
+        write_actions_types_file(modules, str(types_output), endpoint=endpoint)
 
 
 def maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> None:
@@ -73,6 +90,10 @@ def maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> No
         output = str(default_path)
     class_name = str(parsed.get("class_name", "ApiClient"))
     codegen_client_from_url(str(spec_url), str(output), language=language, class_name=class_name)
+    types_output = parsed.get("router_types")
+    if not types_output:
+        types_output = str(config.resolve_app_dir() / "_generated" / "api_types.py")
+    codegen_client_types_from_url(str(spec_url), str(types_output), class_name=class_name)
 
 
 def maybe_codegen_actions(
@@ -85,12 +106,17 @@ def maybe_codegen_actions(
     output = parsed.get("actions_output")
     if not output:
         output = str(config.resolve_src_dir() / "actions.client.ts")
+    types_output = parsed.get("actions_types")
+    if not types_output:
+        types_output = str(config.resolve_app_dir() / "_generated" / "actions_types.py")
     if modules is None:
         if spec_url:
             codegen_actions_from_url(str(spec_url), str(output))
+            codegen_actions_types_from_url(str(spec_url), str(types_output))
         return
     endpoint = str(parsed.get("actions_endpoint", "/_actions"))
     write_actions_client_file(modules, str(output), endpoint=endpoint)
+    write_actions_types_file(modules, str(types_output), endpoint=endpoint)
 
 
 def maybe_codegen_actions_schema(
@@ -125,6 +151,38 @@ def maybe_codegen_actions_schema(
     return digest, (etag or last_etag)
 
 
+def maybe_codegen_actions_types_schema(
+    url: str,
+    output: str,
+    last_hash: str | None,
+    last_etag: str | None,
+) -> tuple[str | None, str | None]:
+    """Fetch the action schema and update the types file if it changed."""
+    headers: dict[str, str] = {}
+    if last_etag:
+        headers["If-None-Match"] = last_etag
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            etag = response.headers.get("ETag")
+            schema = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 304:
+            return last_hash, last_etag
+        return last_hash, last_etag
+    except Exception:
+        return last_hash, last_etag
+    code = generate_actions_types_code_from_schema(schema)
+    digest = hashlib.sha256(code.encode("utf-8")).hexdigest()
+    if digest == last_hash:
+        return last_hash, last_etag
+    os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+    logger.info("[WEB] Actions types updated")
+    return digest, (etag or last_etag)
+
+
 def hash_file(path: str) -> str | None:
     """Hash a file's content for change detection."""
     try:
@@ -150,4 +208,23 @@ def maybe_codegen_router_spec(
     digest = hash_file(output)
     if digest and digest != last_hash:
         logger.info("[WEB] API client updated")
+    return digest or last_hash
+
+
+def maybe_codegen_router_types(
+    url: str,
+    output: str,
+    last_hash: str | None,
+) -> str | None:
+    """Fetch the router spec and update the types file if it changed."""
+    try:
+        codegen_client_types_from_url(url, output, class_name="ApiClient")
+    except Exception:
+        logger.exception("[WEB] router types generation failed")
+        if not logger.isEnabledFor(20):
+            traceback.print_exc()
+        return last_hash
+    digest = hash_file(output)
+    if digest and digest != last_hash:
+        logger.info("[WEB] API types updated")
     return digest or last_hash

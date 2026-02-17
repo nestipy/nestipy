@@ -15,6 +15,7 @@ from nestipy.web import (
     write_actions_client_file,
     build_actions_schema,
     generate_actions_client_code_from_schema,
+    generate_actions_types_code_from_schema,
     CsrfActionGuard,
     OriginActionGuard,
     ActionSignatureGuard,
@@ -127,6 +128,14 @@ def test_actions_codegen_from_schema(tmp_path: Path):
     text = out.read_text(encoding="utf-8")
     assert "DemoActions" in text
     assert "cached_counter" in text
+
+
+def test_actions_types_codegen_from_schema():
+    schema = build_actions_schema([AppModule], endpoint="/_actions")
+    code = generate_actions_types_code_from_schema(schema)
+    assert "class ActionsClient" in code
+    assert "class DemoActions" in code
+    assert "def hello" in code
 
 
 @Injectable()

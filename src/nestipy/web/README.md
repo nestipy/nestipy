@@ -70,6 +70,7 @@ Supported patterns (examples):
 - **Imports**:
   - `external(module, name)` for components
   - `external_fn(module, name)` for functions/hooks
+  - `@js_import(module, name)` for typed function imports
 - **Constructor**: `new_(Class, {...})` → `new Class({...})`
 
 Notes:
@@ -170,6 +171,7 @@ def Page():
 - Components must return `h(...)` / `h.tag(...)`
 - Limited Python control flow; no arbitrary statements in JSX trees
 - Use `external_fn()` for hooks and state libraries (e.g., Zustand)
+- Use `@js_import()` when you want a Python-typed wrapper for a JS import
 - Use `js("...")` for raw JS when needed
 
 ## Async Effects

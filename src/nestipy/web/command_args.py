@@ -42,6 +42,9 @@ def parse_args(args: Iterable[str]) -> dict[str, str | bool]:
         elif arg == "--router-output" and i + 1 < len(args_list):
             parsed["router_output"] = args_list[i + 1]
             i += 1
+        elif arg == "--router-types" and i + 1 < len(args_list):
+            parsed["router_types"] = args_list[i + 1]
+            i += 1
         elif arg == "--no-build":
             parsed["no_build"] = True
         elif arg in {"--dev", "-D"}:
@@ -52,6 +55,9 @@ def parse_args(args: Iterable[str]) -> dict[str, str | bool]:
             parsed["actions"] = True
         elif arg == "--actions-output" and i + 1 < len(args_list):
             parsed["actions_output"] = args_list[i + 1]
+            i += 1
+        elif arg == "--actions-types" and i + 1 < len(args_list):
+            parsed["actions_types"] = args_list[i + 1]
             i += 1
         elif arg == "--actions-endpoint" and i + 1 < len(args_list):
             parsed["actions_endpoint"] = args_list[i + 1]
@@ -107,8 +113,11 @@ def collect_packages(args: Iterable[str]) -> list[str]:
         "--proxy",
         "--proxy-paths",
         "--actions-output",
+        "--actions-types",
         "--actions-endpoint",
         "--actions-watch",
+        "--router-output",
+        "--router-types",
         "--ssr-entry",
         "--ssr-out-dir",
         "--ssr-runtime",

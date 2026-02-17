@@ -22,6 +22,7 @@ class ActionParam:
     """Describe a single action parameter for client generation."""
     name: str
     ts_type: str
+    py_type: str
     optional: bool
 
 
@@ -31,6 +32,7 @@ class ActionSpec:
     name: str
     params: list[ActionParam]
     return_type: str
+    return_py: str
     model_types: list[type]
 
 
@@ -78,20 +80,30 @@ def _build_action_spec(name: str, fn: Any) -> ActionSpec:
         annotation = param.annotation
         if annotation is inspect.Parameter.empty:
             ts_type = "unknown"
+            py_type = "Any"
             optional = param.default is not inspect.Parameter.empty
-            params.append(ActionParam(param.name, ts_type, optional))
+            params.append(ActionParam(param.name, ts_type, py_type, optional))
             continue
         if _is_injected_param(annotation):
             continue
         ts_type = _py_to_ts(annotation)
+        py_type = _py_to_py(annotation)
         _collect_model_types(annotation, model_types)
         optional = param.default is not inspect.Parameter.empty or _is_optional(annotation)
-        params.append(ActionParam(param.name, ts_type, optional))
+        params.append(ActionParam(param.name, ts_type, py_type, optional))
     return_type = "unknown"
+    return_py = "Any"
     if sig.return_annotation is not inspect.Signature.empty:
         return_type = _py_to_ts(sig.return_annotation)
+        return_py = _py_to_py(sig.return_annotation)
         _collect_model_types(sig.return_annotation, model_types)
-    return ActionSpec(name=name, params=params, return_type=return_type, model_types=model_types)
+    return ActionSpec(
+        name=name,
+        params=params,
+        return_type=return_type,
+        return_py=return_py,
+        model_types=model_types,
+    )
 
 
 def _is_injected_param(annotation: Any) -> bool:
@@ -166,6 +178,48 @@ def _py_to_ts(annotation: Any) -> str:
     if _is_model_type(annotation):
         return annotation.__name__
     return "unknown"
+
+
+def _py_to_py(annotation: Any) -> str:
+    """Convert a Python type annotation to a Python type string."""
+    annotation = _unwrap_annotated(annotation)
+    if isinstance(annotation, str):
+        return annotation
+    origin = get_origin(annotation)
+    if origin is not None:
+        if origin in {list, tuple, set}:
+            args = get_args(annotation)
+            inner = _py_to_py(args[0]) if args else "Any"
+            container = "list" if origin is list else "tuple" if origin is tuple else "set"
+            return f"{container}[{inner}]"
+        if origin is dict:
+            args = get_args(annotation)
+            key = _py_to_py(args[0]) if args else "str"
+            value = _py_to_py(args[1]) if len(args) > 1 else "Any"
+            return f"dict[{key}, {value}]"
+        if origin is _union_type() or origin is types.UnionType:
+            args = get_args(annotation)
+            parts = [_py_to_py(a) for a in args]
+            return " | ".join(sorted(set(parts))) or "Any"
+        return "Any"
+
+    if annotation is str:
+        return "str"
+    if annotation is int:
+        return "int"
+    if annotation is float:
+        return "float"
+    if annotation is bool:
+        return "bool"
+    if annotation is None or annotation is type(None):
+        return "None"
+    if annotation is Any:
+        return "Any"
+    if _is_model_type(annotation):
+        return annotation.__name__
+    if inspect.isclass(annotation) and hasattr(annotation, "__name__"):
+        return annotation.__name__
+    return "Any"
 
 
 def _is_model_type(tp: Any) -> bool:
@@ -256,11 +310,13 @@ def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]
                     {
                         "name": param.name,
                         "type": param.ts_type,
+                        "py_type": param.py_type,
                         "optional": param.optional,
                     }
                     for param in spec.params
                 ],
                 "return_type": spec.return_type,
+                "return_py": spec.return_py,
             }
         )
 
@@ -275,10 +331,16 @@ def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]
                 {
                     "name": field_name,
                     "type": _py_to_ts(field_type),
+                    "py_type": _py_to_py(field_type),
                     "optional": _is_optional(field_type),
                 }
             )
-        models_schema.append({"name": model.__name__, "fields": fields})
+        models_schema.append(
+            {
+                "name": model.__name__,
+                "fields": fields,
+            }
+        )
 
     return {"endpoint": endpoint, "actions": actions_schema, "models": models_schema}
 
@@ -327,6 +389,7 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
             ActionParam(
                 name=param.get("name", "arg"),
                 ts_type=param.get("type", "unknown"),
+                py_type=param.get("py_type", "Any"),
                 optional=bool(param.get("optional")),
             )
             for param in (action.get("params") or [])
@@ -341,6 +404,7 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
                 name=method,
                 params=params,
                 return_type=return_type,
+                return_py=action.get("return_py", "Any"),
                 model_types=[],
             )
         )
@@ -415,6 +479,160 @@ def write_actions_client_file(
         f.write(code)
 
 
+def generate_actions_types_code_from_schema(
+    schema: dict[str, Any],
+    *,
+    class_name: str = "ActionsClient",
+) -> str:
+    """Generate Python protocol types from an actions schema."""
+    actions = schema.get("actions") or []
+    models = schema.get("models") or []
+
+    def _pascal_case(value: str) -> str:
+        parts = [p for p in value.replace(".", "_").split("_") if p]
+        return "".join(p[:1].upper() + p[1:] for p in parts) or "Action"
+
+    lines: list[str] = [
+        "from __future__ import annotations",
+        "",
+        "from typing import Any, Protocol, TypedDict, NotRequired, Required, TypeVar, Generic, Callable",
+        "",
+        "T = TypeVar(\"T\")",
+        "",
+        "class ActionError(Protocol):",
+        "    message: str",
+        "    type: str",
+        "",
+        "class ActionResponse(Protocol, Generic[T]):",
+        "    ok: bool",
+        "    data: T | None",
+        "    error: ActionError | None",
+        "",
+        "class JsPromise(Protocol, Generic[T]):",
+        "    def then(",
+        "        self,",
+        "        on_fulfilled: Callable[[T], Any] | None = ...,",
+        "        on_rejected: Callable[[Any], Any] | None = ...,",
+        "    ) -> \"JsPromise[Any]\": ...",
+        "",
+    ]
+
+    for model in models:
+        name = model.get("name")
+        fields = model.get("fields", [])
+        if not name:
+            continue
+        lines.append(f"class {name}(Protocol):")
+        if not fields:
+            lines.append("    pass")
+            lines.append("")
+            continue
+        for field in fields:
+            field_name = field.get("name")
+            if not field_name:
+                continue
+            field_type = field.get("py_type") or "Any"
+            if field.get("optional"):
+                field_type = f"{field_type} | None"
+            lines.append(f"    {field_name}: {field_type}")
+        lines.append("")
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for action in actions:
+        name = action.get("name")
+        if not name:
+            continue
+        if "." in name:
+            group, method = name.split(".", 1)
+        else:
+            group, method = "actions", name
+        grouped.setdefault(group, []).append({**action, "method": method})
+
+    for group, group_actions in grouped.items():
+        for action in group_actions:
+            params = action.get("params") or []
+            if not params:
+                continue
+            params_name = _pascal_case(f"{group}_{action['method']}_params")
+            lines.append(f"class {params_name}(TypedDict, total=False):")
+            for param in params:
+                param_name = param.get("name") or "arg"
+                param_type = param.get("py_type") or "Any"
+                if param.get("optional"):
+                    lines.append(f"    {param_name}: NotRequired[{param_type}]")
+                else:
+                    lines.append(f"    {param_name}: Required[{param_type}]")
+            lines.append("")
+
+        group_name = _pascal_case(group)
+        lines.append(f"class {group_name}(Protocol):")
+        if not group_actions:
+            lines.append("    pass")
+            lines.append("")
+            continue
+        for action in group_actions:
+            return_py = action.get("return_py") or "Any"
+            params = action.get("params") or []
+            if params:
+                params_name = _pascal_case(f"{group}_{action['method']}_params")
+                lines.append(
+                    f"    def {action['method']}(self, params: {params_name}) -> JsPromise[ActionResponse[{return_py}]]: ..."
+                )
+            else:
+                lines.append(
+                    f"    def {action['method']}(self) -> JsPromise[ActionResponse[{return_py}]]: ..."
+                )
+        lines.append("")
+
+    lines.append(f"class {class_name}(Protocol):")
+    if not grouped:
+        lines.append("    pass")
+    else:
+        for group in grouped:
+            group_name = _pascal_case(group)
+            lines.append(f"    {group}: {group_name}")
+        lines.append(
+            "    call: Callable[..., JsPromise[ActionResponse[Any]]]"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_actions_types_code(
+    modules: Iterable[type],
+    *,
+    class_name: str = "ActionsClient",
+    endpoint: str = "/_actions",
+) -> str:
+    """Generate Python protocol types from module metadata."""
+    schema = build_actions_schema(modules, endpoint=endpoint)
+    return generate_actions_types_code_from_schema(schema, class_name=class_name)
+
+
+def codegen_actions_types_from_url(url: str, output: str, *, class_name: str = "ActionsClient") -> None:
+    """Write Python protocol types from a schema URL."""
+    with urllib.request.urlopen(url) as response:
+        schema = json.loads(response.read().decode("utf-8"))
+    _ensure_parent(output)
+    code = generate_actions_types_code_from_schema(schema, class_name=class_name)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+
+
+def write_actions_types_file(
+    modules: Iterable[type],
+    output: str,
+    *,
+    class_name: str = "ActionsClient",
+    endpoint: str = "/_actions",
+) -> None:
+    """Write Python protocol types from module metadata."""
+    _ensure_parent(output)
+    code = generate_actions_types_code(modules, class_name=class_name, endpoint=endpoint)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+
+
 def _ensure_parent(output: str) -> None:
     """Ensure the output directory exists."""
     path = os.path.abspath(output)
@@ -430,6 +648,10 @@ __all__ = [
     "build_actions_schema_from_registry",
     "generate_actions_client_code",
     "generate_actions_client_code_from_schema",
+    "generate_actions_types_code",
+    "generate_actions_types_code_from_schema",
     "codegen_actions_from_url",
+    "codegen_actions_types_from_url",
     "write_actions_client_file",
+    "write_actions_types_file",
 ]

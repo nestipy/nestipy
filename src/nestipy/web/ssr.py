@@ -43,53 +43,8 @@ class JSRUNRenderer(SSRRenderer):
         self._runtime = self._runtime()
         entry_code = entry_file.read_text(encoding="utf-8")
         if hasattr(self._runtime, "add_static_module"):
-            shim_code = "\n".join(
-                [
-                    "if (typeof globalThis.process === 'undefined') {",
-                    "  globalThis.process = { env: { NODE_ENV: 'production' } };",
-                    "} else {",
-                    "  globalThis.process.env = globalThis.process.env || {};",
-                    "  if (!('NODE_ENV' in globalThis.process.env)) {",
-                    "    globalThis.process.env.NODE_ENV = 'production';",
-                    "  }",
-                    "}",
-                    "if (typeof globalThis.global === 'undefined') {",
-                    "  globalThis.global = globalThis;",
-                    "}",
-                    "if (typeof globalThis.queueMicrotask === 'undefined') {",
-                    "  globalThis.queueMicrotask = (cb) => Promise.resolve().then(cb);",
-                    "}",
-                    "if (typeof globalThis.MessageChannel === 'undefined') {",
-                    "  class MessagePort {",
-                    "    constructor() { this.onmessage = null; this._other = null; }",
-                    "    postMessage(data) {",
-                    "      const handler = this._other && this._other.onmessage;",
-                    "      if (!handler) return;",
-                    "      const event = { data };",
-                    "      if (typeof globalThis.queueMicrotask === 'function') {",
-                    "        globalThis.queueMicrotask(() => handler(event));",
-                    "      } else if (typeof setTimeout === 'function') {",
-                    "        setTimeout(() => handler(event), 0);",
-                    "      } else {",
-                    "        handler(event);",
-                    "      }",
-                    "    }",
-                    "    start() {}",
-                    "    close() {}",
-                    "  }",
-                    "  class MessageChannel {",
-                    "    constructor() {",
-                    "      this.port1 = new MessagePort();",
-                    "      this.port2 = new MessagePort();",
-                    "      this.port1._other = this.port2;",
-                    "      this.port2._other = this.port1;",
-                    "    }",
-                    "  }",
-                    "  globalThis.MessageChannel = MessageChannel;",
-                    "}",
-                ]
-            )
-            code = shim_code + "\n" + entry_code
+            polyfills = _load_jsrun_polyfills()
+            code = polyfills + "\n" + entry_code
             self._runtime.add_static_module(self._module_name, code)
         else:
             raise ImportError("jsrun.Runtime.add_static_module not available.")
@@ -215,3 +170,22 @@ def env_ssr_enabled() -> bool:
 
 def env_ssr_runtime() -> str:
     return os.getenv("NESTIPY_WEB_SSR_RUNTIME", "jsrun").strip() or "jsrun"
+
+
+def _default_polyfills_path() -> Path:
+    return Path(__file__).parent / "runtime" / "polyfills.js"
+
+
+def _load_jsrun_polyfills() -> str:
+    """Load JS polyfills for the jsrun runtime."""
+    env_path = os.getenv("NESTIPY_WEB_SSR_POLYFILLS", "").strip()
+    if env_path:
+        try:
+            return Path(env_path).read_text(encoding="utf-8")
+        except Exception as exc:
+            logger.warning("[WEB] SSR polyfills not found (%s)", exc)
+    try:
+        return _default_polyfills_path().read_text(encoding="utf-8")
+    except Exception as exc:
+        logger.warning("[WEB] SSR polyfills missing (%s)", exc)
+    return ""

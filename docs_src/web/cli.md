@@ -31,9 +31,11 @@ Actions + router spec codegen:
 - `--actions` — enable actions client generation
 - `--actions-endpoint` — default `/_actions`
 - `--actions-output` — default `web/src/actions.client.ts`
+- `--actions-types` — default `app/_generated/actions_types.py`
 - `--actions-watch` — CSV of backend paths to watch; disables polling
 - `--router-spec` — router spec URL (defaults from env)
 - `--router-output` — output path (default `web/src/api/client.ts`)
+- `--router-types` — default `app/_generated/api_types.py`
 - `--lang` — client language (`ts` or `python`) for router spec
 - `--class` — client class name (default `ApiClient`)
 - `--prefix` — URL prefix
@@ -53,7 +55,8 @@ Flags:
 
 Codegen flags (same as `web:dev`):
 - `--spec`, `--output`, `--lang`, `--class`, `--prefix`
-- `--actions`, `--actions-endpoint`, `--actions-output`
+- `--actions`, `--actions-endpoint`, `--actions-output`, `--actions-types`
+- `--router-output`, `--router-types`
 
 ## `web:codegen`
 
@@ -61,10 +64,20 @@ Codegen flags (same as `web:dev`):
 nestipy run web:codegen --spec URL --output web/src/api/client.ts --lang ts
 ```
 
+Optional types output:
+```bash
+nestipy run web:codegen --spec URL --output web/src/api/client.ts --router-types app/_generated/api_types.py
+```
+
 ## `web:actions`
 
 ```bash
 nestipy run web:actions --spec URL --output web/src/actions.client.ts
+```
+
+Optional types output:
+```bash
+nestipy run web:actions --spec URL --output web/src/actions.client.ts --actions-types app/_generated/actions_types.py
 ```
 
 ## `web:install`

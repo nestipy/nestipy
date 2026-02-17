@@ -77,12 +77,14 @@ await fetchCsrfToken();
 
 ## Using Actions in Python UI
 
-Actions are generated into `web/src/actions.client.ts` and used at runtime in the browser. In Python UI, import `createActions` via `external_fn()` and call methods from the generated client:
+Actions are generated into `web/src/actions.client.ts` and used at runtime in the browser. In Python UI, import `createActions` via `@js_import()` and call methods from the generated client:
 
 ```py
-from nestipy.web import component, h, external_fn
+from nestipy.web import component, h, js_import
+from app._generated.actions_types import ActionsClient
 
-create_actions = external_fn("../actions.client", "createActions", alias="createActions")
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
 
 @component
 def Page():
@@ -93,6 +95,9 @@ def Page():
         class_name="btn",
     )
 ```
+
+`app/_generated/actions_types.py` is generated automatically when you run `web:dev --actions`
+or `web:actions --actions-types ...`.
 
 The compiler emits TS that calls the generated client. The Python code is compile‑time only.
 

@@ -46,14 +46,23 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         actions_output = parsed.get("actions_output")
         if not actions_output:
             actions_output = str(config.resolve_src_dir() / "actions.client.ts")
+        actions_types_output = parsed.get("actions_types")
+        if not actions_types_output:
+            actions_types_output = str(config.resolve_app_dir() / "_generated" / "actions_types.py")
         actions_endpoint = str(parsed.get("actions_endpoint", "/_actions"))
         from nestipy.web.actions_client import write_actions_client_file
 
         write_actions_client_file(modules, str(actions_output), endpoint=actions_endpoint)
+        from nestipy.web.actions_client import write_actions_types_file
+
+        write_actions_types_file(modules, str(actions_types_output), endpoint=actions_endpoint)
 
         client_output = parsed.get("output")
         if not client_output:
             client_output = str(config.resolve_src_dir() / "api" / "client.ts")
+        client_types_output = parsed.get("router_types")
+        if not client_types_output:
+            client_types_output = str(config.resolve_app_dir() / "_generated" / "api_types.py")
         client_language = str(parsed.get("lang", "ts"))
         class_name = str(parsed.get("class_name", "ApiClient"))
         prefix = str(parsed.get("prefix", ""))
@@ -63,6 +72,14 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
             modules,
             str(client_output),
             language=client_language,
+            class_name=class_name,
+            prefix=prefix,
+        )
+        from nestipy.web.client_types import write_client_types_file
+
+        write_client_types_file(
+            modules,
+            str(client_types_output),
             class_name=class_name,
             prefix=prefix,
         )
@@ -114,6 +131,70 @@ def init(args: Iterable[str]) -> None:
     actions_file = app_dir / "actions.py"
     if not actions_file.exists():
         actions_file.write_text(DEFAULT_ACTIONS_TEMPLATE, encoding="utf-8")
+    generated_dir = app_dir / "_generated"
+    generated_dir.mkdir(parents=True, exist_ok=True)
+    init_file = generated_dir / "__init__.py"
+    if not init_file.exists():
+        init_file.write_text("", encoding="utf-8")
+    actions_types_file = generated_dir / "actions_types.py"
+    if not actions_types_file.exists():
+        actions_types_file.write_text(
+            "\n".join(
+                [
+                    "from __future__ import annotations",
+                    "",
+                    "from typing import Any, Protocol, TypeVar, Generic, Callable",
+                    "",
+                    "T = TypeVar(\"T\")",
+                    "",
+                    "class ActionError(Protocol):",
+                    "    message: str",
+                    "    type: str",
+                    "",
+                    "class ActionResponse(Protocol, Generic[T]):",
+                    "    ok: bool",
+                    "    data: T | None",
+                    "    error: ActionError | None",
+                    "",
+                    "class JsPromise(Protocol, Generic[T]):",
+                    "    def then(",
+                    "        self,",
+                    "        on_fulfilled: Callable[[T], Any] | None = ...,",
+                    "        on_rejected: Callable[[Any], Any] | None = ...,",
+                    "    ) -> \"JsPromise[Any]\": ...",
+                    "",
+                    "class ActionsClient(Protocol):",
+                    "    pass",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+    api_types_file = generated_dir / "api_types.py"
+    if not api_types_file.exists():
+        api_types_file.write_text(
+            "\n".join(
+                [
+                    "from __future__ import annotations",
+                    "",
+                    "from typing import Any, Protocol, TypeVar, Generic, Callable",
+                    "",
+                    "T = TypeVar(\"T\")",
+                    "",
+                    "class JsPromise(Protocol, Generic[T]):",
+                    "    def then(",
+                    "        self,",
+                    "        on_fulfilled: Callable[[T], Any] | None = ...,",
+                    "        on_rejected: Callable[[Any], Any] | None = ...,",
+                    "    ) -> \"JsPromise[Any]\": ...",
+                    "",
+                    "class ApiClient(Protocol):",
+                    "    pass",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
     if not parsed.get("no_build"):
         try:

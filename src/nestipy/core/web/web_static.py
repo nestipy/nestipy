@@ -110,6 +110,9 @@ class WebStaticHandler:
         ssr_routes_loaded = False
         if ssr_enabled:
             runtime = env_ssr_runtime()
+            if ssr_stream and runtime == "jsrun":
+                logger.warning("[WEB] SSR streaming disabled for jsrun runtime")
+                ssr_stream = False
             entry_path = os.getenv("NESTIPY_WEB_SSR_ENTRY") or resolve_ssr_entry(static_dir)
             try:
                 ssr_renderer = create_ssr_renderer(runtime, entry_path)

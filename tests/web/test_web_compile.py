@@ -159,6 +159,43 @@ def Page():
     assert "export function Card(props: CardProps): JSX.Element" in card_tsx
 
 
+def test_compile_with_js_import(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "page.py",
+        """
+from typing import Protocol, Any
+from nestipy.web import component, h, js, js_import
+
+class UserActions(Protocol):
+    def hello(self, params: dict[str, str]) -> Any: ...
+
+class ActionsClient(Protocol):
+    UserActions: UserActions
+
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
+
+@component
+def Page():
+    actions = create_actions()
+    return h.div(js("actions ? 'ok' : 'no'"))
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "createActions" in page_tsx
+    assert "actions.client" in page_tsx
+    assert "const actions = createActions()" in page_tsx
+
+
 def test_vite_proxy_config(tmp_path: Path) -> None:
     app_dir = tmp_path / "app"
     out_dir = tmp_path / "web"

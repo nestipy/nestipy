@@ -16,9 +16,11 @@ const res = await actions.UserActions.hello({ name: 'Nestipy' });
 ### Python UI Usage (actions)
 
 ```py
-from nestipy.web import component, h, external_fn, use_effect, use_state
+from nestipy.web import component, h, js_import, use_effect, use_state
+from app._generated.actions_types import ActionsClient
 
-create_actions = external_fn("../actions.client", "createActions", alias="createActions")
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
 
 @component
 def Page():
@@ -53,9 +55,11 @@ const res = await api.UserController.health();
 ### Python UI Usage (API)
 
 ```py
-from nestipy.web import component, h, external_fn, use_effect, use_state
+from nestipy.web import component, h, js_import, use_effect, use_state
+from app._generated.api_types import ApiClient
 
-create_api_client = external_fn("../api/client", "createApiClient", alias="createApiClient")
+@js_import("../api/client", "createApiClient")
+def create_api_client() -> ApiClient: ...
 
 @component
 def Page():
@@ -66,6 +70,8 @@ def Page():
 
     return h.div(h.p(ping))
 ```
+
+`app/_generated/api_types.py` is generated when the router spec is available (`web:dev --router-spec ...` or `web:codegen --router-types ...`).
 
 ## Codegen
 

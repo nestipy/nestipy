@@ -7,7 +7,8 @@ from pathlib import Path
 import libcst as cst
 
 from nestipy.web.ui import ExternalComponent, ExternalFunction
-from .parser_expr import _call_name, _eval_external_call
+from .errors import CompilerError
+from .parser_expr import _call_name, _eval_external_call, _eval_string
 from .parser_types import ImportSpec
 
 
@@ -24,6 +25,17 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | Exte
     """Collect external component declarations from assignments."""
     externals: dict[str, ExternalComponent | ExternalFunction] = {}
     for stmt in module.body:
+        if isinstance(stmt, cst.FunctionDef):
+            ext = _collect_js_import(stmt)
+            if ext:
+                if ext.alias and "_" in ext.alias and "_" not in ext.name:
+                    ext = ExternalFunction(
+                        module=ext.module,
+                        name=ext.name,
+                        alias=None,
+                    )
+                externals[stmt.name.value] = ext
+            continue
         statements = []
         if isinstance(stmt, cst.SimpleStatementLine):
             statements = list(stmt.body)
@@ -64,6 +76,44 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | Exte
                         )
                     externals[target.value] = ext
     return externals
+
+
+def _collect_js_import(fn: cst.FunctionDef) -> ExternalFunction | None:
+    """Collect external function declarations from @js_import decorators."""
+    for deco in fn.decorators:
+        expr = deco.decorator
+        if not isinstance(expr, cst.Call):
+            continue
+        if _call_name(expr) != "js_import":
+            continue
+        return _eval_js_import(expr, fn.name.value)
+    return None
+
+
+def _eval_js_import(call: cst.Call, fallback_name: str) -> ExternalFunction:
+    """Evaluate a js_import() decorator call into an ExternalFunction."""
+    module: str | None = None
+    name: str | None = None
+    alias: str | None = None
+    for arg in call.args:
+        if arg.keyword is None:
+            if module is None:
+                module = _eval_string(arg.value)
+            elif name is None:
+                name = _eval_string(arg.value)
+        else:
+            key = arg.keyword.value
+            if key == "module":
+                module = _eval_string(arg.value)
+            elif key == "name":
+                name = _eval_string(arg.value)
+            elif key == "alias":
+                alias = _eval_string(arg.value)
+    if module is None:
+        raise CompilerError("js_import() requires a module string")
+    if name is None:
+        name = fallback_name
+    return ExternalFunction(module=module, name=name, alias=alias)
 
 
 def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> list[ImportSpec]:

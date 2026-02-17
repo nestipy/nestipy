@@ -124,11 +124,12 @@ nestipy run web:init
 nestipy run web:dev --vite --install --proxy http://127.0.0.1:8001
 ```
 
-Generate actions client (recommended):
+Generate actions client + Python types (recommended):
 
 ```bash
 nestipy run web:actions --spec http://127.0.0.1:8001/_actions/schema \
-  --output web/src/actions.client.ts
+  --output web/src/actions.client.ts \
+  --actions-types app/_generated/actions_types.py
 ```
 
 Use actions in React/TS:
@@ -141,14 +142,16 @@ const res = await actions.UserActions.hello({ name: 'Nestipy' });
 if (res.ok) console.log(res.data);
 ```
 
-Use actions from Python UI via `external_fn()`:
+Use actions from Python UI via `@js_import()`:
 
 `app/page.py`:
 
 ```py
-from nestipy.web import component, h, external_fn, use_effect, use_state
+from nestipy.web import component, h, js_import, use_effect, use_state
+from app._generated.actions_types import ActionsClient
 
-create_actions = external_fn("../actions.client", "createActions", alias="createActions")
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
 
 @component
 def Page():
