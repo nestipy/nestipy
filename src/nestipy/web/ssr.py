@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -120,11 +123,83 @@ class JSRUNRenderer(SSRRenderer):
         return str(result) if result is not None else None
 
 
+class NodeRenderer(SSRRenderer):
+    """SSR renderer backed by a Node.js process."""
+
+    def __init__(self, entry_path: str, node_binary: str | None = None) -> None:
+        entry_file = Path(entry_path)
+        if not entry_file.is_file():
+            raise FileNotFoundError(f"SSR entry not found: {entry_path}")
+
+        resolved_node = node_binary or os.getenv("NESTIPY_WEB_SSR_NODE") or shutil.which("node")
+        if not resolved_node:
+            raise ImportError("node is not installed or not found in PATH.")
+
+        self._node = resolved_node
+        self._entry_path = str(entry_file)
+        timeout_raw = os.getenv("NESTIPY_WEB_SSR_TIMEOUT", "5") or "5"
+        try:
+            self._timeout = max(1.0, float(timeout_raw))
+        except Exception:
+            self._timeout = 5.0
+
+        self._script = "\n".join(
+            [
+                "import { pathToFileURL } from 'url';",
+                "const entry = process.argv[2];",
+                "const url = process.argv[3] || '/';",
+                "const entryUrl = pathToFileURL(entry).href;",
+                "const mod = await import(entryUrl);",
+                "if (!mod || typeof mod.render !== 'function') {",
+                "  console.error('SSR entry does not export render()');",
+                "  process.exit(1);",
+                "}",
+                "const result = await mod.render(url);",
+                "let html = result;",
+                "if (result && typeof result === 'object') {",
+                "  html = result.html ?? result.body ?? '';",
+                "}",
+                "if (html === undefined || html === null) {",
+                "  html = '';",
+                "}",
+                "process.stdout.write(String(html));",
+            ]
+        )
+
+    async def render(self, url: str) -> str | None:
+        return await asyncio.to_thread(self._render_sync, url)
+
+    def _render_sync(self, url: str) -> str | None:
+        try:
+            result = subprocess.run(
+                [self._node, "--input-type=module", "-e", self._script, self._entry_path, url],
+                capture_output=True,
+                text=True,
+                timeout=self._timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise SSRRenderError(f"SSR render timed out ({self._timeout}s).") from exc
+        if result.returncode != 0:
+            message = (result.stderr or "").strip() or "SSR render failed."
+            raise SSRRenderError(message)
+        return result.stdout
+
+
 def create_ssr_renderer(runtime: str, entry_path: str) -> SSRRenderer:
     """Create an SSR renderer for the requested runtime."""
     runtime = (runtime or "jsrun").strip().lower()
+    if runtime in {"auto"}:
+        try:
+            return JSRUNRenderer(entry_path)
+        except ImportError:
+            return NodeRenderer(entry_path)
     if runtime in {"jsrun", "v8"}:
-        return JSRUNRenderer(entry_path)
+        try:
+            return JSRUNRenderer(entry_path)
+        except ImportError:
+            return NodeRenderer(entry_path)
+    if runtime in {"node", "nodejs"}:
+        return NodeRenderer(entry_path)
     raise ValueError(f"Unsupported SSR runtime: {runtime}")
 
 

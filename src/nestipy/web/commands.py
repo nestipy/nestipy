@@ -210,7 +210,8 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
     else:
         _maybe_codegen_client(parsed, config)
         _maybe_codegen_actions(parsed, config, modules)
-    if parsed.get("vite"):
+    vite_enabled = bool(parsed.get("vite") or config.target == "vite")
+    if vite_enabled:
         from nestipy.web.compiler import ensure_vite_files
 
         ensure_vite_files(config)
@@ -220,6 +221,8 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
         ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
         _build_vite(config, ssr=ssr_enabled, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir)
+        _validate_vite_output(config, ssr=ssr_enabled, ssr_out_dir=ssr_out_dir)
+        _maybe_set_web_dist(config)
 
 
 def init(args: Iterable[str]) -> None:
@@ -962,6 +965,41 @@ def _build_vite(
     if rc != 0:
         _log_build_failure(lines)
         raise RuntimeError("Vite build failed.")
+
+
+def _maybe_set_web_dist(config: WebConfig) -> None:
+    """Set NESTIPY_WEB_DIST to the build output directory if not already set."""
+    if os.getenv("NESTIPY_WEB_DIST"):
+        return
+    dist_path = config.resolve_out_dir() / "dist"
+    if dist_path.exists():
+        os.environ["NESTIPY_WEB_DIST"] = str(dist_path)
+
+
+def _validate_vite_output(
+    config: WebConfig,
+    *,
+    ssr: bool = False,
+    ssr_out_dir: str = "dist/ssr",
+) -> None:
+    """Ensure Vite output exists and basic manifests are present."""
+    out_dir = config.resolve_out_dir()
+    dist_dir = out_dir / "dist"
+    if not dist_dir.exists():
+        raise RuntimeError("Vite build did not produce a dist directory.")
+    index_file = dist_dir / "index.html"
+    if not index_file.exists():
+        raise RuntimeError("Vite build missing dist/index.html.")
+    manifest_candidates = [
+        dist_dir / "manifest.json",
+        dist_dir / ".vite" / "manifest.json",
+    ]
+    if not any(path.exists() for path in manifest_candidates):
+        raise RuntimeError("Vite build missing manifest.json.")
+    if ssr:
+        ssr_dir = out_dir / ssr_out_dir
+        if not ssr_dir.exists():
+            raise RuntimeError("Vite SSR build missing ssr output directory.")
 
 
 def _start_backend(

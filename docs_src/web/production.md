@@ -29,6 +29,7 @@ Optional environment variables:
 - `NESTIPY_WEB_STATIC_PATH=/`
 - `NESTIPY_WEB_STATIC_INDEX=index.html`
 - `NESTIPY_WEB_STATIC_FALLBACK=1`
+- `NESTIPY_WEB_BUILD_LOG=summary|verbose|silent`
 
 ## Vite Proxy (Dev)
 

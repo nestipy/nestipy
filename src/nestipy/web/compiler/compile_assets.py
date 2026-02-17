@@ -152,6 +152,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "  ssr: {",
                     "    noExternal: true,",
                     "  },",
+                    "  build: {",
+                    "    manifest: true,",
+                    "  },",
                     *proxy_lines,
                     "});",
                     "",
@@ -192,6 +195,20 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     inserted = True
             if inserted:
                 updated_existing = "\n".join(new_lines)
+
+        if "manifest:" not in updated_existing:
+            lines = updated_existing.splitlines()
+            insert_at = None
+            for idx in range(len(lines) - 1, -1, -1):
+                if lines[idx].strip().startswith("});"):
+                    insert_at = idx
+                    break
+            build_lines = ["  build: {", "    manifest: true,", "  },"]
+            if insert_at is None:
+                lines.extend(build_lines)
+            else:
+                lines[insert_at:insert_at] = build_lines
+            updated_existing = "\n".join(lines)
 
         if updated_existing != existing:
             vite_config.write_text(

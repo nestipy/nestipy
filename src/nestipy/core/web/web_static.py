@@ -4,6 +4,7 @@ import collections
 import json
 import mimetypes
 import os
+import re
 import sys
 import time
 import typing
@@ -56,6 +57,15 @@ class WebStaticHandler:
                         return arg.split("=", 1)[1]
                 return None
 
+            if "--ssr" in argv and not os.getenv("NESTIPY_WEB_SSR"):
+                os.environ["NESTIPY_WEB_SSR"] = "1"
+            cli_ssr_runtime = _cli_value("--ssr-runtime")
+            if cli_ssr_runtime and not os.getenv("NESTIPY_WEB_SSR_RUNTIME"):
+                os.environ["NESTIPY_WEB_SSR_RUNTIME"] = cli_ssr_runtime
+            cli_ssr_entry = _cli_value("--ssr-entry")
+            if cli_ssr_entry and not os.getenv("NESTIPY_WEB_SSR_ENTRY"):
+                os.environ["NESTIPY_WEB_SSR_ENTRY"] = cli_ssr_entry
+
             dist_dir = _cli_value("--web-dist") or ""
             if not dist_dir and "--web" in argv:
                 candidates = ("web/dist", "src/dist", "dist")
@@ -93,6 +103,8 @@ class WebStaticHandler:
         manifest_cache: dict[str, JsonValue] | None = None
         manifest_mtime: float | None = None
         manifest_tags_cache: str | None = None
+        manifest_assets_cache: set[str] | None = None
+        hash_re = re.compile(r"[-.][a-f0-9]{8,}\.")
         ssr_allow_routes: list[str] = []
         ssr_deny_routes: list[str] = []
         ssr_routes_loaded = False
@@ -143,7 +155,7 @@ class WebStaticHandler:
             return rel
 
         def _load_manifest() -> dict[str, JsonValue] | None:
-            nonlocal manifest_cache, manifest_mtime, manifest_tags_cache
+            nonlocal manifest_cache, manifest_mtime, manifest_tags_cache, manifest_assets_cache
             candidates = [
                 ssr_manifest_path,
                 os.path.join(static_dir, ".vite", "ssr-manifest.json"),
@@ -163,6 +175,7 @@ class WebStaticHandler:
                         manifest_cache = json.load(f)
                     manifest_mtime = mtime
                     manifest_tags_cache = None
+                    manifest_assets_cache = None
                     return manifest_cache
                 except Exception:
                     return None
@@ -266,6 +279,38 @@ class WebStaticHandler:
             manifest_tags_cache = "\n".join(links)
             return manifest_tags_cache
 
+        def _manifest_assets() -> set[str]:
+            nonlocal manifest_assets_cache
+            if manifest_assets_cache is not None:
+                return manifest_assets_cache
+            manifest = _load_manifest()
+            assets: set[str] = set()
+            if isinstance(manifest, dict):
+                for item in manifest.values():
+                    if isinstance(item, dict):
+                        file = item.get("file")
+                        if file:
+                            assets.add(str(file))
+                        for css in item.get("css", []) or []:
+                            assets.add(str(css))
+                        for asset in item.get("assets", []) or []:
+                            assets.add(str(asset))
+            manifest_assets_cache = assets
+            return assets
+
+        def _cache_control_for(rel_path: str) -> str | None:
+            if not rel_path:
+                return None
+            filename = os.path.basename(rel_path)
+            if filename == index_name or filename.endswith(".html"):
+                return "no-cache"
+            manifest_assets = _manifest_assets()
+            if rel_path in manifest_assets or f"assets/{filename}" in manifest_assets:
+                return "public, max-age=31536000, immutable"
+            if hash_re.search(filename):
+                return "public, max-age=31536000, immutable"
+            return "public, max-age=3600"
+
         def _render_ssr_payload(html: str) -> str:
             index_file = os.path.join(static_dir, index_name)
             try:
@@ -334,10 +379,14 @@ class WebStaticHandler:
             if not os.path.isfile(file_path):
                 if allow_fallback and fallback_enabled and _accepts_html(req):
                     file_path = os.path.join(static_dir, index_name)
+                    rel_path = index_name
                 if not os.path.isfile(file_path):
                     return False
             mime_type, _ = mimetypes.guess_type(file_path)
             mime_type = mime_type or "application/octet-stream"
+            cache_control = _cache_control_for(rel_path)
+            if cache_control:
+                res.header("Cache-Control", cache_control)
             async with aiofiles.open(file_path, "rb") as f:
                 payload = await f.read()
             res.header("Content-Type", mime_type)
