@@ -351,11 +351,13 @@ def resolve_component_imports(
 
     import_map: dict[Path, list[ImportSpec]] = {}
     for imp in parsed.imports:
-        if imp.path is None:
+        if imp.path is None or imp.type_only:
             continue
         import_map.setdefault(imp.path, []).append(imp)
 
-    unresolved = used_names - local_names - {imp.alias for imp in parsed.imports if imp.path}
+    unresolved = used_names - local_names - {
+        imp.alias for imp in parsed.imports if imp.path and not imp.type_only
+    }
     if unresolved:
         raise CompilerError(
             f"Unknown component(s) used: {', '.join(sorted(unresolved))}"

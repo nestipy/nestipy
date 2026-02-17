@@ -10,15 +10,16 @@ from nestipy.web import (
     use_state,
     use_effect,
     use_context,
-    external,
-    external_fn,
+    js_import,
 )
-from app.state import ThemeContext, use_app_store
+from app.store import ThemeContext, use_app_store
+from app._generated.api_types import ApiClient
 
 if TYPE_CHECKING:
-    from app.state import ThemeContextValue
+    from app.store import ThemeContextValue
 
-create_api_client = external_fn("../../api/client", "createApiClient", alias="createApiClient")
+@js_import("../../api/client", "createApiClient")
+def create_api_client() -> ApiClient: ...
 
 
 @component

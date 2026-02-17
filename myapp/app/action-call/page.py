@@ -10,15 +10,16 @@ from nestipy.web import (
     use_state,
     use_effect,
     use_context,
-    external,
-    external_fn,
+    js_import,
 )
-from app.state import ThemeContext, use_app_store
+from app.store import ThemeContext, use_app_store
+from app._generated.actions_types import ActionsClient
 
 if TYPE_CHECKING:
-    from app.state import ThemeContextValue
+    from app.store import ThemeContextValue
 
-create_actions = external_fn("../../actions.client", "createActions", alias="createActions")
+@js_import("../../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
 
 
 @component

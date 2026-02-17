@@ -16,6 +16,7 @@ class ImportSpec:
     name: str
     alias: str
     path: Path | None
+    type_only: bool = False
 
 
 @dataclass(slots=True)

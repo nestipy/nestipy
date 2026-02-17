@@ -13,16 +13,22 @@ from nestipy.web import (
     use_callback,
     use_context,
     external,
-    external_fn,
+    js_import,
 )
-from app.state import ThemeContext, use_app_store
+from app.store import ThemeContext, use_app_store
+from app._generated.actions_types import ActionsClient
+from app._generated.api_types import ApiClient
 
 if TYPE_CHECKING:
-    from app.state import ThemeContextValue
+    from app.store import ThemeContextValue
 
 Link = external("react-router-dom", "Link")
-create_actions = external_fn("../actions.client", "createActions", alias="createActions")
-create_api_client = external_fn("../api/client", "createApiClient", alias="createApiClient")
+
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
+
+@js_import("../api/client", "createApiClient")
+def create_api_client() -> ApiClient: ...
 
 
 @component

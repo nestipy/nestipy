@@ -143,6 +143,7 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                     alias = import_alias.asname.name.value if import_alias.asname else name
 
                     path = None
+                    type_only = False
                     if module_name:
                         module_rel = Path(module_name.replace(".", "/"))
                         module_path = base_dir / module_rel
@@ -163,7 +164,10 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                         candidate = base_dir / name
                         path = _resolve_module_file(candidate, app_dir)
 
-                    imports.append(ImportSpec(name=name, alias=alias, path=path))
+                    if path is not None and "_generated" in path.parts:
+                        type_only = True
+
+                    imports.append(ImportSpec(name=name, alias=alias, path=path, type_only=type_only))
             elif isinstance(inner, cst.Import):
                 continue
 

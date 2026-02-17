@@ -5,8 +5,60 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import struct
 
 from nestipy.web.config import WebConfig
+
+
+def _default_favicon_bytes() -> bytes:
+    """Return a simple 16x16 favicon ICO."""
+    width = 16
+    height = 16
+    bytes_per_pixel = 4
+    image_bytes = width * height * bytes_per_pixel
+    mask_row_bytes = ((width + 31) // 32) * 4
+    mask_bytes = mask_row_bytes * height
+    bytes_in_res = 40 + image_bytes + mask_bytes
+
+    header = struct.pack("<HHH", 0, 1, 1)
+    entry = struct.pack(
+        "<BBBBHHII",
+        width,
+        height,
+        0,
+        0,
+        1,
+        32,
+        bytes_in_res,
+        6 + 16,
+    )
+    bmp_header = struct.pack(
+        "<IIIHHIIIIII",
+        40,
+        width,
+        height * 2,
+        1,
+        32,
+        0,
+        image_bytes,
+        0,
+        0,
+        0,
+        0,
+    )
+    # Nestipy red (#c10e0e) in BGRA.
+    pixel = bytes([0x0E, 0x0E, 0xC1, 0xFF])
+    row = pixel * width
+    pixel_data = row * height
+    mask = b"\x00" * mask_bytes
+    return header + entry + bmp_header + pixel_data + mask
+
+
+def _ensure_default_favicon(path: Path) -> None:
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(_default_favicon_bytes())
 
 
 def _dedupe_api_client_stub(content: str) -> str:
@@ -37,6 +89,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     "  <head>",
                     "    <meta charset='UTF-8' />",
                     "    <meta name='viewport' content='width=device-width, initial-scale=1.0' />",
+                    "    <link rel='icon' href='/favicon.ico' />",
                     "    <title>Nestipy Web</title>",
                     "  </head>",
                     "  <body>",
@@ -48,6 +101,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             ),
             encoding="utf-8",
         )
+    _ensure_default_favicon(out_dir / "public" / "favicon.ico")
 
     package_json = out_dir / "package.json"
     if not package_json.exists():

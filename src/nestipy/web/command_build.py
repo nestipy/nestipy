@@ -119,6 +119,9 @@ def init(args: Iterable[str]) -> None:
     )
     app_dir = config.resolve_app_dir()
     app_dir.mkdir(parents=True, exist_ok=True)
+    app_init = app_dir / "__init__.py"
+    if not app_init.exists():
+        app_init.write_text("", encoding="utf-8")
 
     page_file = app_dir / "page.py"
     if not page_file.exists():

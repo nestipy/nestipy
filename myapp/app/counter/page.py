@@ -10,7 +10,7 @@ from nestipy.web import (
     use_state,
     use_callback,
 )
-from app.state import use_app_store
+from app.store import use_app_store
 
 
 @component

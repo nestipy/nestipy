@@ -196,6 +196,120 @@ def Page():
     assert "const actions = createActions()" in page_tsx
 
 
+def test_compile_with_generated_types_import(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "_generated" / "actions_types.py",
+        """
+from typing import Protocol
+
+class ActionsClient(Protocol):
+    pass
+""".strip(),
+    )
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h, js, js_import
+from app._generated.actions_types import ActionsClient
+
+@js_import("../actions.client", "createActions")
+def create_actions() -> ActionsClient: ...
+
+@component
+def Page():
+    actions = create_actions()
+    return h.div(js("actions ? 'ok' : 'no'"))
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "actions_types" not in page_tsx
+
+
+def test_compile_module_constants(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "state.py",
+        """
+from nestipy.web import create_context
+
+theme_default = {"theme": "dark", "toggle": None}
+ThemeContext = create_context(theme_default)
+""".strip(),
+    )
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+from app.state import ThemeContext
+
+@component
+def Page():
+    return h.div("ok")
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    state_tsx = (out_dir / "src" / "components" / "state.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "const theme_default" in state_tsx
+    assert "React.createContext" in state_tsx
+
+
+def test_skip_typing_module_constants(tmp_path: Path) -> None:
+    app_dir = tmp_path / "app"
+    out_dir = tmp_path / "web"
+
+    _write(
+        app_dir / "state.py",
+        """
+from typing import TypeVar, Literal
+from nestipy.web import create_context
+
+T = TypeVar("T")
+ThemeName = Literal["light", "dark"]
+theme_default = {"theme": "dark", "toggle": None}
+ThemeContext = create_context(theme_default)
+""".strip(),
+    )
+
+    _write(
+        app_dir / "page.py",
+        """
+from nestipy.web import component, h
+from app.state import ThemeContext
+
+@component
+def Page():
+    return h.div("ok")
+""".strip(),
+    )
+
+    config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
+    compile_app(config, root=str(tmp_path))
+
+    state_tsx = (out_dir / "src" / "components" / "state.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "TypeVar" not in state_tsx
+    assert "Literal" not in state_tsx
+
+
 def test_vite_proxy_config(tmp_path: Path) -> None:
     app_dir = tmp_path / "app"
     out_dir = tmp_path / "web"

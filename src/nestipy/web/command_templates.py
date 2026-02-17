@@ -3,6 +3,21 @@ from __future__ import annotations
 
 DEFAULT_PAGE_TEMPLATE = """from nestipy.web import component, h
 
+# Tip: auto-generate typed JS imports with:
+#   nestipy run web:actions --actions-types app/_generated/actions_types.py
+#   nestipy run web:codegen --router-types app/_generated/api_types.py
+#
+# Example:
+#   from nestipy.web import js_import
+#   from app._generated.actions_types import ActionsClient
+#   from app._generated.api_types import ApiClient
+#
+#   @js_import("../actions.client", "createActions")
+#   def create_actions() -> ActionsClient: ...
+#
+#   @js_import("../api/client", "createApiClient")
+#   def create_api_client() -> ApiClient: ...
+
 @component
 def Page():
     features = [

@@ -120,6 +120,8 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         """Capture modification times for app source files."""
         state: dict[str, float] = {}
         for path in app_dir.rglob("*.py"):
+            if "_generated" in path.parts:
+                continue
             try:
                 state[str(path)] = path.stat().st_mtime
             except FileNotFoundError:
@@ -158,6 +160,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             traceback.print_exc()
     if router_spec_url and router_output:
         router_hash = maybe_codegen_router_spec(router_spec_url, router_output, router_hash)
+        last_router_poll = time.monotonic()
         if router_types_output:
             router_types_hash = maybe_codegen_router_types(
                 router_spec_url,
@@ -195,6 +198,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             actions_hash,
             actions_etag,
         )
+        last_actions_poll = time.monotonic()
         if actions_types_output:
             actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
                 actions_schema_url,
@@ -265,6 +269,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_hash,
                         actions_etag,
                     )
+                    last_actions_poll = time.monotonic()
                     if actions_types_output:
                         actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
                             actions_schema_url,
@@ -276,6 +281,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                     router_hash = maybe_codegen_router_spec(
                         router_spec_url, router_output, router_hash
                     )
+                    last_router_poll = time.monotonic()
                     if router_types_output:
                         router_types_hash = maybe_codegen_router_types(
                             router_spec_url,

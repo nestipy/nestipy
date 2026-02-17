@@ -18,8 +18,10 @@ from nestipy.web.actions_client import (
     write_actions_types_file,
 )
 from nestipy.web.client import codegen_client, codegen_client_from_url
+from nestipy.router import router_spec_from_dict
 from nestipy.web.client_types import (
     codegen_client_types_from_url,
+    generate_client_types_code,
     write_client_types_file,
 )
 from nestipy.web.config import WebConfig
@@ -218,13 +220,20 @@ def maybe_codegen_router_types(
 ) -> str | None:
     """Fetch the router spec and update the types file if it changed."""
     try:
-        codegen_client_types_from_url(url, output, class_name="ApiClient")
+        with urllib.request.urlopen(url, timeout=2) as response:
+            data = json.loads(response.read().decode("utf-8"))
     except Exception:
         logger.exception("[WEB] router types generation failed")
         if not logger.isEnabledFor(20):
             traceback.print_exc()
         return last_hash
-    digest = hash_file(output)
-    if digest and digest != last_hash:
-        logger.info("[WEB] API types updated")
-    return digest or last_hash
+    router_spec = router_spec_from_dict(data)
+    code = generate_client_types_code(router_spec, class_name="ApiClient")
+    digest = hashlib.sha256(code.encode("utf-8")).hexdigest()
+    if digest == last_hash:
+        return last_hash
+    os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
+    with open(output, "w", encoding="utf-8") as f:
+        f.write(code)
+    logger.info("[WEB] API types updated")
+    return digest

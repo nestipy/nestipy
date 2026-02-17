@@ -16,6 +16,50 @@ from .parser_hooks import (
 )
 from .parser_hooks import _get_call_arg
 
+_TYPING_ONLY_CALLS = {
+    "TypeVar",
+    "TypeAlias",
+    "ParamSpec",
+    "TypedDict",
+    "Protocol",
+    "NewType",
+    "Final",
+    "ClassVar",
+    "Annotated",
+    "Required",
+    "NotRequired",
+}
+
+_TYPING_ONLY_SUBSCRIPTS = {
+    "Literal",
+    "ClassVar",
+    "Annotated",
+    "Required",
+    "NotRequired",
+    "Final",
+    "TypeAlias",
+}
+
+
+def _typing_name(expr: cst.BaseExpression) -> str | None:
+    if isinstance(expr, cst.Name):
+        return expr.value
+    if isinstance(expr, cst.Attribute):
+        return expr.attr.value
+    return None
+
+
+def _is_typing_expression(expr: cst.BaseExpression) -> bool:
+    if isinstance(expr, cst.Call):
+        call_name = _call_name(expr)
+        if call_name in _TYPING_ONLY_CALLS:
+            return True
+    if isinstance(expr, cst.Subscript):
+        base = _typing_name(expr.value)
+        if base in _TYPING_ONLY_SUBSCRIPTS:
+            return True
+    return False
+
 
 def _collect_module_prelude(
     module: cst.Module, *, export_values: bool = True
@@ -61,6 +105,8 @@ def _collect_module_prelude(
                 value = inner.value
             if target is None or value is None:
                 continue
+            if _is_typing_expression(value):
+                continue
             if isinstance(value, cst.Call):
                 call_name = _call_name(value)
                 if call_name == "create_context":
@@ -92,7 +138,6 @@ def _collect_module_prelude(
                     )
                     names.add(target.value)
                     continue
-            continue
 
             # Emit simple module-level constants (e.g., theme_default).
             try:
