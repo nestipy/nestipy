@@ -17,12 +17,6 @@ class AppControllerMessageOptions(TypedDict, total=False):
 class AppControllerPingOptions(TypedDict, total=False):
     pass
 
-class HealthControllerHealthzOptions(TypedDict, total=False):
-    pass
-
-class HealthControllerReadyzOptions(TypedDict, total=False):
-    pass
-
 class ActionsControllerCsrfOptions(TypedDict, total=False):
     pass
 
@@ -38,19 +32,13 @@ class AppControllerApi(Protocol):
     def message(self, options: AppControllerMessageOptions | None = None) -> JsPromise[str]: ...
     def ping(self, options: AppControllerPingOptions | None = None) -> JsPromise[str]: ...
 
-class HealthControllerApi(Protocol):
-    def healthz(self, options: HealthControllerHealthzOptions | None = None) -> JsPromise[Any]: ...
-    def readyz(self, options: HealthControllerReadyzOptions | None = None) -> JsPromise[Any]: ...
-
 class ActionsControllerApi(Protocol):
-    def csrf(self, options: ActionsControllerCsrfOptions | None = None) -> JsPromise[Any]: ...
-    def handle(self, options: ActionsControllerHandleOptions | None = None) -> JsPromise[Any]: ...
-    def schema(self, options: ActionsControllerSchemaOptions | None = None) -> JsPromise[Any]: ...
+    def csrf(self, options: ActionsControllerCsrfOptions | None = None) -> JsPromise[dict[str, Any]]: ...
+    def handle(self, options: ActionsControllerHandleOptions | None = None) -> JsPromise[dict[str, Any]]: ...
+    def schema(self, options: ActionsControllerSchemaOptions | None = None) -> JsPromise[dict[str, Any]]: ...
 
 class ApiClient(Protocol):
     AppController: AppControllerApi
-    HealthController: HealthControllerApi
     ActionsController: ActionsControllerApi
     App: AppControllerApi
-    Health: HealthControllerApi
     Actions: ActionsControllerApi

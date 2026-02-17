@@ -47,7 +47,7 @@ class GranianServerRunner:
         web_ssr = "--ssr" in argv or "--web-ssr" in argv
         web_ssr_runtime = _cli_value("--ssr-runtime") or _cli_value("--web-ssr-runtime")
         web_ssr_entry = _cli_value("--ssr-entry") or _cli_value("--web-ssr-entry")
-
+        del options["host"]
         def _default_web_dist() -> str:
             candidates = ("web/dist", "src/dist", "dist")
             for candidate in candidates:
@@ -127,7 +127,7 @@ class GranianServerRunner:
 
         if target is None:
             unsupported = set(options.keys()) - {
-                "host",
+                "address",
                 "port",
                 "uds",
                 "interface",
