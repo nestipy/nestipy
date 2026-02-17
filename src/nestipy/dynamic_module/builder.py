@@ -131,7 +131,7 @@ class ConfigurableModuleBuilder(Generic[T]):
     @overload
     def build(self) -> tuple[type[ConfigurableModuleBase[T]], str]: ...
 
-    def build(self) -> tuple[Type, str]:
+    def build(self) -> tuple[type[ConfigurableModuleBase[T]], str]:
         module_option_token = f"{uuid.uuid4().hex}_TOKEN"
 
         def register(
@@ -195,7 +195,9 @@ class ConfigurableModuleBuilder(Generic[T]):
             attrs[f"{self._method_name}_async"] = classmethod(register_async)
 
         cls = type("ConfigurableModuleClass", (object,), attrs)
-        return cls, module_option_token
+        if self._method_name == "for_root":
+            return cast(type[ConfigurableModuleWithForRoot[T]], cls), module_option_token
+        return cast(type[ConfigurableModuleBase[T]], cls), module_option_token
 
 
 class ConfigurableModuleBuilderForRoot(ConfigurableModuleBuilder[T]):

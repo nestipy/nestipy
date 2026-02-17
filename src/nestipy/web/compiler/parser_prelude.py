@@ -61,9 +61,6 @@ def _collect_module_prelude(
                             contexts.append(f"export {{ {import_name} }};")
                         else:
                             contexts.append(f"export const {target.value} = {import_name};")
-                    else:
-                        if target.value != import_name:
-                            contexts.append(f"const {target.value} = {import_name};")
                     names.add(target.value)
                     continue
                 if call_name == "js":

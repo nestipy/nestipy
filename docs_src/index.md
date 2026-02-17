@@ -82,7 +82,7 @@ def Page():
 ## Run the backend
 
 ```bash
-python main.py
+nestipy  start --dev --web
 ```
 
 ## Web quickstart (frontend)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -117,6 +118,16 @@ def build_page_tsx(
     page_hooks = inline_hooks.get(page.primary, [])
     page_prelude = inline_prelude.get(page.primary, [])
     state_hooks, other_hooks = _split_hook_lines(page_hooks)
+    page_prelude = _prune_unused_prelude(page_prelude, other_hooks, body)
+    module_prelude = _prune_unused_module_prelude(
+        module_prelude,
+        component_defs,
+        state_hooks,
+        other_hooks,
+        body,
+        props_interfaces,
+        layout_tsx,
+    )
     state_lines = [f"  {line}" for line in state_hooks]
     prelude_lines = [f"  {line}" for line in page_prelude]
     hook_lines = [f"  {line}" for line in other_hooks]
@@ -649,8 +660,9 @@ def _component_block(
     if exported:
         signature = f"export {signature}"
     state_hooks, other_hooks = _split_hook_lines(hooks or [])
+    prelude_lines = _prune_unused_prelude(prelude or [], other_hooks, body)
     state_lines = [f"  {line}" for line in state_hooks]
-    prelude_lines = [f"  {line}" for line in (prelude or [])]
+    prelude_lines = [f"  {line}" for line in prelude_lines]
     hook_lines = [f"  {line}" for line in other_hooks]
     return "\n".join(
         [
@@ -665,6 +677,79 @@ def _component_block(
             "",
         ]
     )
+
+
+def _prune_unused_prelude(
+    prelude_lines: list[str],
+    hook_lines: list[str],
+    body: str,
+) -> list[str]:
+    """Drop const assignments that are never referenced in the component body."""
+    if not prelude_lines:
+        return prelude_lines
+    candidates: list[tuple[int, str]] = []
+    decl_re = re.compile(r"^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b")
+    for idx, line in enumerate(prelude_lines):
+        match = decl_re.match(line)
+        if match:
+            candidates.append((idx, match.group(1)))
+    if not candidates:
+        return prelude_lines
+
+    kept = [True] * len(prelude_lines)
+    base_text = "\n".join([body] + hook_lines)
+    for idx, name in candidates:
+        other_prelude = "\n".join(
+            line for j, line in enumerate(prelude_lines) if j != idx
+        )
+        usage_text = base_text + "\n" + other_prelude
+        if not re.search(rf"\b{re.escape(name)}\b", usage_text):
+            kept[idx] = False
+    return [line for i, line in enumerate(prelude_lines) if kept[i]]
+
+
+def _prune_unused_module_prelude(
+    prelude_lines: list[str],
+    component_defs: str,
+    state_hooks: list[str],
+    hook_lines: list[str],
+    body: str,
+    props_interfaces: str,
+    layout_tsx: str,
+) -> list[str]:
+    """Drop unused module-level const declarations."""
+    if not prelude_lines:
+        return prelude_lines
+    decl_re = re.compile(r"^\s*const\s+([A-Za-z_$][\w$]*)\b")
+    candidates: list[tuple[int, str]] = []
+    for idx, line in enumerate(prelude_lines):
+        if line.lstrip().startswith("export "):
+            continue
+        match = decl_re.match(line)
+        if match:
+            candidates.append((idx, match.group(1)))
+    if not candidates:
+        return prelude_lines
+
+    base_text = "\n".join(
+        [
+            component_defs,
+            "\n".join(state_hooks),
+            "\n".join(hook_lines),
+            body,
+            props_interfaces,
+            layout_tsx,
+        ]
+    )
+    kept = [True] * len(prelude_lines)
+    for idx, name in candidates:
+        other_prelude = "\n".join(
+            line for j, line in enumerate(prelude_lines) if j != idx
+        )
+        usage_text = base_text + "\n" + other_prelude
+        if not re.search(rf"\b{re.escape(name)}\b", usage_text):
+            kept[idx] = False
+    return [line for i, line in enumerate(prelude_lines) if kept[i]]
 
 
 def _split_hook_lines(hooks: list[str]) -> tuple[list[str], list[str]]:

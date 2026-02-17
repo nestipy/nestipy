@@ -84,7 +84,11 @@ def _eval_expr(
         return JSExpr(f"({joined})")
     if isinstance(expr, cst.Name):
         if expr.value in bound_values:
-            return bound_values[expr.value]
+            bound = bound_values[expr.value]
+            if isinstance(bound, JSExpr):
+                ref = name_map.get(expr.value, expr.value) if name_map else expr.value
+                return JSExpr(ref)
+            return bound
         if expr.value in externals:
             ext = externals[expr.value]
             return JSExpr(name_map.get(expr.value, ext.import_name) if name_map else ext.import_name)
@@ -485,7 +489,10 @@ def _expr_to_js(
     """Convert a CST expression into a JS expression string."""
     if isinstance(expr, cst.Name):
         if bindings and expr.value in bindings:
-            rendered = _binding_to_js(bindings[expr.value])
+            bound = bindings[expr.value]
+            if isinstance(bound, JSExpr):
+                return name_map.get(expr.value, expr.value) if name_map else expr.value
+            rendered = _binding_to_js(bound)
             if rendered is not None:
                 return rendered
         if expr.value == "None":
