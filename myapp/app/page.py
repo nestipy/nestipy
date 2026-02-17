@@ -100,7 +100,7 @@ def Page():
         {
             "title": "Actions",
             "desc": "Trigger typed RPC actions instantly.",
-            "href": "/api-call",
+            "href": "/action-call",
         },
     ]:
         card = h.div(
@@ -133,16 +133,15 @@ def Page():
         h.div(
             h.span("Get started by editing app/page.py", class_name="start-pill"),
             h.div(
-                toggle_button,
-                h.span("By", class_name="byline"),
-                h.span("Nestipy", class_name="byline byline-accent"),
-                class_name="top-right",
+                h.button(toggle_button, class_name="btn-ghost"),
+                class_name="center-right flex flex-col gap-2",
             ),
-            class_name="top-row",
+            class_name="flex flex-row gap-8 ",
         ),
         h.div(
             h.div(
-                h.h1("NESTIPY", class_name="hero-logo"),
+                h.img(src="/nestipy.png", alt="Nestipy", class_name="hero-logo", width="100", height="100"),
+                h.h1("Nestipy", class_name="hero-logo"),
                 h.p(
                     "Full-stack Python framework with typed actions and React UI.",
                     class_name="hero-sub",
@@ -165,9 +164,9 @@ def Page():
             class_name="status-row",
         ),
         h.div(
-            h.button("Reload Action", on_click=reload_action, class_name="ghost-btn"),
-            h.button("Reload API", on_click=reload_ping, class_name="ghost-btn"),
-            h.button("Inc Shared", on_click=inc_shared, class_name="ghost-btn"),
+            h.button("Reload Action", on_click=reload_action, class_name="btn-ghost"),
+            h.button("Reload API", on_click=reload_ping, class_name="btn-ghost"),
+            h.button("Inc Shared", on_click=inc_shared, class_name="btn-ghost"),
             class_name="status-actions",
         ),
         h.div(link_cards, class_name="link-grid"),

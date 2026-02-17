@@ -11,7 +11,7 @@ def Layout():
                 "This nested layout scopes tooling for /api-call routes.",
                 class_name="panel-subtitle",
             ),
-            class_name="panel-header",
+            class_name=" flex flex-col gap-2 items-center justify-center",
         ),
         h.div(h(Slot), class_name="panel-body"),
         class_name="panel panel-plain",

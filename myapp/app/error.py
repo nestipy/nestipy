@@ -35,7 +35,7 @@ def Error():
                 class_name="error-details",
             ),
             h.div(
-                Link("Back to home", to="/", class_name="error-minimal-link"),
+                Link("Back to home", to="/", class_name="btn btn-primary"),
                 class_name="error-minimal-actions",
             ),
             class_name="error-minimal-content",

@@ -8,19 +8,13 @@ from nestipy.web import (
     component,
     h,
     use_state,
-    use_memo,
     use_callback,
-    use_context,
 )
-from app.state import ThemeContext, use_app_store
-
-if TYPE_CHECKING:
-    from app.state import ThemeContextValue
+from app.state import use_app_store
 
 
 @component
 def Page():
-    theme: "ThemeContextValue" = use_context(ThemeContext)
     count, set_count = use_state(0)
     shared_count = use_app_store(lambda state: state.sharedCount)
     inc_shared = use_app_store(lambda state: state.incShared)
@@ -38,17 +32,6 @@ def Page():
     def label():
         return f"Count: {count}"
 
-    title = use_memo(label, deps=[count])
-
-    if theme["theme"] == "dark":
-        theme_name = "Dark"
-    else:
-        theme_name = "Light"
-
-    if count % 2 == 0:
-        parity = h.span("Even", class_name="pill")
-    else:
-        parity = h.span("Odd", class_name="pill pill-accent")
 
     return h.section(
         h.div(
@@ -63,14 +46,12 @@ def Page():
         h.div(
             h.div(
                 h.span("Local count", class_name="simple-label"),
-                h.span(count, class_name="counter-display"),
-                parity,
+                h.span(count, class_name="counter-display"),             
                 h.div(
-                    h.button("-1", on_click=dec, class_name="btn"),
+                    h.button("-1", on_click=dec, class_name="btn btn-outline"),
                     h.button("+1", on_click=inc, class_name="btn btn-primary"),
                     class_name="home-actions",
                 ),
-                h.p(title, class_name="simple-note"),
                 class_name="simple-panel",
             ),
             h.div(
@@ -84,11 +65,6 @@ def Page():
                 class_name="simple-panel",
             ),
             class_name="simple-grid",
-        ),
-        h.div(
-            h.span("Theme", class_name="simple-label"),
-            h.span(theme_name, class_name="simple-value"),
-            class_name="simple-row",
         ),
         class_name="page page-centered",
     )
