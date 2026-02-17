@@ -24,4 +24,7 @@ export default defineConfig({
     },
     port: 2345,
   },
+  build: {
+    manifest: true,
+  },
 });
