@@ -27,6 +27,7 @@ from blacksheep import (
 from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
 from .http_adapter import HttpAdapter
 from nestipy.common.http_ import Response, Websocket
+from nestipy.core.security.cors import CorsOptions, resolve_cors_options
 
 
 class BlackSheepAdapter(HttpAdapter):
@@ -51,15 +52,25 @@ class BlackSheepAdapter(HttpAdapter):
     def engine(self, args, *kwargs) -> None:
         pass
 
-    def enable_cors(self) -> None:
+    def enable_cors(self, options: CorsOptions | None = None) -> None:
         if self._cors_enabled or getattr(self.instance, "_cors_strategy", None) is not None:
             return
         self._cors_enabled = True
+        if options is None:
+            options = CorsOptions.from_env()
+        else:
+            options = resolve_cors_options(options)
+        if options is None:
+            return
+        allow_origins = options.allow_origins
+        if options.allow_all or "*" in allow_origins:
+            allow_origins = ["*"]
+        origins_value = " ".join(allow_origins)
         self.instance.use_cors(
-            allow_methods="GET POST PUT DELETE OPTIONS",
-            allow_origins="*",
-            allow_headers="Content-Type",
-            max_age=300,
+            allow_methods=" ".join(options.allow_methods),
+            allow_origins=origins_value,
+            allow_headers=" ".join(options.allow_headers),
+            max_age=options.max_age or 300,
         )
 
 

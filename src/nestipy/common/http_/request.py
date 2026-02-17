@@ -142,6 +142,28 @@ class Request:
         return self._headers
 
     @property
+    def request_id(self) -> Optional[str]:
+        state = self.scope.get("state") if isinstance(self.scope, dict) else None
+        if isinstance(state, dict):
+            return state.get("request_id")
+        return None
+
+    @request_id.setter
+    def request_id(self, value: str) -> None:
+        if not isinstance(self.scope, dict):
+            return
+        state = self.scope.setdefault("state", {})
+        if isinstance(state, dict):
+            state["request_id"] = value
+
+    @property
+    def debug(self) -> bool:
+        state = self.scope.get("state") if isinstance(self.scope, dict) else None
+        if isinstance(state, dict):
+            return bool(state.get("debug", False))
+        return False
+
+    @property
     def client(self) -> list:
         """
         Get client information (host, port).

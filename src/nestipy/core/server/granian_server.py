@@ -94,6 +94,7 @@ class GranianServerRunner:
                 fmt=getattr(app, "_log_format", None) or DEFAULT_LOG_FORMAT,
                 datefmt=getattr(app, "_log_datefmt", None),
                 use_color=getattr(app, "_log_color", True),
+                use_json=getattr(app, "_log_json", False),
             )
         if "log_access" not in options and getattr(app, "_granian_log_access", None) is not None:
             options["log_access"] = getattr(app, "_granian_log_access")

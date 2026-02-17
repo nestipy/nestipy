@@ -4,6 +4,8 @@ import orjson
 
 from .abstract import IoAdapter
 from ..socket_request import Websocket
+from nestipy.common.logger import logger
+from nestipy.core.exception.error_policy import build_error_info
 
 
 class WebsocketAdapter(IoAdapter):
@@ -31,7 +33,11 @@ class WebsocketAdapter(IoAdapter):
         def decorator(handler: Callable):
             async def wrapper(sid: str, data: Any):
                 client = self._client_info[sid]
-                return await handler(event, client, data)
+                try:
+                    return await handler(event, client, data)
+                except Exception as exc:
+                    await self._handle_error(client, exc)
+                    return None
 
             self._event_handlers[event] = wrapper
             return handler
@@ -76,7 +82,13 @@ class WebsocketAdapter(IoAdapter):
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
                 self._connected.append(sid)
-                return await handler(sid, *args, **kwargs)
+                client = self._client_info.get(sid)
+                try:
+                    return await handler(sid, *args, **kwargs)
+                except Exception as exc:
+                    if client:
+                        await self._handle_error(client, exc)
+                    return None
 
             self._on_connect_handler.append(wrapper)
             return handler
@@ -88,7 +100,13 @@ class WebsocketAdapter(IoAdapter):
 
         def decorator(handler: Callable):
             async def wrapper(sid: Any, *args, **kwargs):
-                return await handler(sid, *args, **kwargs)
+                client = self._client_info.get(sid)
+                try:
+                    return await handler(sid, *args, **kwargs)
+                except Exception as exc:
+                    if client:
+                        await self._handle_error(client, exc)
+                    return None
 
             self._on_message_handler.append(wrapper)
             return handler
@@ -102,7 +120,13 @@ class WebsocketAdapter(IoAdapter):
             async def wrapper(sid: Any, *args, **kwargs):
                 if sid in self._connected:
                     self._connected.remove(sid)
-                return await handler(sid, *args, **kwargs)
+                client = self._client_info.get(sid)
+                try:
+                    return await handler(sid, *args, **kwargs)
+                except Exception as exc:
+                    if client:
+                        await self._handle_error(client, exc)
+                    return None
 
             self._on_disconnect_handler.append(wrapper)
             return handler
@@ -159,3 +183,32 @@ class WebsocketAdapter(IoAdapter):
             self._client_info.pop(sid, None)
 
         return True
+
+    async def _handle_error(self, client: Websocket, exc: Exception) -> None:
+        try:
+            error_info = build_error_info(
+                exc,
+                request_id=getattr(client, "request_id", None),
+                debug=getattr(client, "debug", False),
+            )
+            payload = {"event": "error", "error": error_info}
+            await client.send(
+                {
+                    "type": "websocket.send",
+                    "text": orjson.dumps(payload).decode("utf-8"),
+                }
+            )
+        except Exception:
+            logger.exception("Failed to emit websocket error")
+
+    async def close(self) -> None:
+        for sid in list(self._connected):
+            client = self._client_info.get(sid)
+            if client is None:
+                continue
+            try:
+                await client.send({"type": "websocket.close", "code": 1001})
+            except Exception:
+                continue
+        self._connected.clear()
+        self._client_info.clear()

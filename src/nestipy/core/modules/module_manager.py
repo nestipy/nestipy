@@ -14,6 +14,7 @@ from nestipy.core.adapter.http_adapter import HttpAdapter
 from nestipy.dynamic_module import DynamicModule
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.ioc import ModuleProviderDict, NestipyContainer
+from nestipy.core.health import HealthRegistry, HealthController, ReadyState
 from nestipy.metadata import ModuleMetadata, Reflect
 from nestipy.core.providers.discover import DiscoverService
 from nestipy.core.providers.async_local_storage import AsyncLocalStorage
@@ -61,6 +62,15 @@ class ModuleManager:
         self.add_root_module_provider(
             ModuleProviderDict(token=GraphqlAdapter, value=getattr(self._app, "_graphql_adapter"))
         )
+        if getattr(self._app, "_health_enabled", True):
+            ready_state = getattr(self._app, "_ready_state", None)
+            if ready_state is not None:
+                self.add_root_module_provider(
+                    ModuleProviderDict(token=ReadyState, value=ready_state),
+                    _init=False,
+                )
+            self.add_root_module_provider(HealthRegistry, _init=False)
+            self.add_root_module_controller(HealthController, _init=False)
         self.set_metadata()
 
     def set_metadata(self) -> None:
@@ -97,6 +107,22 @@ class ModuleManager:
         )
         root_providers = root_providers + list(providers)
         Reflect.set_metadata(root_module, ModuleMetadata.Providers, root_providers)
+        if _init:
+            self.set_metadata()
+
+    def add_root_module_controller(
+        self, *controllers: Type, _init: bool = True
+    ) -> None:
+        container = NestipyContainer.get_instance()
+        for controller in controllers:
+            if controller not in container.get_all_services():
+                container.add_singleton(controller)
+        root_module = getattr(self._app, "_root_module")
+        root_controllers: list = Reflect.get_metadata(
+            root_module, ModuleMetadata.Controllers, []
+        )
+        root_controllers = uniq_list(root_controllers + list(controllers))
+        Reflect.set_metadata(root_module, ModuleMetadata.Controllers, root_controllers)
         if _init:
             self.set_metadata()
 

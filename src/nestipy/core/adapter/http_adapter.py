@@ -3,6 +3,7 @@ import json
 import os
 import re
 import typing
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import Callable, Union, Type, TYPE_CHECKING, AsyncIterator, overload, Literal
@@ -15,6 +16,8 @@ from nestipy.common.template import TemplateKey
 from nestipy.common.template.interface import TemplateEngine
 from nestipy.core.router.router_proxy import RouterProxy
 from nestipy.core.template import MinimalJinjaTemplateEngine
+from nestipy.core.exception.error_policy import build_error_info
+from nestipy.core.security.cors import CorsOptions
 from nestipy.core.types import (
     ASGIApp,
     FilterLike,
@@ -181,7 +184,7 @@ class HttpAdapter(ABC):
         return self._io_adapter
 
     @abstractmethod
-    def enable_cors(self) -> None:
+    def enable_cors(self, options: CorsOptions | None = None) -> None:
         pass
 
     async def on_startup(self, *_args, **_kwargs):
@@ -203,6 +206,20 @@ class HttpAdapter(ABC):
                 await hook()
             else:
                 hook()
+
+    async def shutdown(self) -> None:
+        io_adapter = self._io_adapter
+        if io_adapter is None:
+            return
+        close_fn = getattr(io_adapter, "close", None)
+        if close_fn is None:
+            return
+        try:
+            result = close_fn()
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            pass
 
     @asynccontextmanager
     async def lifespan(self, _app: ASGIApp) -> AsyncIterator[None]:
@@ -324,19 +341,29 @@ class HttpAdapter(ABC):
     ) -> Response:
         req = Request(self.scope, self.receive, self.send)
         res = Response(template_engine=self.get_state(TemplateKey.MetaEngine))
+        if req.request_id is None:
+            header_id = req.headers.get("x-request-id") or req.headers.get(
+                "x-correlation-id"
+            )
+            req.request_id = header_id or uuid.uuid4().hex
+        if isinstance(req.scope, dict):
+            state = req.scope.setdefault("state", {})
+            if isinstance(state, dict) and "debug" not in state:
+                state["debug"] = bool(self.debug)
+        request_id = req.request_id
+        if request_id:
+            res.header("X-Request-Id", request_id)
 
         async def next_fn(error: Union[HttpException | None] = None):
             #  catch error
             if error is not None:
                 accept = req.headers.get("accept", [])
+                payload = build_error_info(
+                    error, request_id=request_id, debug=req.debug or self.debug
+                )
+                status_code = int(payload.get("status", 500) or 500)
                 if "application/json" in accept:
-                    return await res.status(error.status_code).json(
-                        {
-                            "message": error.message,
-                            "status": error.status_code,
-                            "details": error.details,
-                        }
-                    )
+                    return await res.status(status_code).json(payload)
                 else:
                     if self.debug:
                         jinja = MinimalJinjaTemplateEngine(
@@ -370,14 +397,14 @@ class HttpAdapter(ABC):
                             res.header("Expire", "0")
                             .header("Cache-Control", "max-age=0, must-revalidate")
                             .header("Content-Type", "text/html;charset=utf-8")
-                            .status(error.status_code)
+                            .status(status_code)
                             .send(content)
                         )
                     else:
                         return await (
                             res.header("Content-Type", "text/html;charset=utf-8")
-                            .status(error.status_code)
-                            .send(str(error))
+                            .status(status_code)
+                            .send(payload.get("message", "Internal server error"))
                         )
             else:
                 return await res.status(204).send("No content")

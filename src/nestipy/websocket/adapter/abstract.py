@@ -45,3 +45,7 @@ class IoAdapter(ABC):
     @abstractmethod
     async def __call__(self, scope: dict, receive: Callable, send: Callable) -> bool:
         pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        pass

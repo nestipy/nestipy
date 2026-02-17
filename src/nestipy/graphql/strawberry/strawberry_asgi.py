@@ -13,6 +13,7 @@ from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_P
 
 from ..graphql_asgi import GraphqlASGI
 from ..graphql_module import GraphqlOption, ASGIOption
+from nestipy.core.security.cors import apply_cors_headers, resolve_cors_options
 
 
 class StrawberryASGI(GraphQL, GraphqlASGI):
@@ -76,13 +77,15 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
             response = await self.run(request)
         except HTTPException as e:
             response = PlainTextResponse(e.reason, status_code=e.status_code)
+        state = scope.get("state") if isinstance(scope, dict) else None
+        if isinstance(state, dict):
+            request_id = state.get("request_id")
+            if request_id and "X-Request-Id" not in response.headers:
+                response.headers["X-Request-Id"] = request_id
         # Apply cors to graphql
         if self.option and self.option.cors:
-            response.headers.update(
-                {
-                    "access-control-allow-origin": "*",
-                    "access-control-allow-headers": "Content-Type",
-                    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
-                }
-            )
+            cors_options = resolve_cors_options(self.option.cors)
+            if cors_options is not None:
+                origin = request.headers.get("origin") if request is not None else None
+                apply_cors_headers(response.headers, origin, cors_options)
         await response(scope, receive, send)

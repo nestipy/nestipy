@@ -4,6 +4,8 @@ from socketio import AsyncServer
 
 from .abstract import IoAdapter
 from ..socket_request import Websocket
+from nestipy.common.logger import logger
+from nestipy.core.exception.error_policy import build_error_info
 
 
 class SocketIoAdapter(IoAdapter):
@@ -32,7 +34,11 @@ class SocketIoAdapter(IoAdapter):
                     environ["asgi.receive"],
                     environ["asgi.send"],
                 )
-                return await handler(event, client, data)
+                try:
+                    return await handler(event, client, data)
+                except Exception as exc:
+                    await self._emit_error(sid, exc, namespace)
+                    return None
 
             self._io.on(event, namespace=namespace)(wrapper)
 
@@ -68,7 +74,11 @@ class SocketIoAdapter(IoAdapter):
                     environ["asgi.receive"],
                     environ["asgi.send"],
                 )
-                return await handler(sid, client, None)
+                try:
+                    return await handler(sid, client, None)
+                except Exception as exc:
+                    await self._emit_error(sid, exc, None)
+                    return None
 
             return self._io.on("connect")(wrapper)
 
@@ -86,7 +96,11 @@ class SocketIoAdapter(IoAdapter):
                     lambda _: None,
                     lambda _: None,
                 )
-                return await handler(sid, client, None)
+                try:
+                    return await handler(sid, client, None)
+                except Exception as exc:
+                    await self._emit_error(sid, exc, None)
+                    return None
 
             return self._io.on("disconnect")(wrapper)
 
@@ -99,3 +113,26 @@ class SocketIoAdapter(IoAdapter):
             await self._io.handle_request(scope, receive, send)
             return True
         return False
+
+    async def _emit_error(
+        self, sid: Any, exc: Exception, namespace: Optional[str]
+    ) -> None:
+        try:
+            error_info = build_error_info(exc)
+            await self._io.emit(
+                "error",
+                error_info,
+                to=sid,
+                namespace=namespace,
+            )
+        except Exception:
+            logger.exception("Failed to emit socket.io error")
+
+    async def close(self) -> None:
+        for sid in list(self._connected):
+            try:
+                if hasattr(self._io, "disconnect"):
+                    await self._io.disconnect(sid)
+            except Exception:
+                continue
+        self._connected.clear()

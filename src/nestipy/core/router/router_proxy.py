@@ -339,9 +339,12 @@ class RouterProxy:
         next_fn: NextFn,
         container: typing.Optional[NestipyIContainer] = None,
     ):
-        tb = traceback.format_exc()
         if not isinstance(ex, HttpException):
-            ex = HttpException(HttpStatus.INTERNAL_SERVER_ERROR, str(ex), str(tb))
+            ex = HttpException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                str(ex) or HttpStatusMessages.INTERNAL_SERVER_ERROR,
+                None,
+            )
         else:
             status_code = getattr(ex, "status_code", HttpStatus.INTERNAL_SERVER_ERROR)
             if not isinstance(status_code, int) or status_code < 100 or status_code > 599:

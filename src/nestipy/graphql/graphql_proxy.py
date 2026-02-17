@@ -27,6 +27,8 @@ from ..common import (
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
+from ..core.exception.error_policy import build_graphql_error, request_context_info
+from ..core.security.cors import apply_cors_headers, resolve_cors_options
 from ..common.constant import DEVTOOLS_STATIC_PATH_KEY
 from ..types_ import NextFn
 
@@ -172,8 +174,8 @@ class GraphqlProxy:
                 if not isinstance(e, HttpException):
                     e = HttpException(
                         HttpStatus.INTERNAL_SERVER_ERROR,
-                        str(e),
-                        str(tb),
+                        str(e) or HttpStatusMessages.INTERNAL_SERVER_ERROR,
+                        None,
                     )
                 exception_handler: ExceptionFilterHandler = await self.container.get(
                     ExceptionFilterHandler
@@ -259,14 +261,10 @@ class GraphqlProxy:
                 sreq = StarletteRequest(scope=_req.scope, receive=_req.receive)
                 sresp = await gql_asgi.run(sreq)
                 if option.cors:
-                    sresp.headers.setdefault("access-control-allow-origin", "*")
-                    sresp.headers.setdefault(
-                        "access-control-allow-headers", "Content-Type"
-                    )
-                    sresp.headers.setdefault(
-                        "access-control-allow-methods",
-                        "GET, POST, PUT, DELETE, OPTIONS",
-                    )
+                    cors_options = resolve_cors_options(option.cors)
+                    if cors_options is not None:
+                        origin = _req.headers.get("origin")
+                        apply_cors_headers(sresp.headers, origin, cors_options)
                 res.status(sresp.status_code or 200)
                 for key, value in sresp.headers.items():
                     res.header(key, value)
@@ -285,7 +283,25 @@ class GraphqlProxy:
                 tb = traceback.format_exc()
                 logger.error("GraphQL request failed: %s", exc)
                 logger.error(tb)
-                return await res.status(500).send(str(exc))
+                request_id, debug = request_context_info()
+                message, extensions = build_graphql_error(
+                    exc,
+                    request_id=request_id or getattr(_req, "request_id", None),
+                    debug=debug or getattr(_req, "debug", False),
+                )
+                status_code = 500
+                if extensions and isinstance(extensions.get("code"), int):
+                    status_code = int(extensions["code"])
+                payload = {
+                    "errors": [
+                        {
+                            "message": message,
+                            "extensions": extensions,
+                        }
+                    ],
+                    "data": None,
+                }
+                return await res.status(status_code).json(payload)
             finally:
                 if previous_context is not None:
                     context_container.set_execution_context(previous_context)
@@ -316,6 +332,8 @@ class GraphqlProxy:
             send = _ws.send
             try:
                 await gql_asgi.handle(scope, receive, send)
+            except Exception as exc:
+                logger.error("GraphQL WS error: %s", exc)
             finally:
                 if previous_context is not None:
                     context_container.set_execution_context(previous_context)

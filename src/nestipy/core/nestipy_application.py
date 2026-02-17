@@ -56,6 +56,8 @@ from nestipy.core.registrars import (
     WebsocketRegistrar,
     OpenApiRegistrar,
 )
+from nestipy.core.security.cors import CorsOptions
+from nestipy.core.health import ReadyState
 from nestipy.core.types import ASGIScope, ASGIReceive, ASGISend, JsonValue, ModuleRef, PipeLike
 from nestipy.graphql.graphql_module import GraphqlModule
 from nestipy.web.ssr import SSRRenderer
@@ -164,7 +166,7 @@ install(console=console, width=200)
 @dataclasses.dataclass
 class NestipyConfig:
     adapter: Optional[HttpAdapter] = None
-    cors: Optional[bool] = None
+    cors: Optional[Union[bool, CorsOptions, dict]] = None
     debug: bool = True
     profile: bool = False
     dependency_graph_debug: bool = False
@@ -174,6 +176,7 @@ class NestipyConfig:
     devtools_static_path: Optional[str] = None
     devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
     log_level: Optional[Union[int, str]] = None
+    log_json: bool = False
     log_file: Optional[str] = None
     log_file_level: Optional[Union[int, str]] = None
     log_format: Optional[str] = None
@@ -191,6 +194,8 @@ class NestipyConfig:
     router_spec_token: Optional[str] = None
     router_version_prefix: str = "v"
     router_detect_conflicts: bool = True
+    security_headers: bool = True
+    health_enabled: bool = True
 
 
 class NestipyApplication:
@@ -217,6 +222,11 @@ class NestipyApplication:
     _router_detect_conflicts: bool = True
     _devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
     _web_ssr_renderer: Optional[SSRRenderer] = None
+    _log_json: bool = False
+    _security_headers_enabled: bool = True
+    _cors_options: Optional[CorsOptions] = None
+    _health_enabled: bool = True
+    _ready_state: Optional[ReadyState] = None
 
     def __init__(self, config: Optional[NestipyConfig] = None):
         """
@@ -233,14 +243,23 @@ class NestipyApplication:
         self._middleware_container = MiddlewareContainer.get_instance()
         self.instance_loader = InstanceLoader()
         self._background_tasks: BackgroundTasks = BackgroundTasks()
+        if self._health_enabled:
+            self._ready_state = ReadyState()
         self._devtools_static_path = resolve_devtools_static_path(
             config.devtools_static_path
         )
+        self._health_enabled = bool(getattr(config, "health_enabled", True))
+        env_health = os.getenv("NESTIPY_HEALTH", "").strip().lower()
+        if env_health in {"0", "false", "no", "off"}:
+            self._health_enabled = False
+        elif env_health in {"1", "true", "yes", "on"}:
+            self._health_enabled = True
         self._http_adapter.set(DEVTOOLS_STATIC_PATH_KEY, self._devtools_static_path)
         self._log_level = ConfigManager.resolve_log_level(config.log_level, logging.INFO)
         self._log_format = config.log_format
         self._log_datefmt = config.log_datefmt
         self._log_color = config.log_color
+        self._log_json = config.log_json
         self._granian_log_dictconfig = config.granian_log_dictconfig
         self._granian_log_access = config.granian_log_access
         self._granian_log_access_format = config.granian_log_access_format
@@ -326,6 +345,7 @@ class NestipyApplication:
         self._enhancers = GlobalEnhancerManager(self._http_adapter, self._modules)
         self.on_startup(self._helpers.lifecycle.startup)
         self.on_shutdown(self._helpers.lifecycle.shutdown)
+        self.on_shutdown(self._shutdown_adapters)
 
     # ------------------------------------------------------------------
     # Lifecycle Hooks
@@ -347,6 +367,12 @@ class NestipyApplication:
         """
         self._http_adapter.on_shutdown_callback(callback)
         return callback
+
+    async def _shutdown_adapters(self) -> None:
+        try:
+            await self._http_adapter.shutdown()
+        except Exception as exc:
+            logger.error("Error while shutting down adapters: %s", exc)
 
     @classmethod
     async def get(cls, key: Union[Type, str]):
@@ -490,6 +516,8 @@ class NestipyApplication:
             self._register_not_found()
             await self._http_adapter.start()
             self._ready = True
+            if self._ready_state is not None:
+                self._ready_state.ready = True
 
         except Exception as e:
             _tb = traceback.format_exc()
@@ -681,8 +709,10 @@ class NestipyApplication:
                 self._middleware_container.add_singleton(proxy)
         self._add_root_module_provider(*middleware)
 
-    def enable_cors(self):
-        self._config.enable_cors()
+    def enable_cors(self, options: CorsOptions | dict | bool | None = None):
+        if options is None:
+            options = True
+        self._config.enable_cors(options if isinstance(options, CorsOptions) else options)
 
     def enable_http_logging(self):
         self._config.enable_http_logging()

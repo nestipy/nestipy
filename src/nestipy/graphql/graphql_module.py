@@ -2,6 +2,8 @@ import dataclasses
 from datetime import timedelta
 from typing import Literal, Annotated, Optional, Sequence, Callable, Any, Union, Mapping
 
+from nestipy.core.security.cors import CorsOptions
+
 from nestipy.common.decorator import Module
 from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.ioc import Inject
@@ -33,7 +35,7 @@ class SchemaOption:
 @dataclasses.dataclass
 class GraphqlOption:
     url: str = "/graphql"
-    cors: bool = True
+    cors: bool | CorsOptions | dict[str, Any] = True
     auto_schema_file: Optional[str] = None
     ide: Literal["default", "graphiql", "apollo-sandbox"] = "graphiql"
     schema_option: Optional[Union[SchemaOption, dict[str, Any]]] = None

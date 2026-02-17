@@ -12,10 +12,9 @@ from strawberry import (
 )
 from strawberry.types.field import StrawberryField
 
-from nestipy.common.exception.http import HttpException
-from nestipy.microservice.exception import RpcException
 from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey
+from nestipy.core.exception.error_policy import build_graphql_error, request_context_info
 from ..graphql_adapter import GraphqlAdapter
 from ..graphql_asgi import GraphqlASGI
 from ..graphql_module import GraphqlOption
@@ -26,13 +25,10 @@ class StrawberryAdapter(GraphqlAdapter):
     def raise_exception(self, e: Exception):
         if isinstance(e, GraphQLError):
             raise e
-        extensions: dict[str, Any] = {}
-        message = str(e)
-        if isinstance(e, (HttpException, RpcException)):
-            message = e.message
-            extensions["code"] = e.status_code
-            if getattr(e, "details", None) is not None:
-                extensions["details"] = e.details
+        request_id, debug = request_context_info()
+        message, extensions = build_graphql_error(
+            e, request_id=request_id, debug=debug
+        )
         raise GraphQLError(message, original_error=e, extensions=extensions or None)
 
     _schema: Optional[Schema] = None

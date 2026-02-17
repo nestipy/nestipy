@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import json as jsonlib
+from datetime import datetime, timezone
 from typing import Optional, Iterable
 
 from rich.console import Console
@@ -105,6 +107,31 @@ class _NestipyRichHandler(RichHandler):
         super().__init__(*args, **kwargs)
 
 
+class _NestipyJsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, object] = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        for key in (
+            "request_id",
+            "method",
+            "path",
+            "status",
+            "duration_ms",
+            "action",
+            "ok",
+            "event",
+        ):
+            if hasattr(record, key):
+                payload[key] = getattr(record, key)
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return jsonlib.dumps(payload, default=str)
+
+
 def _apply_handlers(
     target_logger: logging.Logger,
     handlers: Iterable[logging.Handler],
@@ -126,6 +153,7 @@ def configure_logger(
     fmt: str = DEFAULT_LOG_FORMAT,
     datefmt: Optional[str] = None,
     use_color: bool = True,
+    as_json: bool = False,
     file: Optional[str] = None,
     file_level: Optional[int] = None,
     file_mode: str = "a",
@@ -136,7 +164,10 @@ def configure_logger(
     Configure Nestipy logger with console (colored) and optional file handlers.
     """
     handlers: list[logging.Handler] = []
-    if use_color:
+    if as_json:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(_NestipyJsonFormatter())
+    elif use_color:
         console_handler = RichHandler(
             console=console,
             rich_tracebacks=True,
@@ -156,7 +187,10 @@ def configure_logger(
 
     if file:
         file_handler = logging.FileHandler(file, mode=file_mode)
-        file_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+        if as_json:
+            file_handler.setFormatter(_NestipyJsonFormatter())
+        else:
+            file_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
         if file_level is not None:
             file_handler.setLevel(file_level)
         handlers.append(file_handler)
@@ -173,22 +207,34 @@ def build_granian_log_dictconfig(
     fmt: str = DEFAULT_LOG_FORMAT,
     datefmt: Optional[str] = None,
     use_color: bool = True,
+    use_json: bool = False,
 ) -> dict:
     """
     Build a logging.dictConfig for Granian so its logs follow Nestipy format.
     """
-    formatter = {
-        "()": _NestipyRichFormatter,
-        "fmt": fmt,
-        "datefmt": datefmt,
-    }
-    if not use_color:
+    if use_json:
+        formatter = {
+            "()": _NestipyJsonFormatter,
+        }
+    else:
+        formatter = {
+            "()": _NestipyRichFormatter,
+            "fmt": fmt,
+            "datefmt": datefmt,
+        }
+    if not use_color and not use_json:
         formatter = {
             "()": logging.Formatter,
             "fmt": fmt,
             "datefmt": datefmt,
         }
-    if use_color:
+    if use_json:
+        handler = {
+            "class": "logging.StreamHandler",
+            "level": level,
+            "formatter": "nestipy",
+        }
+    elif use_color:
         handler = {
             "()": _NestipyRichHandler,
             "level": level,

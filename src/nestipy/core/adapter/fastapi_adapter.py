@@ -8,6 +8,7 @@ from starlette.types import ASGIApp
 
 from nestipy.common.http_ import Response, Websocket
 from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
+from nestipy.core.security.cors import CorsOptions, resolve_cors_options
 from .http_adapter import HttpAdapter
 
 
@@ -129,13 +130,26 @@ class FastApiAdapter(HttpAdapter):
     def engine(self, args, *kwargs) -> None:
         pass
 
-    def enable_cors(self) -> None:
+    def enable_cors(self, options: CorsOptions | None = None) -> None:
+        if options is None:
+            options = CorsOptions.from_env()
+        else:
+            options = resolve_cors_options(options)
+        if options is None:
+            return
+        allow_origins = options.allow_origins
+        if options.allow_all or "*" in allow_origins:
+            allow_origins = ["*"]
+        allow_credentials = bool(options.allow_credentials and "*" not in allow_origins)
         self.instance.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_origins=allow_origins,
+            allow_credentials=allow_credentials,
+            allow_methods=options.allow_methods,
+            allow_headers=options.allow_headers,
+            expose_headers=options.expose_headers,
+            max_age=options.max_age,
+            allow_origin_regex=options.allow_origin_regex,
         )
 
 

@@ -14,6 +14,8 @@ from pydantic import TypeAdapter, ValidationError
 from nestipy.common import Controller, Post, Get, Injectable, Request, Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.status import HttpStatus
+from nestipy.common.logger import logger
+from nestipy.core.exception.error_policy import build_error_info
 from nestipy.dynamic_module import ConfigurableModuleBuilder
 from nestipy.ioc import Body, Inject, Req, Res, NestipyContainer
 from nestipy.ioc.helper import ContainerHelper
@@ -83,7 +85,7 @@ class OriginActionGuard:
         self,
         *,
         allowed_origins: Iterable[str] | None = None,
-        allow_missing: bool = True,
+        allow_missing: bool = False,
         allow_same_origin: bool = True,
     ) -> None:
         self.allowed_origins = {o.rstrip("/") for o in (allowed_origins or [])}
@@ -125,14 +127,24 @@ class CsrfActionGuard:
         cookie: str = "csrf_token",
         meta_key: str = "csrf",
         allow_missing: bool = False,
+        allow_missing_origin: bool = False,
     ) -> None:
         self.header = header.lower()
         self.cookie = cookie
         self.meta_key = meta_key
         self.allow_missing = allow_missing
+        self.allow_missing_origin = allow_missing_origin
 
     def can_activate(self, ctx: ActionContext) -> bool:
         if ctx.request is None:
+            return True
+        origin = (
+            ctx.headers.get("origin")
+            or ctx.headers.get("referer")
+            or ctx.headers.get("referrer")
+            or ""
+        )
+        if not origin and self.allow_missing_origin:
             return True
         header_value = ctx.headers.get(self.header)
         meta = ctx.payload.get("meta") if isinstance(ctx.payload, dict) else None
@@ -632,20 +644,26 @@ class ActionsController:
         req: Annotated[Request, Req()] = None,
     ) -> dict[str, Any]:
         """Execute an action from the request payload."""
-        if not isinstance(payload, dict):
-            raise HttpException(HttpStatus.BAD_REQUEST, "Invalid action payload")
-        name = payload.get("action")
-        if not name:
-            raise HttpException(HttpStatus.BAD_REQUEST, "Missing action name")
-        args = payload.get("args") or []
-        kwargs = payload.get("kwargs") or {}
-        if not isinstance(args, list) or not isinstance(kwargs, dict):
-            raise HttpException(HttpStatus.BAD_REQUEST, "Invalid action arguments")
-        action_fn = self.registry.get(str(name))
-        if action_fn is None:
-            raise HttpException(HttpStatus.NOT_FOUND, f"Action '{name}' not found")
-
+        start = time.perf_counter()
+        ok = False
+        action_name = "unknown"
+        request_id = req.request_id if req is not None else None
+        debug = req.debug if req is not None else False
         try:
+            if not isinstance(payload, dict):
+                raise HttpException(HttpStatus.BAD_REQUEST, "Invalid action payload")
+            name = payload.get("action")
+            if not name:
+                raise HttpException(HttpStatus.BAD_REQUEST, "Missing action name")
+            action_name = str(name)
+            args = payload.get("args") or []
+            kwargs = payload.get("kwargs") or {}
+            if not isinstance(args, list) or not isinstance(kwargs, dict):
+                raise HttpException(HttpStatus.BAD_REQUEST, "Invalid action arguments")
+            action_fn = self.registry.get(str(name))
+            if action_fn is None:
+                raise HttpException(HttpStatus.NOT_FOUND, f"Action '{name}' not found")
+
             ctx = ActionContext(
                 action=str(name),
                 action_fn=action_fn,
@@ -665,6 +683,7 @@ class ActionsController:
                 cache_key = _make_cache_key(call_args, call_kwargs, cache_key_fn)
                 cached = self.registry.get_cached(str(name), cache_key)
                 if cached is not None:
+                    ok = True
                     return {"ok": True, "data": cached}
             if inspect.iscoroutinefunction(action_fn):
                 result = await action_fn(*call_args, **call_kwargs)
@@ -672,26 +691,46 @@ class ActionsController:
                 result = action_fn(*call_args, **call_kwargs)
             if cache_ttl is not None and cache_ttl > 0 and cache_key is not None:
                 self.registry.set_cached(str(name), cache_key, result, cache_ttl)
+            ok = True
+            return {"ok": True, "data": result}
         except ActionValidationError as exc:
             if self.config.wrap_errors:
                 return {
                     "ok": False,
-                    "error": {
-                        "message": exc.message,
-                        "type": "ActionValidationError",
-                        "details": exc.details,
-                    },
+                    "error": build_error_info(
+                        exc,
+                        request_id=request_id,
+                        debug=debug,
+                        status_override=HttpStatus.BAD_REQUEST,
+                    ),
                 }
             raise HttpException(HttpStatus.BAD_REQUEST, exc.message)
         except Exception as exc:
             if self.config.wrap_errors:
                 return {
                     "ok": False,
-                    "error": {"message": str(exc), "type": exc.__class__.__name__},
+                    "error": build_error_info(
+                        exc,
+                        request_id=request_id,
+                        debug=debug,
+                    ),
                 }
             raise
-
-        return {"ok": True, "data": result}
+        finally:
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "[ACTION] %s (%.2fms) ok=%s req_id=%s",
+                action_name,
+                duration_ms,
+                ok,
+                request_id,
+                extra={
+                    "action": action_name,
+                    "duration_ms": duration_ms,
+                    "ok": ok,
+                    "request_id": request_id,
+                },
+            )
 
     @Get("/csrf")
     async def csrf(self, res: Annotated[Response, Res()]) -> dict[str, Any]:
@@ -764,29 +803,29 @@ class ActionsModule(ConfigurableModuleClass):
         """Register the actions controller and providers."""
         options = options or ActionsOption()
         if not options.guards:
-            enabled = os.getenv("NESTIPY_ACTION_SECURITY", "").lower() in {
-                "1",
-                "true",
-                "yes",
-                "on",
-            }
+            security_flag = os.getenv("NESTIPY_ACTION_SECURITY", "").lower()
+            enabled = security_flag not in {"0", "false", "no", "off"}
             if enabled:
                 guards: list[Any] = []
                 origins_env = os.getenv("NESTIPY_ACTION_ALLOWED_ORIGINS", "")
                 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
-                allow_missing = os.getenv("NESTIPY_ACTION_ALLOW_MISSING_ORIGIN", "").lower() in {
-                    "1",
-                    "true",
-                    "yes",
-                    "on",
-                }
+                allow_missing_env = os.getenv("NESTIPY_ACTION_ALLOW_MISSING_ORIGIN", "").strip()
+                if allow_missing_env:
+                    allow_missing = allow_missing_env.lower() in {
+                        "1",
+                        "true",
+                        "yes",
+                        "on",
+                    }
+                else:
+                    allow_missing = True
                 guards.append(
                     OriginActionGuard(
                         allowed_origins=origins,
                         allow_missing=allow_missing,
                     )
                 )
-                csrf_enabled = os.getenv("NESTIPY_ACTION_CSRF", "").lower() not in {
+                csrf_enabled = options.csrf_enabled and os.getenv("NESTIPY_ACTION_CSRF", "").lower() not in {
                     "0",
                     "false",
                     "no",
@@ -794,7 +833,11 @@ class ActionsModule(ConfigurableModuleClass):
                 }
                 if csrf_enabled:
                     guards.append(
-                        CsrfActionGuard(cookie=options.csrf_cookie, allow_missing=False)
+                        CsrfActionGuard(
+                            cookie=options.csrf_cookie,
+                            allow_missing=False,
+                            allow_missing_origin=True,
+                        )
                     )
                 signature_secret = os.getenv("NESTIPY_ACTION_SIGNATURE_SECRET")
                 if signature_secret:
