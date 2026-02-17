@@ -198,16 +198,24 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
 
         if "manifest:" not in updated_existing:
             lines = updated_existing.splitlines()
-            insert_at = None
-            for idx in range(len(lines) - 1, -1, -1):
-                if lines[idx].strip().startswith("});"):
-                    insert_at = idx
+            inserted = False
+            for idx, line in enumerate(lines):
+                if re.search(r"\bbuild\s*:\s*\{", line):
+                    indent = re.match(r"(\s*)", line).group(1) + "  "
+                    lines.insert(idx + 1, f"{indent}manifest: true,")
+                    inserted = True
                     break
-            build_lines = ["  build: {", "    manifest: true,", "  },"]
-            if insert_at is None:
-                lines.extend(build_lines)
-            else:
-                lines[insert_at:insert_at] = build_lines
+            if not inserted:
+                insert_at = None
+                for idx in range(len(lines) - 1, -1, -1):
+                    if lines[idx].strip().startswith("});"):
+                        insert_at = idx
+                        break
+                build_lines = ["  build: {", "    manifest: true,", "  },"]
+                if insert_at is None:
+                    lines.extend(build_lines)
+                else:
+                    lines[insert_at:insert_at] = build_lines
             updated_existing = "\n".join(lines)
 
         if updated_existing != existing:

@@ -83,7 +83,7 @@ class WebStaticHandler:
         static_dir = os.path.realpath(dist_dir)
         if not os.path.isdir(static_dir):
             logger.warning(
-                "[WEB] Static dist directory not found: %s (run `nestipy run web:build --vite`)",
+                "[WEB] Static dist directory not found: %s (run `nestipy run web:build`)",
                 static_dir,
             )
             return
