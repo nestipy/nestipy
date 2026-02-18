@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # export NESTIPY_ROUTER_SPEC_TOKEN=secret
     app.listen(
         "main:app",
-        address="127.0.0.1",
+        host="127.0.0.1",
         port=8001,
         interface=Interfaces.ASGI,
         reload=True,

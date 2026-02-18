@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # Start the server using Granian (high-speed ASGI server)
     app.listen(
         "main:app",
-        address="0.0.0.0",
+        host="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,
@@ -64,13 +64,13 @@ if __name__ == '__main__':
 The `NestipyFactory` is a static class that allows you to create an application instance. It's the core of the bootstrapping process, resolving the entire dependency tree starting from the `AppModule`.
 
 ### Server Deployment
-By default, Nestipy uses **Granian** for its high performance. The `app.listen()` method handles the server startup. You can pass various options like `address`, `port`, and `reload` (useful during development).
+By default, Nestipy uses **Granian** for its high performance. The `app.listen()` method handles the server startup. You can pass various options like `host`, `port`, and `reload` (useful during development).
 
 ::: tip
 For simple use cases or embedding Nestipy into other scripts, you can use the compact mode:
 ```python
 if __name__ == '__main__':
-    app.listen(address="0.0.0.0", port=8000)
+    app.listen(host="0.0.0.0", port=8000)
 ```
 :::
 

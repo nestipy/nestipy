@@ -71,10 +71,10 @@ from nestipy.core import MiddlewareConsumer
 class AppModule(NestipyModule):
     def configure(self, consumer: MiddlewareConsumer):
         consumer.apply(LoggerMiddleware).for_route(CatsController).excludes([])
-
+```
 You can exclude by **path** or **path + method**:
 
-```python
+```python title='app_module.py'
 from nestipy.ioc import MiddlewareExclude
 
 consumer.apply(LoggerMiddleware).for_route("/users").excludes([
@@ -84,7 +84,6 @@ consumer.apply(LoggerMiddleware).for_route("/users").excludes([
 ])
 ```
 
-```
 
 ### Functional middleware
 

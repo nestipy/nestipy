@@ -19,7 +19,7 @@ async def app(scope: dict, receive: Callable, send: Callable):
 if __name__ == "__main__":
     granian = Granian(
         target="test:app",
-        address="0.0.0.0",
+        host="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,

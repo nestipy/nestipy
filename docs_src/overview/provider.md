@@ -47,7 +47,7 @@ The most common and recommended way to inject dependencies is through the constr
 ```python
 @Controller("cats")
 class CatsController:
-    def __init__(self, service: CatsService):
+    def __init__(self, service: Annotated[CatsService, Inject()]):
         # Nestipy sees 'service' needs a 'CatsService' and provides it
         self.service = service
 

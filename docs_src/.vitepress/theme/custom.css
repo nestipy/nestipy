@@ -218,11 +218,13 @@
 }
 
 .VPHomeFeatures {
-  margin-top: 2rem;
+  padding-top: 8rem;
+  padding-bottom: 8rem;
+  min-height: 60vh;
 }
 
 .VPHomeFeatures .items {
-  gap: 1.25rem;
+  gap: 2rem;
 }
 
 .VPHomeFeatures .item {

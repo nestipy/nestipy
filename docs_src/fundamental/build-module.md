@@ -86,7 +86,7 @@ class AppModule:
 from nestipy.core import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
-app.run()
+app.listen()
 ```
 
 ## Next Steps

@@ -54,7 +54,7 @@ app = NestipyFactory.create(AppModule)
 if __name__ == '__main__':
     app.listen(
         "main:app",
-        address="0.0.0.0",
+        host="0.0.0.0",
         port=8000,
         interface=Interfaces.ASGI,
         reload=True,
@@ -65,7 +65,7 @@ Embed mode (no import string, fewer options like `reload/workers`):
 
 ```python
 if __name__ == '__main__':
-    app.listen(address="0.0.0.0", port=8000)
+    app.listen(host="0.0.0.0", port=8000)
 ```
 Inside module, we got,
 
