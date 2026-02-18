@@ -7,6 +7,7 @@ export default withMermaid(defineConfig({
   description: "A Python framework inspired by NestJS and built on top of FastAPI or Blacksheep.",
   srcDir: '.',
   outDir: '../docs', 
+  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: '/images/nestipy.png',
