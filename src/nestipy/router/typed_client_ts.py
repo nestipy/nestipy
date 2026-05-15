@@ -105,7 +105,7 @@ def _unique_group_name(base: str, used: set[str]) -> str:
         used.add(base)
         return base
     idx = 2
-    while f"{base}{idx}" in used: 
+    while f"{base}{idx}" in used:
         idx += 1
     final = f"{base}{idx}"
     used.add(final)
@@ -115,7 +115,7 @@ def _unique_group_name(base: str, used: set[str]) -> str:
 def _ts_prop_name(name: str) -> str:
     if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
         return name
-    return f"\"{name}\""
+    return f'"{name}"'
 
 
 def generate_typescript_client_code(
@@ -244,7 +244,11 @@ def generate_typescript_client_code(
                 option_fields.append(f"cookies?: {cookies_type}")
 
             if option_fields:
-                options_type = "{ " + "; ".join(option_fields) + " , query: Record<string, unknown>; headers: Record<string, string>; cookies: Record<string, string>}"
+                options_type = (
+                    "{ "
+                    + "; ".join(option_fields)
+                    + " , query: Record<string, unknown>; headers: Record<string, string>; cookies: Record<string, string>}"
+                )
                 signature = f"options?: {options_type}"
             else:
                 # Always include options so generated code can safely reference it.
@@ -271,16 +275,18 @@ def generate_typescript_client_code(
                 signature_parts.append(signature)
             full_signature = ", ".join(signature_parts)
 
-            lines.append(f"  async {method_name}({full_signature}): Promise<{return_hint}> {{")
+            lines.append(
+                f"  async {method_name}({full_signature}): Promise<{return_hint}> {{"
+            )
 
             path_template = route.path
-            lines.append(f"    let path = \"{path_template}\";")
+            lines.append(f'    let path = "{path_template}";')
             if path_params:
                 for spec in path_params:
                     token = spec.name
                     var_name = param_names.get(token, token)
                     lines.append(
-                        f"    path = path.replace(\"{{{token}}}\", encodeURIComponent(String({var_name})));"
+                        f'    path = path.replace("{{{token}}}", encodeURIComponent(String({var_name})));'
                     )
 
             lines.append("    const queryParams = options?.query;")
@@ -291,13 +297,15 @@ def generate_typescript_client_code(
             lines.append("    if (cookieParams) {")
             lines.append("      const cookieHeader = Object.entries(cookieParams)")
             lines.append("        .map(([key, value]) => `${key}=${String(value)}`)")
-            lines.append("        .join(\"; \");")
-            lines.append("      if (cookieHeader) mergedHeaders[\"Cookie\"] = cookieHeader;")
+            lines.append('        .join("; ");')
+            lines.append(
+                '      if (cookieHeader) mergedHeaders["Cookie"] = cookieHeader;'
+            )
             lines.append("    }")
 
             method = (route.methods[0] if route.methods else "GET").upper()
             lines.append(
-                f"    return this._request<{return_hint}>(\"{method}\", path, {{ query: queryParams, json: jsonBody, headers: mergedHeaders }});"
+                f'    return this._request<{return_hint}>("{method}", path, {{ query: queryParams, json: jsonBody, headers: mergedHeaders }});'
             )
             lines.append("  }")
             lines.append("")
@@ -324,7 +332,7 @@ def generate_typescript_client_code(
         [
             "",
             "  constructor(options: ClientOptions) {",
-            "    this._baseUrl = options.baseUrl.replace(/\\/+$/, \"\");",
+            '    this._baseUrl = options.baseUrl.replace(/\\/+$/, "");',
             "    this._fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);",
             "    this._headers = options.headers ?? {};",
         ]
@@ -333,7 +341,9 @@ def generate_typescript_client_code(
         prop_name = group_props[ctrl]
         if prop_name in {"constructor"}:
             prop_name += "_"
-        lines.append(f"    this.{prop_name} = new {group_names[ctrl]}(this._request.bind(this));")
+        lines.append(
+            f"    this.{prop_name} = new {group_names[ctrl]}(this._request.bind(this));"
+        )
     for alias, origin, _class_name_ref in aliases:
         lines.append(f"    this.{alias} = this.{origin};")
     lines.extend(
@@ -341,21 +351,21 @@ def generate_typescript_client_code(
             "  }",
             "",
             "  private _joinUrl(path: string): string {",
-            "    if (path.startsWith(\"http://\") || path.startsWith(\"https://\")) {",
+            '    if (path.startsWith("http://") || path.startsWith("https://")) {',
             "      return path;",
             "    }",
-            "    return `${this._baseUrl}/${path.replace(/^\\/+/, \"\")}`;",
+            '    return `${this._baseUrl}/${path.replace(/^\\/+/, "")}`;',
             "  }",
             "",
             "  private _buildQuery(query?: Record<string, unknown>): string {",
-            "    if (!query) return \"\";",
+            '    if (!query) return "";',
             "    const params = new URLSearchParams();",
             "    for (const [key, value] of Object.entries(query)) {",
             "      if (value === undefined || value === null) continue;",
             "      params.append(key, String(value));",
             "    }",
             "    const qs = params.toString();",
-            "    return qs ? `?${qs}` : \"\";",
+            '    return qs ? `?${qs}` : "";',
             "  }",
             "",
             "  private async _request<T>(",
@@ -368,8 +378,8 @@ def generate_typescript_client_code(
             "    let body: BodyInit | undefined = undefined;",
             "    if (options && options.json !== undefined) {",
             "      body = JSON.stringify(options.json);",
-            "      if (!headers[\"content-type\"]) {",
-            "        headers[\"content-type\"] = \"application/json\";",
+            '      if (!headers["content-type"]) {',
+            '        headers["content-type"] = "application/json";',
             "      }",
             "    }",
             "    const response = await this._fetcher(url, { method, headers, body });",
@@ -391,7 +401,7 @@ def generate_typescript_client_code(
             "}",
             "",
             f"export function createApiClient(options: Partial<ClientOptions> = {{}}): {class_name} {{",
-            f"  return new {class_name}({{ baseUrl: \"\", ...options }});",
+            f'  return new {class_name}({{ baseUrl: "", ...options }});',
             "}",
             "export const create_api_client = createApiClient;",
         ]

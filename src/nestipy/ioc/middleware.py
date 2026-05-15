@@ -1,19 +1,19 @@
+import re
+from collections import OrderedDict
 from dataclasses import dataclass, field
+from re import Pattern
 from typing import (
-    Union,
-    Type,
+    TYPE_CHECKING,
     Callable,
+    Iterable,
     Literal,
     Optional,
+    Type,
+    Union,
     cast,
-    TYPE_CHECKING,
-    Iterable,
 )
-from collections import OrderedDict
-import re
-from re import Pattern
 
-from nestipy.metadata import Reflect, RouteKey, ClassMetadata
+from nestipy.metadata import ClassMetadata, Reflector, RouteKey
 
 if TYPE_CHECKING:
     from .container import NestipyContainer
@@ -132,7 +132,7 @@ class MiddlewareProxy:
             self.route.url = route
         else:
             self.route.url = (
-                f"/{Reflect.get_metadata(route, RouteKey.path, '').strip('/')}"
+                f"/{Reflector.get_metadata(route, RouteKey.path, '').strip('/')}"
             )
         return self
 
@@ -149,7 +149,7 @@ class MiddlewareProxy:
                 MiddlewareExclude,
                 Iterable[Union[str, dict, MiddlewareExclude, tuple]],
             ]
-        ]
+        ],
     ) -> list[MiddlewareExclude]:
         if pattern is None:
             return []
@@ -175,9 +175,7 @@ class MiddlewareProxy:
                 path = item.get("path") or item.get("route") or item.get("url")
                 if path is None:
                     continue
-                method = _normalize_methods(
-                    item.get("method") or item.get("methods")
-                )
+                method = _normalize_methods(item.get("method") or item.get("methods"))
                 excludes.append(MiddlewareExclude(path=str(path), method=method))
         return excludes
 
@@ -217,7 +215,7 @@ class MiddlewareContainer:
     ):
         if module is not None:
             for m in list(proxy.middlewares):
-                Reflect.set_metadata(
+                Reflector.set_metadata(
                     m,
                     ClassMetadata.Metadata,
                     ClassMetadata(module=module, global_providers=[]),

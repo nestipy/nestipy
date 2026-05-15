@@ -7,7 +7,12 @@ from typing import Iterable
 from nestipy.web.config import WebConfig
 
 from .command_args import collect_packages, parse_args
-from .command_shell import run_command_capture, select_package_manager, web_build_log_mode, web_log
+from .command_shell import (
+    run_command_capture,
+    select_package_manager,
+    web_build_log_mode,
+    web_log,
+)
 
 
 def install(args: Iterable[str]) -> None:

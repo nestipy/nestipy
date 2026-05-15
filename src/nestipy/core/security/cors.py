@@ -77,7 +77,9 @@ class CorsOptions:
         )
 
 
-def resolve_cors_options(value: Any, *, prefix: str = "NESTIPY_CORS") -> Optional[CorsOptions]:
+def resolve_cors_options(
+    value: Any, *, prefix: str = "NESTIPY_CORS"
+) -> Optional[CorsOptions]:
     if value is None:
         return None
     if isinstance(value, CorsOptions):
@@ -121,6 +123,7 @@ def apply_cors_headers(
     allowed = _origin_allowed(origin, options)
     if not allowed:
         return
+
     def _set_default(key: str, value: str) -> None:
         if hasattr(headers, "setdefault"):
             headers.setdefault(key, value)
@@ -134,9 +137,7 @@ def apply_cors_headers(
     _set_default("access-control-allow-methods", ", ".join(options.allow_methods))
     _set_default("access-control-allow-headers", ", ".join(options.allow_headers))
     if options.expose_headers:
-        _set_default(
-            "access-control-expose-headers", ", ".join(options.expose_headers)
-        )
+        _set_default("access-control-expose-headers", ", ".join(options.expose_headers))
     if options.max_age is not None:
         _set_default("access-control-max-age", str(options.max_age))
 

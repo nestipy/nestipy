@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
-    from nestipy.core.nestipy_application import NestipyApplication
-    from nestipy.core.nestipy_application import NestipyConfig
+    from nestipy.core.application import NestipyApplication, NestipyConfig
 
-from nestipy.core.security.cors import resolve_cors_options, CorsOptions
+from nestipy.core.security.cors import CorsOptions, resolve_cors_options
+
 
 class ConfigManager:
     """Handle runtime configuration application and HTTP logging toggle."""

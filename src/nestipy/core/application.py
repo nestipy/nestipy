@@ -3,80 +3,92 @@ import json
 import logging
 import os.path
 import secrets
+import sys
 import time
 import traceback
-import sys
 import typing
 from pathlib import Path
 from typing import (
-    Type,
-    Callable,
-    Literal,
-    Union,
     TYPE_CHECKING,
-    Optional,
+    Callable,
     Dict,
+    Literal,
+    Optional,
     Sequence,
+    Type,
     TypedDict,
+    Union,
     Unpack,
 )
 
 from rich.traceback import install
 
-from nestipy.common.logger import logger, console
+from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
+from nestipy.common.logger import console, logger
 from nestipy.common.middleware import NestipyMiddleware
 from nestipy.common.template import TemplateEngine
+from nestipy.core.config import ConfigManager
+from nestipy.core.enhancers import GlobalEnhancerManager
+from nestipy.core.health import ReadyState
+from nestipy.core.http import AsgiHandler
+from nestipy.core.lifecycle import LifecycleRunner
+from nestipy.core.modules import ModuleManager
 from nestipy.core.providers.background import BackgroundTasks
+from nestipy.core.registrars import (
+    GraphqlRegistrar,
+    OpenApiRegistrar,
+    RouteRegistrar,
+    WebsocketRegistrar,
+)
+from nestipy.core.security.cors import CorsOptions
+from nestipy.core.server import GranianServerRunner
+from nestipy.core.types import (
+    ASGIReceive,
+    ASGIScope,
+    ASGISend,
+    JsonValue,
+    ModuleRef,
+    PipeLike,
+)
+from nestipy.core.views import ViewManager
+from nestipy.core.web import (
+    DevtoolsRegistrar,
+    WebStaticHandler,
+    resolve_devtools_static_path,
+)
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
+from nestipy.graphql.graphql_module import GraphqlModule
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from nestipy.ioc import (
     MiddlewareContainer,
     MiddlewareProxy,
-    NestipyContainer,
     ModuleProviderDict,
+    NestipyContainer,
 )
-from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
-from nestipy.openapi.openapi_docs.v3 import PathItem, Schema, Reference
+from nestipy.openapi.openapi_docs.v3 import PathItem, Reference, Schema
+from nestipy.web.ssr import SSRRenderer
+
+from ..websocket.adapter import IoAdapter
 from .adapter.fastapi_adapter import FastApiAdapter
 from .adapter.http_adapter import HttpAdapter
 from .instance_loader import InstanceLoader
 from .router.router_proxy import RouterProxy
-from ..websocket.adapter import IoAdapter
-from nestipy.core.lifecycle import LifecycleRunner
-from nestipy.core.config import ConfigManager
-from nestipy.core.http import AsgiHandler
-from nestipy.core.enhancers import GlobalEnhancerManager
-from nestipy.core.modules import ModuleManager
-from nestipy.core.server import GranianServerRunner
-from nestipy.core.views import ViewManager
-from nestipy.core.web import DevtoolsRegistrar, WebStaticHandler, resolve_devtools_static_path
-from nestipy.core.registrars import (
-    RouteRegistrar,
-    GraphqlRegistrar,
-    WebsocketRegistrar,
-    OpenApiRegistrar,
-)
-from nestipy.core.security.cors import CorsOptions
-from nestipy.core.health import ReadyState
-from nestipy.core.types import ASGIScope, ASGIReceive, ASGISend, JsonValue, ModuleRef, PipeLike
-from nestipy.graphql.graphql_module import GraphqlModule
-from nestipy.web.ssr import SSRRenderer
 
 if TYPE_CHECKING:
-    from nestipy.common.exception.interface import ExceptionFilter
-    from nestipy.common.interceptor import NestipyInterceptor
-    from nestipy.common.guards.can_activate import CanActivate
     from granian.constants import (
-        Interfaces,
-        RuntimeModes,
-        Loops,
-        TaskImpl,
         HTTPModes,
-        LogLevels,
+        Interfaces,
+        Loops,
+        RuntimeModes,
         SSLProtocols,
+        TaskImpl,
     )
     from granian.http import HTTP1Settings, HTTP2Settings
     from watchfiles import BaseFilter
+
+    from nestipy.common.exception.interface import ExceptionFilter
+    from nestipy.common.guards.can_activate import CanActivate
+    from nestipy.common.interceptor import NestipyInterceptor
 
 
 class GranianOptions(TypedDict, total=False):
@@ -100,7 +112,7 @@ class GranianOptions(TypedDict, total=False):
     http1_settings: Optional["HTTP1Settings"]
     http2_settings: Optional["HTTP2Settings"]
     log_enabled: bool
-    log_level: "LogLevels"
+    log_level: Optional[Union[int, str]]
     log_dictconfig: Optional[dict[str, JsonValue]]
     log_access: bool
     log_access_format: Optional[str]
@@ -145,6 +157,7 @@ class GranianOptions(TypedDict, total=False):
 @dataclasses.dataclass(slots=True)
 class _NestipyHelpers:
     """Helper container to keep NestipyApplication orchestration small."""
+
     web_static: WebStaticHandler
     devtools: DevtoolsRegistrar
     server: GranianServerRunner
@@ -154,10 +167,12 @@ class _NestipyHelpers:
 @dataclasses.dataclass(slots=True)
 class _NestipyRegistrars:
     """Registrars for routes + protocol integrations."""
+
     routes: RouteRegistrar
     graphql: GraphqlRegistrar
     websockets: WebsocketRegistrar
     openapi: OpenApiRegistrar
+
 
 # install rich track_back
 install(console=console, width=200)
@@ -255,7 +270,9 @@ class NestipyApplication:
         elif env_health in {"1", "true", "yes", "on"}:
             self._health_enabled = True
         self._http_adapter.set(DEVTOOLS_STATIC_PATH_KEY, self._devtools_static_path)
-        self._log_level = ConfigManager.resolve_log_level(config.log_level, logging.INFO)
+        self._log_level = ConfigManager.resolve_log_level(
+            config.log_level, logging.INFO
+        )
         self._log_format = config.log_format
         self._log_datefmt = config.log_datefmt
         self._log_color = config.log_color
@@ -293,6 +310,7 @@ class NestipyApplication:
             if env_graph_renderer in {"mermaid", "cytoscape"}
             else config.devtools_graph_renderer
         )
+
         devtools = DevtoolsRegistrar(
             http_adapter=self._http_adapter,
             devtools_static_path=self._devtools_static_path,
@@ -305,6 +323,7 @@ class NestipyApplication:
         )
         try:
             from nestipy.core.router.route_explorer import RouteExplorer
+
             version_prefix = os.getenv(
                 "NESTIPY_ROUTER_VERSION_PREFIX", config.router_version_prefix
             )
@@ -430,7 +449,10 @@ class NestipyApplication:
 
         spec = self.get_router_spec(prefix=prefix)
         return write_client_file(
-            spec, output_path=output_path, class_name=class_name, async_client=async_client
+            spec,
+            output_path=output_path,
+            class_name=class_name,
+            async_client=async_client,
         )
 
     def generate_typescript_client(
@@ -452,7 +474,9 @@ class NestipyApplication:
     # ------------------------------------------------------------------
     # Server
     # ------------------------------------------------------------------
-    def listen(self, target: Optional[str] = "main:app", **options: Unpack[GranianOptions]):
+    def listen(
+        self, target: Optional[str] = "main:app", **options: Unpack[GranianOptions]
+    ):
         """
         Run the app with Granian.
 
@@ -499,9 +523,13 @@ class NestipyApplication:
             return
         setup_start = time.perf_counter()
         try:
-            modules = self._get_modules(typing.cast(Type, self._root_module))
+            modules = typing.cast(
+                list[ModuleRef], self._get_modules(typing.cast(Type, self._root_module))
+            )
             self._modules_cache = modules
-            di_elapsed, routes_elapsed, graphql_module_instance = await self._init_di(modules)
+            di_elapsed, routes_elapsed, graphql_module_instance = await self._init_di(
+                modules
+            )
             self._apply_routes(modules)
             if graphql_module_instance is not None:
                 await self._apply_graphql(graphql_module_instance, modules)
@@ -529,7 +557,9 @@ class NestipyApplication:
                 total_elapsed = (time.perf_counter() - setup_start) * 1000
                 logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
-    async def _init_di(self, modules: list[ModuleRef]) -> tuple[float, float, GraphqlModule | None]:
+    async def _init_di(
+        self, modules: list[ModuleRef]
+    ) -> tuple[float, float, GraphqlModule | None]:
         """Create instances, precompute dependency graph, and return DI timing."""
         di_elapsed = 0.0
         routes_elapsed = 0.0
@@ -572,10 +602,12 @@ class NestipyApplication:
             di_elapsed = (time.perf_counter() - di_start) * 1000
         if self._profile:
             routes_start = time.perf_counter()
-        self._openapi_paths, self._openapi_schemas, self._list_routes = self._registrars.routes.apply(
-            modules,
-            build_openapi=False,
-            register_routes=True,
+        self._openapi_paths, self._openapi_schemas, self._list_routes = (
+            self._registrars.routes.apply(
+                modules,
+                build_openapi=False,
+                register_routes=True,
+            )
         )
         self._openapi_built = False
         if self._profile:
@@ -622,14 +654,14 @@ class NestipyApplication:
             routes_elapsed,
             len(self._list_routes),
         )
-        for m in profile["module_breakdown"]:
-            logger.info(
-                "[MODULE] %s init=%.2fms providers=%s controllers=%s",
-                m["module"],
-                m["ms"],
-                m["providers"],
-                m["controllers"],
-            )
+        # for m in profile["module_breakdown"]:
+        #     logger.info(
+        #         "[MODULE] %s init=%.2fms providers=%s controllers=%s",
+        #         m["module"],
+        #         m["ms"],
+        #         m["providers"],
+        #         m["controllers"],
+        #     )
         total_elapsed = (time.perf_counter() - setup_start) * 1000
         logger.info("[BOOTSTRAP] Total=%.2fms", total_elapsed)
 
@@ -712,7 +744,9 @@ class NestipyApplication:
     def enable_cors(self, options: CorsOptions | dict | bool | None = None):
         if options is None:
             options = True
-        self._config.enable_cors(options if isinstance(options, CorsOptions) else options)
+        self._config.enable_cors(
+            options if isinstance(options, CorsOptions) else options
+        )
 
     def enable_http_logging(self):
         self._config.enable_http_logging()

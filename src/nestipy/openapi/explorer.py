@@ -1,6 +1,6 @@
 import typing
 
-from nestipy.metadata import Reflect
+from nestipy.metadata import Reflector
 
 
 class OpenApiExplorer:
@@ -8,7 +8,7 @@ class OpenApiExplorer:
     def explore(cls, obj):
         deps: dict = {}
         schemas: dict = {}
-        meta = Reflect.get(obj)
+        meta = Reflector.get(obj)
         for key, value in meta.items():
             if typing.cast(str, key).startswith("__openapi__"):
                 openapi_key = typing.cast(str, key).replace("__openapi__", "")

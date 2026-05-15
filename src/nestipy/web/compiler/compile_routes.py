@@ -92,11 +92,11 @@ def build_routes(
                 "  const title = isRouteErrorResponse(error) ? error.statusText : 'Unexpected error';",
                 "  const message = error?.message ?? 'Something went wrong while rendering this page.';",
                 "  return (",
-                "    <section className=\"error-page\">",
-                "      <div className=\"error-card\">",
-                "        <span className=\"error-code\">{status}</span>",
-                "        <h1 className=\"error-title\">{title}</h1>",
-                "        <p className=\"error-message\">{message}</p>",
+                '    <section className="error-page">',
+                '      <div className="error-card">',
+                '        <span className="error-code">{status}</span>',
+                '        <h1 className="error-title">{title}</h1>',
+                '        <p className="error-message">{message}</p>',
                 "      </div>",
                 "    </section>",
                 "  );",
@@ -107,7 +107,9 @@ def build_routes(
 
     app_dir = config.resolve_app_dir(root)
     layout_root = _build_layout_tree(layout_infos)
-    _attach_pages_to_layouts(layout_root, routes, page_vars, route_index, app_dir, layout_infos)
+    _attach_pages_to_layouts(
+        layout_root, routes, page_vars, route_index, app_dir, layout_infos
+    )
 
     error_element = (
         f"<{error_info.import_alias} />" if error_info else "<DefaultErrorBoundary />"
@@ -119,7 +121,7 @@ def build_routes(
             notfound_by_layout.setdefault(prefix, []).append(info)
 
     def _notfound_path(info: NotFoundInfo, prefix: tuple[str, ...]) -> str:
-        rel_parts = info.raw_parts[len(prefix):]
+        rel_parts = info.raw_parts[len(prefix) :]
         if not rel_parts:
             return "*"
         segments = [_segment_from_part(part) for part in rel_parts]
@@ -153,14 +155,18 @@ def build_routes(
             return f"      {{ path: '{route_path}', element: {element}, errorElement: {error_element} }}"
         return f"      {{ path: '{route_path}', element: {element} }}"
 
-    def render_layout_node(node: LayoutNode, parent_parts: tuple[str, ...], *, top_level: bool) -> list[str]:
+    def render_layout_node(
+        node: LayoutNode, parent_parts: tuple[str, ...], *, top_level: bool
+    ) -> list[str]:
         entries: list[str] = []
         if node.info is None:
             # No layout at this node; render pages as top-level siblings.
             for path, var_name in node.pages:
                 element = f"<{var_name} />"
                 full_path = path or ""
-                entries.append(render_page_entry(full_path or None, element, top_level=True))
+                entries.append(
+                    render_page_entry(full_path or None, element, top_level=True)
+                )
             for child in node.children:
                 entries.extend(render_layout_node(child, parent_parts, top_level=True))
             if top_level:
@@ -171,7 +177,7 @@ def build_routes(
                     entries.append(_render_top_level_notfound(info))
             return entries
 
-        relative_parts = node.raw_parts[len(parent_parts):]
+        relative_parts = node.raw_parts[len(parent_parts) :]
         path_segments = [_segment_from_part(part) for part in relative_parts]
         path = "/".join(path_segments)
         if not path and not top_level:
@@ -184,7 +190,9 @@ def build_routes(
         for child_page_path, var_name in node.pages:
             child_element = f"<{var_name} />"
             if child_page_path in (None, ""):
-                children_lines.append(f"      {{ index: true, element: {child_element} }}")
+                children_lines.append(
+                    f"      {{ index: true, element: {child_element} }}"
+                )
             else:
                 children_lines.append(
                     f"      {{ path: '{child_page_path}', element: {child_element} }}"
@@ -450,7 +458,7 @@ def _attach_pages_to_layouts(
         raw_parts = tuple(info.source.relative_to(app_dir).parts[:-1])
         prefix = _find_layout_prefix(raw_parts, layout_infos)
         node = node_map.get(prefix, root)
-        remaining = raw_parts[len(prefix):]
+        remaining = raw_parts[len(prefix) :]
         if remaining:
             path = "/".join(_segment_from_part(part) for part in remaining)
         else:

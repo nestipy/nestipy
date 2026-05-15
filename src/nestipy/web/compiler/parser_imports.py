@@ -21,7 +21,9 @@ def _collect_functions(module: cst.Module) -> list[cst.FunctionDef]:
     return funcs
 
 
-def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | ExternalFunction]:
+def _collect_externals(
+    module: cst.Module,
+) -> dict[str, ExternalComponent | ExternalFunction]:
     """Collect external component declarations from assignments."""
     externals: dict[str, ExternalComponent | ExternalFunction] = {}
     for stmt in module.body:
@@ -47,7 +49,11 @@ def _collect_externals(module: cst.Module) -> dict[str, ExternalComponent | Exte
             if isinstance(inner, cst.Assign):
                 if len(inner.targets) != 1:
                     continue
-                target = inner.targets[0].target if isinstance(inner.targets[0].target, cst.Name) else None
+                target = (
+                    inner.targets[0].target
+                    if isinstance(inner.targets[0].target, cst.Name)
+                    else None
+                )
                 value = inner.value
             elif isinstance(inner, cst.AnnAssign):
                 target = inner.target if isinstance(inner.target, cst.Name) else None
@@ -116,7 +122,9 @@ def _eval_js_import(call: cst.Call, fallback_name: str) -> ExternalFunction:
     return ExternalFunction(module=module, name=name, alias=alias)
 
 
-def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> list[ImportSpec]:
+def _collect_imports(
+    module: cst.Module, source_dir: Path, app_dir: Path
+) -> list[ImportSpec]:
     """Collect import specifications for local component modules."""
     imports: list[ImportSpec] = []
 
@@ -140,7 +148,9 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                     continue
                 for import_alias in inner.names:
                     name = import_alias.name.value
-                    alias = import_alias.asname.name.value if import_alias.asname else name
+                    alias = (
+                        import_alias.asname.name.value if import_alias.asname else name
+                    )
 
                     path = None
                     type_only = False
@@ -150,11 +160,20 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                         local_path = _resolve_module_file(module_path, app_dir)
                         app_path = None
                         if module_name.startswith("app."):
-                            app_rel = Path(module_name.split(".", 1)[1].replace(".", "/"))
+                            app_rel = Path(
+                                module_name.split(".", 1)[1].replace(".", "/")
+                            )
                             app_path = _resolve_module_file(app_dir / app_rel, app_dir)
                         elif relative_level == 0:
-                            app_path = _resolve_module_file(app_dir / module_rel, app_dir)
-                        if module_name == "layout" and local_path and app_path and local_path != app_path:
+                            app_path = _resolve_module_file(
+                                app_dir / module_rel, app_dir
+                            )
+                        if (
+                            module_name == "layout"
+                            and local_path
+                            and app_path
+                            and local_path != app_path
+                        ):
                             # Prefer the local layout when both local and root exist.
                             # Use "from app.layout import ..." to target the root layout.
                             path = local_path
@@ -167,7 +186,11 @@ def _collect_imports(module: cst.Module, source_dir: Path, app_dir: Path) -> lis
                     if path is not None and "_generated" in path.parts:
                         type_only = True
 
-                    imports.append(ImportSpec(name=name, alias=alias, path=path, type_only=type_only))
+                    imports.append(
+                        ImportSpec(
+                            name=name, alias=alias, path=path, type_only=type_only
+                        )
+                    )
             elif isinstance(inner, cst.Import):
                 continue
 

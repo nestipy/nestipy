@@ -14,4 +14,6 @@ CallableHandler = Callable[
 
 WebsocketHandler = Callable[[Websocket], Awaitable[HandlerResult] | HandlerResult]
 
-MountHandler = Callable[[dict, Callable, Callable], Awaitable[HandlerResult] | HandlerResult]
+MountHandler = Callable[
+    [dict, Callable, Callable], Awaitable[HandlerResult] | HandlerResult
+]

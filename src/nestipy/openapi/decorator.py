@@ -1,23 +1,26 @@
 import dataclasses
 import inspect
 from enum import Enum
-from typing import Union, Optional, Any, Type, Callable, Dict
+from typing import Any, Callable, Dict, Optional, Type, Union
 
-from pydantic import TypeAdapter, BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from nestipy.metadata import SetMetadata
+
 from .openapi_docs.v3 import (
-    RequestBody,
-    Response,
+    Callback,
+    ExternalDocs,
+    Header,
+    MediaType,
     Parameter,
     ParameterLocation,
-    Header,
     Reference,
-    ExternalDocs,
+    RequestBody,
+    Response,
+    Schema,
+    SecurityRequirement,
     Server,
-    Callback,
 )
-from .openapi_docs.v3 import SecurityRequirement, MediaType, Schema
 
 
 class ApiConsumer(Enum):
@@ -135,6 +138,7 @@ def ApiResponse(
     )
     return _ApiResponse(status, response_body)
 
+
 def ApiBadRequestResponse(
     schema: Optional[Union[BaseModel, Type]] = None,
     description: Optional[str] = None,
@@ -243,11 +247,14 @@ def ApiOperation(
 
 def ApiExternalDocs(url: str, description: Optional[str] = None):
     return SetMetadata(
-        key="__openapi__external_docs", data=ExternalDocs(url=url, description=description)
+        key="__openapi__external_docs",
+        data=ExternalDocs(url=url, description=description),
     )
 
 
-def ApiServer(url: str, description: Optional[str] = None, variables: Optional[dict] = None):
+def ApiServer(
+    url: str, description: Optional[str] = None, variables: Optional[dict] = None
+):
     return SetMetadata(
         key="__openapi__servers",
         data=[Server(url=url, description=description, variables=variables)],
@@ -317,6 +324,7 @@ def ApiCookie(name: str, description: Optional[str] = None, required: bool = Fal
             required=required,
         )
     )
+
 
 def ApiUnauthorizedResponse(
     schema: Optional[Union[BaseModel, Type]] = None,

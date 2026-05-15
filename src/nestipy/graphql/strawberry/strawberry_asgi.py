@@ -1,7 +1,7 @@
 from dataclasses import asdict, is_dataclass
-from typing import Union, Callable, MutableMapping, Any, Awaitable, cast
+from typing import Any, Awaitable, Callable, MutableMapping, Union, cast
 
-from strawberry.asgi import HTTPException
+from cross_web import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from starlette.websockets import WebSocket
@@ -11,9 +11,10 @@ from strawberry.printer import print_schema
 from strawberry.schema import BaseSchema
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
 
-from ..graphql_asgi import GraphqlASGI
-from ..graphql_module import GraphqlOption, ASGIOption
 from nestipy.core.security.cors import apply_cors_headers, resolve_cors_options
+
+from ..graphql_asgi import GraphqlASGI
+from ..graphql_module import ASGIOption, GraphqlOption
 
 
 class StrawberryASGI(GraphQL, GraphqlASGI):
@@ -29,7 +30,9 @@ class StrawberryASGI(GraphQL, GraphqlASGI):
             asgi_option = asdict(raw_asgi_option)
         else:
             asgi_option = {}
-        asgi_option = {key: value for key, value in asgi_option.items() if value is not None}
+        asgi_option = {
+            key: value for key, value in asgi_option.items() if value is not None
+        }
         if "graphql_ide" not in asgi_option and "graphiql" not in asgi_option:
             if option.ide:
                 asgi_option["graphql_ide"] = option.ide

@@ -19,13 +19,17 @@ class GlobalEnhancerManager:
     def use_global_interceptors(self, *interceptors: InterceptorLike):
         self._http_adapter.add_global_interceptors(*interceptors)
         self._modules.add_root_module_provider(
-            *typing.cast(tuple[Union[ModuleProviderDict, Type, typing.Callable]], interceptors)
+            *typing.cast(
+                tuple[Union[ModuleProviderDict, Type, typing.Callable]], interceptors
+            )
         )
 
     def use_global_filters(self, *filters: FilterLike):
         self._http_adapter.add_global_filters(*filters)
         self._modules.add_root_module_provider(
-            *typing.cast(tuple[Union[ModuleProviderDict, Type, typing.Callable]], filters)
+            *typing.cast(
+                tuple[Union[ModuleProviderDict, Type, typing.Callable]], filters
+            )
         )
 
     def use_global_guards(self, *guards: GuardLike):

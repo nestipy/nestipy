@@ -76,7 +76,9 @@ def _py_type_repr(tp: typing.Any) -> str:
         args = typing.get_args(tp)
         if origin in (list, tuple, set):
             inner = _py_type_repr(args[0]) if args else "Any"
-            container = "list" if origin is list else "tuple" if origin is tuple else "set"
+            container = (
+                "list" if origin is list else "tuple" if origin is tuple else "set"
+            )
             return f"{container}[{inner}]"
         if origin in (dict, typing.Dict):
             key = _py_type_repr(args[0]) if args else "str"
@@ -236,14 +238,14 @@ def generate_client_types_code(
         "",
         "from typing import Any, Protocol, TypedDict, NotRequired, Required, TypeVar, Generic, Callable",
         "",
-        "T = TypeVar(\"T\")",
+        'T = TypeVar("T")',
         "",
         "class JsPromise(Protocol, Generic[T]):",
         "    def then(",
         "        self,",
         "        on_fulfilled: Callable[[T], Any] | None = ...,",
         "        on_rejected: Callable[[Any], Any] | None = ...,",
-        "    ) -> \"JsPromise[Any]\": ...",
+        '    ) -> "JsPromise[Any]": ...',
         "",
     ]
 

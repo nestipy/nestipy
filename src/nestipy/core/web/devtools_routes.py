@@ -1,19 +1,35 @@
 from __future__ import annotations
 
-import os
 import mimetypes
+import os
 from typing import Callable, Optional, Type
 
 import aiofiles
 
 from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
-from nestipy.common.logger import logger
 from nestipy.common.http_ import Request, Response
-from nestipy.ioc import NestipyContainer
-from nestipy.metadata import ModuleMetadata, Reflect
-from nestipy.router.spec import RouterSpec
+from nestipy.common.logger import logger
 from nestipy.core.adapter.http_adapter import HttpAdapter
 from nestipy.core.types import JsonValue, ModuleRef, ProviderToken, TokenProvider
+from nestipy.ioc import NestipyContainer
+from nestipy.metadata import ModuleMetadata, Reflector
+from nestipy.router.spec import RouterSpec
+
+
+def devtools_content_security_policy() -> str:
+    # Devtools pages embed inline <style> and <script>. They may also load optional
+    # graph renderers from a CDN when local assets are unavailable.
+    return (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
+        "connect-src 'self';"
+    )
 
 
 def resolve_devtools_static_path(config_path: Optional[str]) -> str:
@@ -38,6 +54,7 @@ def read_or_create_devtools_token() -> str:
 
 class DevtoolsRegistrar:
     """Register devtools routes (static assets, graph UI, router spec)."""
+
     def __init__(
         self,
         *,
@@ -90,7 +107,12 @@ class DevtoolsRegistrar:
                 async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
                     content = await f.read()
                 content = content.replace("/_devtools/static", static_path)
-                return await res.header("Content-Type", mime_type).send(content)
+                response = res.header("Content-Type", mime_type)
+                if ext == ".html":
+                    response = response.header(
+                        "Content-Security-Policy", devtools_content_security_policy()
+                    )
+                return await response.send(content)
             async with aiofiles.open(file_path, "rb") as f:
                 payload = await f.read()
             res.header("Content-Type", mime_type)
@@ -126,7 +148,14 @@ class DevtoolsRegistrar:
                     content = await f.read()
                 # Normalize to current static path for relative links
                 content = content.replace("/_devtools/static", static_path)
-                return await res.header("Content-Type", mime_type).send(content)
+                return (
+                    await res.header("Content-Type", mime_type)
+                    .header(
+                        "Content-Security-Policy",
+                        devtools_content_security_policy(),
+                    )
+                    .send(content)
+                )
             async with aiofiles.open(file_path, "rb") as f:
                 payload = await f.read()
             res.header("Content-Type", mime_type)
@@ -162,7 +191,9 @@ class DevtoolsRegistrar:
 
         async def graph_html_handler(req: Request, res: Response, _next_fn):
             static_root = self._devtools_static_path
-            renderer = (req.query_params.get("renderer") or self._devtools_graph_renderer).lower()
+            renderer = (
+                req.query_params.get("renderer") or self._devtools_graph_renderer
+            ).lower()
             if renderer not in {"mermaid", "cytoscape"}:
                 renderer = self._devtools_graph_renderer
             template_dir = os.path.realpath(
@@ -186,11 +217,17 @@ class DevtoolsRegistrar:
                 .replace("__NESTIPY_GRAPH_JSON__", graph_json_path)
                 .replace("__NESTIPY_GRAPH_PATH__", graph_path)
             )
-            return await res.header("Content-Type", "text/html; charset=utf-8").send(html)
+            return await (
+                res.header("Content-Type", "text/html; charset=utf-8")
+                .header("Content-Security-Policy", devtools_content_security_policy())
+                .send(html)
+            )
 
         raw_meta = {"raw": True}
         self._http_adapter.get(graph_path, graph_html_handler, raw_meta)
         self._http_adapter.get(graph_json_path, graph_json_handler, raw_meta)
+        if self._http_adapter.debug:
+            logger.info(f"[DEVTOOLS] Graph routes : {graph_path}")
 
     def register_router_spec(self) -> None:
         """Serve router spec JSON when enabled."""
@@ -259,12 +296,16 @@ class DevtoolsRegistrar:
                         "id": module_id(module),
                         "label": module_name(module),
                         "type": "module",
-                        "global": Reflect.get_metadata(module, ModuleMetadata.Global, False),
+                        "global": Reflector.get_metadata(
+                            module, ModuleMetadata.Global, False
+                        ),
                     }
                 )
 
             module_key = module_name(module)
-            for controller in Reflect.get_metadata(module, ModuleMetadata.Controllers, []):
+            for controller in Reflector.get_metadata(
+                module, ModuleMetadata.Controllers, []
+            ):
                 ctrl_label = token_name(controller)
                 ctrl_id = f"controller:{module_key}:{ctrl_label}"
                 add_node(
@@ -283,7 +324,9 @@ class DevtoolsRegistrar:
                     }
                 )
 
-            for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
+            for provider in Reflector.get_metadata(
+                module, ModuleMetadata.Providers, []
+            ):
                 prov_label = provider_name(provider)
                 prov_id = f"provider:{module_key}:{prov_label}"
                 add_node(
@@ -302,7 +345,7 @@ class DevtoolsRegistrar:
                     }
                 )
 
-            for imp in Reflect.get_metadata(module, ModuleMetadata.Imports, []):
+            for imp in Reflector.get_metadata(module, ModuleMetadata.Imports, []):
                 imp_module = imp.module if hasattr(imp, "module") else imp
                 if imp_module is None:
                     continue
@@ -319,4 +362,8 @@ class DevtoolsRegistrar:
         return {"root": module_id(root_module), "nodes": nodes, "edges": edges}
 
 
-__all__ = ["DevtoolsRegistrar", "resolve_devtools_static_path", "read_or_create_devtools_token"]
+__all__ = [
+    "DevtoolsRegistrar",
+    "resolve_devtools_static_path",
+    "read_or_create_devtools_token",
+]

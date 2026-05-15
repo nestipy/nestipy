@@ -48,7 +48,7 @@ class AppModule:
 ```python
 import socketio
 
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core.factory import NestipyFactory
 from nestipy.websocket import SocketIoAdapter
 
 app = NestipyFactory.create(AppModule)

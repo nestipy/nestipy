@@ -30,9 +30,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
     """Run the dev loop with optional Vite and backend processes."""
     parsed = parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
-    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths = str(
+        parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or ""
+    )
     proxy_paths_list = (
-        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+        [p.strip() for p in proxy_paths.split(",") if p.strip()]
+        if proxy_paths
+        else None
     )
     backend_cmd = parsed.get("backend") or os.getenv("NESTIPY_WEB_BACKEND")
     backend_cwd = parsed.get("backend_cwd") or os.getenv("NESTIPY_WEB_BACKEND_CWD")
@@ -93,7 +97,9 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             or ""
         )
         if actions_watch:
-            actions_watch_paths = [p.strip() for p in actions_watch.split(",") if p.strip()]
+            actions_watch_paths = [
+                p.strip() for p in actions_watch.split(",") if p.strip()
+            ]
         if actions_watch_paths and "NESTIPY_WEB_ACTIONS_POLL" not in os.environ:
             actions_poll_interval = 0.0
 
@@ -159,7 +165,9 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
         if not logger.isEnabledFor(20):
             traceback.print_exc()
     if router_spec_url and router_output:
-        router_hash = maybe_codegen_router_spec(router_spec_url, router_output, router_hash)
+        router_hash = maybe_codegen_router_spec(
+            router_spec_url, router_output, router_hash
+        )
         last_router_poll = time.monotonic()
         if router_types_output:
             router_types_hash = maybe_codegen_router_types(
@@ -211,6 +219,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
             install_deps(config)
         vite_process = start_vite(config)
         if vite_process.stdout is not None:
+
             def _stream_vite_logs() -> None:
                 for raw in iter(vite_process.stdout.readline, ""):
                     line = raw.strip()
@@ -219,6 +228,7 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                 code = vite_process.wait()
                 if code != 0:
                     web_log(f"Vite dev server exited (code={code}).")
+
             import threading
 
             threading.Thread(target=_stream_vite_logs, daemon=True).start()
@@ -271,11 +281,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                     )
                     last_actions_poll = time.monotonic()
                     if actions_types_output:
-                        actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
-                            actions_schema_url,
-                            actions_types_output,
-                            actions_types_hash,
-                            actions_types_etag,
+                        actions_types_hash, actions_types_etag = (
+                            maybe_codegen_actions_types_schema(
+                                actions_schema_url,
+                                actions_types_output,
+                                actions_types_hash,
+                                actions_types_etag,
+                            )
                         )
                 if router_spec_url and router_output:
                     router_hash = maybe_codegen_router_spec(
@@ -319,11 +331,13 @@ def dev(args: Iterable[str], modules: list[Type] | None = None) -> None:
                         actions_etag,
                     )
                     if actions_types_output:
-                        actions_types_hash, actions_types_etag = maybe_codegen_actions_types_schema(
-                            actions_schema_url,
-                            actions_types_output,
-                            actions_types_hash,
-                            actions_types_etag,
+                        actions_types_hash, actions_types_etag = (
+                            maybe_codegen_actions_types_schema(
+                                actions_schema_url,
+                                actions_types_output,
+                                actions_types_hash,
+                                actions_types_etag,
+                            )
                         )
                     last_actions_state = current_actions_state
                     last_actions_poll = time.monotonic()

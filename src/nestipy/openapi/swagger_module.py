@@ -1,18 +1,19 @@
 import dataclasses
 import os.path
-from typing import TYPE_CHECKING, cast, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import aiofiles
 import ujson
 
 from nestipy.common.http_ import Request, Response
-from nestipy.metadata import Reflect
+from nestipy.metadata import Reflector
+
 from .constant import OPENAPI_HANDLER_METADATA
 from .openapi_docs.common import Serializer
 from .openapi_docs.v3 import OpenAPI
 
 if TYPE_CHECKING:
-    from ..core.nestipy_application import NestipyApplication
+    from ..core.application import NestipyApplication
 
 
 @dataclasses.dataclass
@@ -63,6 +64,7 @@ class SwaggerModule:
             document_cache: Optional[_Document] = None
 
             def get_document() -> _Document:
+                print("get_document")
                 nonlocal document_cache
                 if document_cache is None:
                     document_cache = cls._create_document(app, config)
@@ -93,7 +95,21 @@ class SwaggerModule:
                 html = await file.read()
                 devtools_static = app.get_devtools_static_path()
                 html = html.replace("/_devtools/static", devtools_static)
-                response = await res.status(200).html(html)
+                swagger_csp = (
+                    "default-src 'self'; "
+                    "base-uri 'self'; "
+                    "object-src 'none'; "
+                    "frame-ancestors 'none'; "
+                    "script-src 'self'; "
+                    "style-src 'self' 'unsafe-inline'; "
+                    "img-src 'self' data:; "
+                    "font-src 'self' data:;"
+                )
+                response = await (
+                    res.status(200)
+                    .header("Content-Security-Policy", swagger_csp)
+                    .html(html)
+                )
                 await file.close()
                 return response
 
@@ -103,4 +119,4 @@ class SwaggerModule:
             http_adapter.get("/openapi.yml", openapi_yml_handler, raw_meta)
             http_adapter.get(api_path, openapi_swagger_handler, raw_meta)
 
-        Reflect.set_metadata(app, OPENAPI_HANDLER_METADATA, register_open_api)
+        Reflector.set_metadata(app, OPENAPI_HANDLER_METADATA, register_open_api)

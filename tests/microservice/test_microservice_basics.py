@@ -1,19 +1,25 @@
 import pytest
-
+from nestipy.core.context.execution_context import ExecutionContext
+from nestipy.ioc.context_container import RequestContextContainer
 from nestipy.ioc.dependency import TypeAnnotated
-from nestipy.metadata import Reflect
+from nestipy.metadata import Reflector
+from nestipy.microservice.client.option import TCPClientOption, Transport
 from nestipy.microservice.context import RpcRequest, RpcResponse
 from nestipy.microservice.decorator import (
-    MessagePattern,
-    EventPattern,
     MICROSERVICE_LISTENER,
+    EventPattern,
+    MessagePattern,
     MicroserviceMetadata,
 )
-from nestipy.microservice.dependency import Client, Payload, Ctx, Context, Headers, Pattern
-from nestipy.ioc.context_container import RequestContextContainer
-from nestipy.core.context.execution_context import ExecutionContext
+from nestipy.microservice.dependency import (
+    Client,
+    Context,
+    Ctx,
+    Headers,
+    Pattern,
+    Payload,
+)
 from nestipy.microservice.serializer import JSONSerializer
-from nestipy.microservice.client.option import Transport, TCPClientOption
 
 
 @pytest.mark.asyncio
@@ -40,13 +46,13 @@ def test_microservice_decorators_set_metadata():
         return None
 
     decorated = MessagePattern("ping")(handler)
-    meta = Reflect.get_metadata(decorated, MICROSERVICE_LISTENER, None)
+    meta = Reflector.get_metadata(decorated, MICROSERVICE_LISTENER, None)
     assert meta is not None
     assert meta.pattern == "ping"
     assert meta.type == MicroserviceMetadata.Message
 
     decorated = EventPattern("pong")(handler)
-    meta = Reflect.get_metadata(decorated, MICROSERVICE_LISTENER, None)
+    meta = Reflector.get_metadata(decorated, MICROSERVICE_LISTENER, None)
     assert meta is not None
     assert meta.pattern == "pong"
     assert meta.type == MicroserviceMetadata.Event
@@ -84,19 +90,13 @@ async def test_microservice_dependency_resolution():
     container = RequestContextContainer.get_instance()
     container.set_execution_context(ctx)
     try:
-        payload = Payload().metadata.callback(
-            "data", None, dict, container
-        )
+        payload = Payload().metadata.callback("data", None, dict, container)
         assert payload == {"foo": "bar"}
 
-        payload_field = Payload("foo").metadata.callback(
-            "data", "foo", str, container
-        )
+        payload_field = Payload("foo").metadata.callback("data", "foo", str, container)
         assert payload_field == "bar"
 
-        headers = Headers().metadata.callback(
-            "headers", None, dict, container
-        )
+        headers = Headers().metadata.callback("headers", None, dict, container)
         assert headers == {"x-token": "abc"}
 
         header_one = Headers("x-token").metadata.callback(
@@ -104,19 +104,13 @@ async def test_microservice_dependency_resolution():
         )
         assert header_one == "abc"
 
-        pattern = Pattern().metadata.callback(
-            "pattern", None, str, container
-        )
+        pattern = Pattern().metadata.callback("pattern", None, str, container)
         assert pattern == "ping"
 
-        rpc_ctx = Ctx().metadata.callback(
-            "ctx", None, object, container
-        )
+        rpc_ctx = Ctx().metadata.callback("ctx", None, object, container)
         assert rpc_ctx.get_pattern() == "ping"
 
-        request_obj = Context().metadata.callback(
-            "request", None, object, container
-        )
+        request_obj = Context().metadata.callback("request", None, object, container)
         assert request_obj is req
     finally:
         container.destroy()

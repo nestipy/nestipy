@@ -152,7 +152,6 @@ class FastApiAdapter(HttpAdapter):
             allow_origin_regex=options.allow_origin_regex,
         )
 
-
     def _create_fastapi_handler(
         self, callback: CallableHandler, _metadata: typing.Optional[dict] = None
     ):

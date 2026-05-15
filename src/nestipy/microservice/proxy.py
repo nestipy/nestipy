@@ -1,17 +1,18 @@
 import inspect
 import traceback
-from typing import Type, Callable, cast, Any, Union
+from typing import Any, Callable, Type, Union, cast
 
 from nestipy.common.logger import logger
 from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards.processor import GuardProcessor
 from nestipy.core.interceptor.processor import RequestInterceptor
-from nestipy.ioc import RequestContextContainer, NestipyContainer
+from nestipy.ioc import NestipyContainer, RequestContextContainer
 from nestipy.metadata.class_ import ClassMetadata
-from nestipy.metadata.reflect import Reflect
-from .context import RpcRequest, RpcException
-from .decorator import MICROSERVICE_LISTENER, MicroserviceMetadata, MicroserviceData
+from nestipy.metadata.reflect import Reflector
+
+from .context import RpcException, RpcRequest
+from .decorator import MICROSERVICE_LISTENER, MicroserviceData, MicroserviceMetadata
 from .exception import RPCErrorCode, RPCErrorMessage
 from .server.base import MicroServiceServer
 
@@ -34,11 +35,11 @@ class MicroserviceProxy:
                 and self._is_listener(getattr(inspect_target, method))
             ]
             for m in methods:
-                metadata: ClassMetadata = Reflect.get_metadata(
+                metadata: ClassMetadata = Reflector.get_metadata(
                     inspect_target, ClassMetadata.Metadata, None
                 )
                 if metadata is not None:
-                    data: MicroserviceData = Reflect.get_metadata(
+                    data: MicroserviceData = Reflector.get_metadata(
                         getattr(inspect_target, m), MICROSERVICE_LISTENER, None
                     )
                     if (
@@ -54,7 +55,7 @@ class MicroserviceProxy:
 
     @classmethod
     def _is_listener(cls, method: Callable):
-        return Reflect.get_metadata(method, MICROSERVICE_LISTENER, None) is not None
+        return Reflector.get_metadata(method, MICROSERVICE_LISTENER, None) is not None
 
     def register_listener(self, listener: Callable, data: MicroserviceData):
         match data.type:

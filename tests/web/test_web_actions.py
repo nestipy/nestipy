@@ -105,7 +105,9 @@ async def test_actions_rpc():
         assert schema.status() == 200
         schema_json = schema.json()
         assert schema_json.get("endpoint") == "/_actions"
-        assert any(a.get("name") == "DemoActions.hello" for a in schema_json.get("actions", []))
+        assert any(
+            a.get("name") == "DemoActions.hello" for a in schema_json.get("actions", [])
+        )
     finally:
         NestipyContainer.clear()
         RequestContextContainer.get_instance().destroy()
@@ -188,7 +190,11 @@ class CsrfGuardModule:
         ActionsModule.for_root(
             ActionsOption(
                 path="/_actions",
-                guards=[OriginActionGuard(allowed_origins=["http://127.0.0.1:8000"], allow_missing=False)],
+                guards=[
+                    OriginActionGuard(
+                        allowed_origins=["http://127.0.0.1:8000"], allow_missing=False
+                    )
+                ],
             )
         )
     ],
@@ -323,7 +329,9 @@ async def test_actions_signature_guard():
     try:
         ts = int(time.time())
         nonce = "nonce-1"
-        body = json.dumps({"args": [], "kwargs": {}}, sort_keys=True, separators=(",", ":"))
+        body = json.dumps(
+            {"args": [], "kwargs": {}}, sort_keys=True, separators=(",", ":")
+        )
         message = f"GuardedActions.secure|{ts}|{nonce}|{body}"
         sig = hmac.new(b"secret", message.encode("utf-8"), hashlib.sha256).hexdigest()
         ok = await client.post(

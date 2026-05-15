@@ -39,7 +39,12 @@ from .pipes import (
 )
 from .logger import logger, console
 from .cache import CachePolicy
-from .constant import NESTIPY_SCOPE_ATTR, SCOPE_SINGLETON, SCOPE_TRANSIENT, SCOPE_REQUEST
+from .constant import (
+    NESTIPY_SCOPE_ATTR,
+    SCOPE_SINGLETON,
+    SCOPE_TRANSIENT,
+    SCOPE_REQUEST,
+)
 from .openapi_error import OpenApiErrorResponse, OpenApiErrorDetail
 from .middleware import cors, NestipyMiddleware, session, SessionOption, helmet
 from .middleware import cookie_session, SessionCookieOption, SessionStore
@@ -56,6 +61,7 @@ def __getattr__(name: str):
 
         return ModuleProviderDict
     raise AttributeError(f"module {__name__} has no attribute {name}")
+
 
 __all__ = [
     "ConfigModule",

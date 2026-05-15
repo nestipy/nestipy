@@ -1,13 +1,13 @@
-from typing import Type, Callable, Union, Optional, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Optional, Type, Union
 
 from nestipy.common import Module
-from nestipy.core.nestipy_application import NestipyApplication
-from nestipy.core.nestipy_factory import NestipyFactory
-
+from nestipy.core.application import NestipyApplication
+from nestipy.core.factory import NestipyFactory
 from nestipy.core.platform import BlackSheepApplication, FastApiApplication
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer
 from nestipy.ioc.provider import ModuleProviderDict
+
 from .client import TestClient
 
 
@@ -29,7 +29,7 @@ class TestingModuleRef:
             await self.compile()
         return await NestipyContainer.get_instance().get(key)
 
-    def create_nestipy_application(
+    def create_application(
         self,
         platform: Union[
             Type[BlackSheepApplication], Type[FastApiApplication]
@@ -44,7 +44,7 @@ class TestingModuleRef:
             Type[BlackSheepApplication], Type[FastApiApplication]
         ] = FastApiApplication,
     ) -> TestClient:
-        app = self.create_nestipy_application(platform)
+        app = self.create_application(platform)
         return TestClient(app)
 
 

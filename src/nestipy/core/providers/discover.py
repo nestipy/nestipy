@@ -3,7 +3,7 @@ from typing import Type
 from nestipy.common import Injectable
 from nestipy.common.utils import uniq_list
 from nestipy.core.types import ControllerInstance, ModuleInstance, ProviderInstance
-from nestipy.metadata import Reflect, ModuleMetadata
+from nestipy.metadata import ModuleMetadata, Reflector
 
 
 @Injectable()
@@ -39,7 +39,8 @@ class DiscoverService:
         return [
             p
             for p in self._providers
-            if p.__class__ in Reflect.get_metadata(module, ModuleMetadata.Providers, [])
+            if p.__class__
+            in Reflector.get_metadata(module, ModuleMetadata.Providers, [])
         ]
 
     def get_module_controllers(self, module: Type):
@@ -47,5 +48,5 @@ class DiscoverService:
             c
             for c in self._controllers
             if c.__class__
-            in Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
+            in Reflector.get_metadata(module, ModuleMetadata.Controllers, [])
         ]

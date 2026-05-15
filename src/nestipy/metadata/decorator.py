@@ -1,6 +1,6 @@
 from typing import Any, Union
 
-from .reflect import Reflect
+from .reflect import Reflector
 
 
 class SetMetadata:
@@ -15,12 +15,12 @@ class SetMetadata:
 
     def __call__(self, cls):
         default = [] if self.as_list else {} if self.as_dict else None
-        meta: Union[list, dict] = Reflect.get_metadata(cls, self.key, default)
+        meta: Union[list, dict] = Reflector.get_metadata(cls, self.key, default)
         if self.as_list:
             meta = meta + self.data
         elif self.as_dict:
             meta.update(self.data)
         else:
             meta = self.data
-        Reflect.set_metadata(cls, self.key, meta)
+        Reflector.set_metadata(cls, self.key, meta)
         return cls

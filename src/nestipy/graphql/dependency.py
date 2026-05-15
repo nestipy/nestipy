@@ -49,8 +49,13 @@ def _graphql_context_callback(
 def Args(token: Optional[str] = None):
     actual_token = _ALL_ARGS_TOKEN if token is None else token
     return create_type_annotated(_graphql_args_callback, CtxDepKey.Args)(actual_token)
+
+
 Context = create_type_annotated(_graphql_context_callback, CtxDepKey.Context)
+
+
 def Parent():
     return create_type_annotated(_graphql_parent_callback, CtxDepKey.Args)("root")
+
 
 __all__ = ["Args", "Context", "Parent"]

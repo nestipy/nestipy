@@ -1,7 +1,8 @@
-from typing import Optional, Awaitable, Callable, Union, Type
+from typing import Awaitable, Callable, Optional, Type, Union
 
 from nestipy.common.decorator import Module
-from .config_builder import ConfigurableModuleClass, ConfigOption
+
+from .config_builder import ConfigOption, ConfigurableModuleClass
 from .config_service import ConfigService
 
 
@@ -11,10 +12,8 @@ from .config_service import ConfigService
 )
 class ConfigModule(ConfigurableModuleClass):
     @classmethod
-    def for_root(
-        cls, option: ConfigOption | None = ConfigOption(), is_global: bool = False
-    ):
-        module = super().for_root(option)  # Call on cls to preserve subclass
+    def for_root(cls, option: ConfigOption = ConfigOption(), is_global: bool = False):
+        module = cls.register(option)  # Call on cls to preserve subclass
         module.is_global = option.is_global or is_global
         return module
 
@@ -22,15 +21,15 @@ class ConfigModule(ConfigurableModuleClass):
     def for_root_async(
         cls,
         value: Optional[ConfigOption] = None,
-        factory: Callable[..., Union[Awaitable[ConfigOption], ConfigOption]] = None,
+        factory: Union[Callable[..., Awaitable[ConfigOption]], None] = None,
         existing: Union[Type, str, None] = None,
         use_class: Union[Type, None] = None,
-        inject: list = None,
-        imports: list = None,
-        extras: dict = None,
+        inject: Union[list, None] = None,
+        imports: Union[list, None] = None,
+        extras: Union[dict, None] = None,
         is_global: bool = False,
     ):
-        module = super().for_root_async(
+        module = cls.register_async(
             value=value,
             factory=factory,
             existing=existing,

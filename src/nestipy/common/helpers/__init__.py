@@ -1,7 +1,7 @@
 from typing import Type
 
 from nestipy.ioc import ModuleProviderDict
-from nestipy.metadata import Reflect, ClassMetadata, ModuleMetadata
+from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflector
 
 
 class SpecialProviderExtractor:
@@ -10,10 +10,10 @@ class SpecialProviderExtractor:
         cls, module_class: Type, subclass: Type, key: str
     ) -> list[Type]:
         providers = []
-        class_providers = Reflect.get_metadata(
+        class_providers = Reflector.get_metadata(
             module_class, ModuleMetadata.Providers, []
         )
-        metadata: ClassMetadata = Reflect.get_metadata(
+        metadata: ClassMetadata = Reflector.get_metadata(
             module_class, ClassMetadata.Metadata, None
         )
         if metadata is not None:

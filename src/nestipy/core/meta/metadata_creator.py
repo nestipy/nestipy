@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Type
 
 from nestipy.common.utils import uniq_list
+from nestipy.core.types import ModuleRef
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc import NestipyContainer
-from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflect
-from nestipy.core.types import ModuleRef
+from nestipy.metadata import ClassMetadata, ModuleMetadata, Reflector
 
 
 class MetadataCreator(ABC):
@@ -24,7 +24,7 @@ class MetadataCreator(ABC):
 
     def extract_providers(self) -> list:
         return uniq_list(
-            Reflect.get_metadata(self.module, ModuleMetadata.Providers, [])
+            Reflector.get_metadata(self.module, ModuleMetadata.Providers, [])
         )
 
     def _put_dependency_metadata(self) -> None:
@@ -33,7 +33,7 @@ class MetadataCreator(ABC):
             global_data = self.extract_providers() if self.is_root else self.global_data
             # only p that have not metadata
             if not hasattr(p, ClassMetadata.Metadata):
-                Reflect.set_metadata(
+                Reflector.set_metadata(
                     p,
                     ClassMetadata.Metadata,
                     ClassMetadata(self.module, global_providers=global_data),
@@ -47,23 +47,25 @@ class MetadataCreator(ABC):
         return uniq_list(
             [
                 self._dynamic_module_to_module(m)
-                for m in Reflect.get_metadata(self.module, ModuleMetadata.Imports, [])
+                for m in Reflector.get_metadata(self.module, ModuleMetadata.Imports, [])
             ]
         )
 
     @classmethod
     def _dynamic_module_to_module(cls, im: ModuleRef) -> Type:
         if isinstance(im, DynamicModule):
-            Reflect.set_metadata(im.module, ModuleMetadata.Providers, im.providers)
-            Reflect.set_metadata(im.module, ModuleMetadata.Controllers, im.controllers)
-            Reflect.set_metadata(im.module, ModuleMetadata.Imports, im.imports)
-            Reflect.set_metadata(im.module, ModuleMetadata.Exports, im.exports)
-            Reflect.set_metadata(im.module, ModuleMetadata.Global, im.is_global)
+            Reflector.set_metadata(im.module, ModuleMetadata.Providers, im.providers)
+            Reflector.set_metadata(
+                im.module, ModuleMetadata.Controllers, im.controllers
+            )
+            Reflector.set_metadata(im.module, ModuleMetadata.Imports, im.imports)
+            Reflector.set_metadata(im.module, ModuleMetadata.Exports, im.exports)
+            Reflector.set_metadata(im.module, ModuleMetadata.Global, im.is_global)
             NestipyContainer.get_instance().add_singleton(im.module)
             try:
                 from nestipy.ioc.provider import ModuleProviderDict
             except Exception:
-                ModuleProviderDict = None
+                ModuleProviderDict = None  # ty:ignore[invalid-assignment]
             if ModuleProviderDict is not None:
                 for provider in im.providers:
                     if isinstance(provider, ModuleProviderDict):
@@ -80,26 +82,28 @@ class MetadataCreator(ABC):
         :return:
         """
         if self.is_root:
-            Reflect.set_metadata(self.module, ModuleMetadata.Root, True)
+            Reflector.set_metadata(self.module, ModuleMetadata.Root, True)
             self.global_data = self.extract_providers()
             # compile global first
             imports = self._extract_import()
             not_global_module = []
             for im in imports:
-                if not Reflect.get_metadata(im, ModuleMetadata.Global, False):
+                if not Reflector.get_metadata(im, ModuleMetadata.Global, False):
                     not_global_module.append(im)
                 else:
                     self._type()(im, global_data=self.global_data).create()
                     import_providers_form_exports = []
-                    for export in Reflect.get_metadata(im, ModuleMetadata.Exports, []):
+                    for export in Reflector.get_metadata(
+                        im, ModuleMetadata.Exports, []
+                    ):
                         # For module re-exporting
-                        is_module: bool = Reflect.get_metadata(
+                        is_module: bool = Reflector.get_metadata(
                             export, ModuleMetadata.Module, False
                         )
                         if is_module:
                             import_providers_form_exports = (
                                 import_providers_form_exports
-                                + Reflect.get_metadata(
+                                + Reflector.get_metadata(
                                     export, ModuleMetadata.Providers, []
                                 )
                             )

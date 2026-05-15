@@ -83,10 +83,14 @@ def _return_from_statements(
                     inner.value, externals, component_names, locals, bindings, name_map
                 )
             if isinstance(inner, cst.Assign):
-                _handle_assignment(inner, externals, component_names, locals, bindings, name_map)
+                _handle_assignment(
+                    inner, externals, component_names, locals, bindings, name_map
+                )
                 continue
             if isinstance(inner, cst.AnnAssign):
-                _handle_assignment(inner, externals, component_names, locals, bindings, name_map)
+                _handle_assignment(
+                    inner, externals, component_names, locals, bindings, name_map
+                )
                 continue
             if isinstance(inner, cst.If):
                 result = _handle_if_statement(
@@ -140,7 +144,9 @@ def _handle_assignment(
         return
     if not isinstance(target, cst.Name):
         return
-    evaluated = _eval_expr(value, externals, component_names, locals, bindings, name_map)
+    evaluated = _eval_expr(
+        value, externals, component_names, locals, bindings, name_map
+    )
     bindings[target.value] = evaluated
 
 
@@ -158,7 +164,9 @@ def _handle_if_statement(
         for _, body in branches
     ]
     else_result = (
-        _evaluate_branch(else_body, externals, component_names, locals, bindings, name_map)
+        _evaluate_branch(
+            else_body, externals, component_names, locals, bindings, name_map
+        )
         if else_body is not None
         else None
     )
@@ -282,7 +290,12 @@ def _handle_for_statement(
     iterable = JSExpr(_expr_to_js(stmt.iter, name_map, bindings))
 
     append_target, append_expr = _extract_loop_body(
-        stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
+        stmt.body,
+        externals,
+        component_names,
+        locals | {target_name},
+        bindings,
+        name_map,
     )
     if append_target is None or append_expr is None:
         raise CompilerError(
@@ -311,7 +324,9 @@ def _extract_loop_body(
 
     for stmt in statements:
         if isinstance(stmt, cst.Assign) or isinstance(stmt, cst.AnnAssign):
-            _handle_assignment(stmt, externals, component_names, locals, local_bindings, name_map)
+            _handle_assignment(
+                stmt, externals, component_names, locals, local_bindings, name_map
+            )
             continue
         if isinstance(stmt, cst.If):
             target, expr = _extract_loop_if_expr(
@@ -322,7 +337,9 @@ def _extract_loop_body(
                     stmt, externals, component_names, locals, local_bindings, name_map
                 )
                 if result is not None:
-                    raise CompilerError("Return statements are not allowed inside for loops.")
+                    raise CompilerError(
+                        "Return statements are not allowed inside for loops."
+                    )
                 continue
             append_target = _merge_append_target(append_target, target)
             expressions.append(expr)
@@ -403,7 +420,12 @@ def _extract_nested_for_expr(
         raise CompilerError("For/else is not supported in components.")
     iterable = JSExpr(_expr_to_js(stmt.iter, name_map, bindings))
     append_target, body_expr = _extract_loop_body(
-        stmt.body, externals, component_names, locals | {target_name}, bindings, name_map
+        stmt.body,
+        externals,
+        component_names,
+        locals | {target_name},
+        bindings,
+        name_map,
     )
     if append_target is None or body_expr is None:
         raise CompilerError(
@@ -445,7 +467,9 @@ def _extract_append_call(
         return None, None
     if len(call.args) != 1:
         return None, None
-    value = _eval_expr(call.args[0].value, externals, component_names, locals, bindings, name_map)
+    value = _eval_expr(
+        call.args[0].value, externals, component_names, locals, bindings, name_map
+    )
     return func.value.value, value
 
 

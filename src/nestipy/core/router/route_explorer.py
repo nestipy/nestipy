@@ -1,13 +1,13 @@
-from inspect import isfunction, getmembers
+from inspect import getmembers, isfunction
 from typing import List
-
-from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation
 
 from nestipy.common.utils import deep_merge
 from nestipy.core.types import ModuleRef
 from nestipy.ioc import MiddlewareContainer
-from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
+from nestipy.metadata import ModuleMetadata, Reflector, RouteKey
 from nestipy.openapi.explorer import OpenApiExplorer
+from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation
+
 from .route_extractor import RouteParamsExtractor
 
 
@@ -59,7 +59,7 @@ class RouteExplorer:
         :param module_ref: The module class or instance to explore.
         :return: A list of dictionaries, each containing route information.
         """
-        controllers = Reflect.get_metadata(module_ref, ModuleMetadata.Controllers, [])
+        controllers = Reflector.get_metadata(module_ref, ModuleMetadata.Controllers, [])
         routes = []
         ins = cls()
         for controller in controllers:
@@ -69,7 +69,9 @@ class RouteExplorer:
             routes = routes + controller_routes
         return routes
 
-    def explore_controller(self, controller: type, include_openapi: bool = True) -> List[dict]:
+    def explore_controller(
+        self, controller: type, include_openapi: bool = True
+    ) -> List[dict]:
         """
         Explore a controller class for route methods decorated with @Route, @Get, etc.
         :param controller: The controller class to explore.
@@ -82,26 +84,30 @@ class RouteExplorer:
         routes = []
         # need to extract middleware, guards, exception_handler,
         controller_path = self._normalize_path(
-            Reflect.get_metadata(controller, RouteKey.path, "")
+            Reflector.get_metadata(controller, RouteKey.path, "")
         )
         controller_versions = self._normalize_versions(
-            Reflect.get_metadata(controller, RouteKey.version, None)
+            Reflector.get_metadata(controller, RouteKey.version, None)
         )
-        controller_cache = Reflect.get_metadata(controller, RouteKey.cache, None)
+        controller_cache = Reflector.get_metadata(controller, RouteKey.cache, None)
         for method_name, _ in getmembers(controller, isfunction):
             if method_name.startswith("__"):
                 continue
             method = getattr(controller, method_name)
-            path = Reflect.get_metadata(method, RouteKey.path, None)
+            path = Reflector.get_metadata(method, RouteKey.path, None)
             if path is not None:
                 method_path = self._normalize_path(path)
                 base_path = f"{controller_path}/{method_path}".strip("/")
-                request_method = Reflect.get_metadata(method, RouteKey.method)
+                request_method = Reflector.get_metadata(method, RouteKey.method)
                 method_versions = self._normalize_versions(
-                    Reflect.get_metadata(method, RouteKey.version, None)
+                    Reflector.get_metadata(method, RouteKey.version, None)
                 )
-                versions = method_versions if method_versions is not None else controller_versions
-                cache_policy = Reflect.get_metadata(method, RouteKey.cache, None)
+                versions = (
+                    method_versions
+                    if method_versions is not None
+                    else controller_versions
+                )
+                cache_policy = Reflector.get_metadata(method, RouteKey.cache, None)
                 if cache_policy is None:
                     cache_policy = controller_cache
 
@@ -110,11 +116,13 @@ class RouteExplorer:
                 for version in versions:
                     if version:
                         version_segment = self._format_version(str(version))
-                        full_path = f"/{self._normalize_path(f'{version_segment}/{base_path}')}"
+                        full_path = (
+                            f"/{self._normalize_path(f'{version_segment}/{base_path}')}"
+                        )
                     else:
                         full_path = f"/{self._normalize_path(base_path)}"
 
-                # openapi docs
+                    # openapi docs
                     if include_openapi:
                         params = RouteParamsExtractor.extract_params(full_path)
                         parameters = [
@@ -130,7 +138,9 @@ class RouteExplorer:
                         method_deps, method_schemas = self._openapi_scanner.explore(
                             method
                         )
-                        method_docs = deep_merge(method_deps, {"parameters": parameters})
+                        method_docs = deep_merge(
+                            method_deps, {"parameters": parameters}
+                        )
                         merged_docs = deep_merge(docs, method_docs)
                         merged_schemas = deep_merge(schemas, method_schemas)
                         path_docs = deep_merge(

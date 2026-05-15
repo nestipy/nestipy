@@ -5,6 +5,7 @@ from blacksheep import (
     Response as BlackSheepResponse,
     Request as BlackSheepRequest,
 )
+
 try:
     from blacksheep.server.routing import Router  # type: ignore
 except Exception:
@@ -53,7 +54,10 @@ class BlackSheepAdapter(HttpAdapter):
         pass
 
     def enable_cors(self, options: CorsOptions | None = None) -> None:
-        if self._cors_enabled or getattr(self.instance, "_cors_strategy", None) is not None:
+        if (
+            self._cors_enabled
+            or getattr(self.instance, "_cors_strategy", None) is not None
+        ):
             return
         self._cors_enabled = True
         if options is None:
@@ -72,7 +76,6 @@ class BlackSheepAdapter(HttpAdapter):
             allow_headers=" ".join(options.allow_headers),
             max_age=options.max_age or 300,
         )
-
 
     def create_wichard(self, prefix: str = "/", name: str = "full_path") -> str:
         prefix = prefix.strip("/")

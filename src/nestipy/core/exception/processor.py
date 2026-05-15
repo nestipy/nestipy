@@ -1,5 +1,5 @@
 import typing
-from typing import Union, Callable
+from typing import Callable, Union
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.exception.http import HttpException
@@ -11,7 +11,7 @@ from nestipy.core.constant import APP_FILTER
 from nestipy.core.context.argument_host import ArgumentHost
 from nestipy.core.types import HandlerReturn
 from nestipy.ioc import NestipyContainer
-from nestipy.metadata import Reflect, ClassMetadata
+from nestipy.metadata import ClassMetadata, Reflector
 
 
 @Injectable()
@@ -38,8 +38,10 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
         module_filters = self.extract_special_providers(
             typing.cast(typing.Type, handler_module_class), ExceptionFilter, APP_FILTER
         )
-        class_filters = Reflect.get_metadata(handler_class, ExceptionKey.MetaFilter, [])
-        handler_filters = Reflect.get_metadata(handler, ExceptionKey.MetaFilter, [])
+        class_filters = Reflector.get_metadata(
+            handler_class, ExceptionKey.MetaFilter, []
+        )
+        handler_filters = Reflector.get_metadata(handler, ExceptionKey.MetaFilter, [])
         # NestJS order: method -> class -> module -> global (most specific first)
         all_filters = uniq_list(
             handler_filters + class_filters + module_filters + global_filters
@@ -49,7 +51,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
             if issubclass(fit, ExceptionFilter):
                 # Put dependency
                 services = self.container.get_all_services()
-                Reflect.set_metadata(
+                Reflector.set_metadata(
                     fit,
                     ClassMetadata.Metadata,
                     ClassMetadata(handler_class, global_providers=services),
@@ -65,7 +67,7 @@ class ExceptionFilterHandler(SpecialProviderExtractor):
     ):
         if len(all_filters) > index:
             exception_filter = all_filters[index]
-            all_exception_to_catch = Reflect.get_metadata(
+            all_exception_to_catch = Reflector.get_metadata(
                 exception_filter, ExceptionKey.MetaType, []
             )
             new_result = await self._apply_exception_filter_for_exception(

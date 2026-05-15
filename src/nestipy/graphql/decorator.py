@@ -1,8 +1,7 @@
-from typing import Type, Union, Callable, Any, Optional
-
-from nestipy.metadata import Reflect
+from typing import Any, Callable, Optional, Type, Union
 
 from nestipy.graphql.meta import NestipyGraphqlKey
+from nestipy.metadata import Reflector
 
 
 class GraphQlDecorator:
@@ -17,10 +16,12 @@ class GraphQlDecorator:
 
             if not self.is_method:
                 class_ref = Injectable()(class_ref)
-            Reflect.set_metadata(class_ref, self.graphql_type, self.graphql_value)
-            Reflect.set_metadata(class_ref, NestipyGraphqlKey.return_type, return_type)
-            Reflect.set_metadata(class_ref, NestipyGraphqlKey.args, args)
-            Reflect.set_metadata(class_ref, NestipyGraphqlKey.kwargs, kwargs)
+            Reflector.set_metadata(class_ref, self.graphql_type, self.graphql_value)
+            Reflector.set_metadata(
+                class_ref, NestipyGraphqlKey.return_type, return_type
+            )
+            Reflector.set_metadata(class_ref, NestipyGraphqlKey.args, args)
+            Reflector.set_metadata(class_ref, NestipyGraphqlKey.kwargs, kwargs)
             return class_ref
 
         return wrapper

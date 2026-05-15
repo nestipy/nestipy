@@ -17,16 +17,24 @@ from .command_shell import (
     select_package_manager,
     summarize_build_lines,
 )
-from .command_templates import DEFAULT_ACTIONS_TEMPLATE, DEFAULT_LAYOUT_TEMPLATE, DEFAULT_PAGE_TEMPLATE
+from .command_templates import (
+    DEFAULT_ACTIONS_TEMPLATE,
+    DEFAULT_LAYOUT_TEMPLATE,
+    DEFAULT_PAGE_TEMPLATE,
+)
 
 
 def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
     """Build the frontend and optionally generate clients."""
     parsed = parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
-    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths = str(
+        parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or ""
+    )
     proxy_paths_list = (
-        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+        [p.strip() for p in proxy_paths.split(",") if p.strip()]
+        if proxy_paths
+        else None
     )
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
@@ -48,21 +56,29 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
             actions_output = str(config.resolve_src_dir() / "actions.client.ts")
         actions_types_output = parsed.get("actions_types")
         if not actions_types_output:
-            actions_types_output = str(config.resolve_app_dir() / "_generated" / "actions_types.py")
+            actions_types_output = str(
+                config.resolve_app_dir() / "_generated" / "actions_types.py"
+            )
         actions_endpoint = str(parsed.get("actions_endpoint", "/_actions"))
         from nestipy.web.actions_client import write_actions_client_file
 
-        write_actions_client_file(modules, str(actions_output), endpoint=actions_endpoint)
+        write_actions_client_file(
+            modules, str(actions_output), endpoint=actions_endpoint
+        )
         from nestipy.web.actions_client import write_actions_types_file
 
-        write_actions_types_file(modules, str(actions_types_output), endpoint=actions_endpoint)
+        write_actions_types_file(
+            modules, str(actions_types_output), endpoint=actions_endpoint
+        )
 
         client_output = parsed.get("output")
         if not client_output:
             client_output = str(config.resolve_src_dir() / "api" / "client.ts")
         client_types_output = parsed.get("router_types")
         if not client_types_output:
-            client_types_output = str(config.resolve_app_dir() / "_generated" / "api_types.py")
+            client_types_output = str(
+                config.resolve_app_dir() / "_generated" / "api_types.py"
+            )
         client_language = str(parsed.get("lang", "ts"))
         class_name = str(parsed.get("class_name", "ApiClient"))
         prefix = str(parsed.get("prefix", ""))
@@ -96,7 +112,9 @@ def build(args: Iterable[str], modules: list[Type] | None = None) -> None:
         ssr_enabled = bool(parsed.get("ssr"))
         ssr_entry = str(parsed.get("ssr_entry") or "src/entry-server.tsx")
         ssr_out_dir = str(parsed.get("ssr_out_dir") or "dist/ssr")
-        build_vite(config, ssr=ssr_enabled, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir)
+        build_vite(
+            config, ssr=ssr_enabled, ssr_entry=ssr_entry, ssr_out_dir=ssr_out_dir
+        )
         validate_vite_output(config, ssr=ssr_enabled, ssr_out_dir=ssr_out_dir)
         maybe_set_web_dist(config)
 
@@ -105,9 +123,13 @@ def init(args: Iterable[str]) -> None:
     """Scaffold a minimal Nestipy Web app."""
     parsed = parse_args(args)
     proxy = str(parsed.get("proxy") or os.getenv("NESTIPY_WEB_PROXY") or "") or None
-    proxy_paths = str(parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or "")
+    proxy_paths = str(
+        parsed.get("proxy_paths") or os.getenv("NESTIPY_WEB_PROXY_PATHS") or ""
+    )
     proxy_paths_list = (
-        [p.strip() for p in proxy_paths.split(",") if p.strip()] if proxy_paths else None
+        [p.strip() for p in proxy_paths.split(",") if p.strip()]
+        if proxy_paths
+        else None
     )
     config = WebConfig(
         app_dir=str(parsed.get("app_dir", "app")),
@@ -148,7 +170,7 @@ def init(args: Iterable[str]) -> None:
                     "",
                     "from typing import Any, Protocol, TypeVar, Generic, Callable",
                     "",
-                    "T = TypeVar(\"T\")",
+                    'T = TypeVar("T")',
                     "",
                     "class ActionError(Protocol):",
                     "    message: str",
@@ -164,7 +186,7 @@ def init(args: Iterable[str]) -> None:
                     "        self,",
                     "        on_fulfilled: Callable[[T], Any] | None = ...,",
                     "        on_rejected: Callable[[Any], Any] | None = ...,",
-                    "    ) -> \"JsPromise[Any]\": ...",
+                    '    ) -> "JsPromise[Any]": ...',
                     "",
                     "class ActionsClient(Protocol):",
                     "    pass",
@@ -182,14 +204,14 @@ def init(args: Iterable[str]) -> None:
                     "",
                     "from typing import Any, Protocol, TypeVar, Generic, Callable",
                     "",
-                    "T = TypeVar(\"T\")",
+                    'T = TypeVar("T")',
                     "",
                     "class JsPromise(Protocol, Generic[T]):",
                     "    def then(",
                     "        self,",
                     "        on_fulfilled: Callable[[T], Any] | None = ...,",
                     "        on_rejected: Callable[[Any], Any] | None = ...,",
-                    "    ) -> \"JsPromise[Any]\": ...",
+                    '    ) -> "JsPromise[Any]": ...',
                     "",
                     "class ApiClient(Protocol):",
                     "    pass",

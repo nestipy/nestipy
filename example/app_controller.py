@@ -1,45 +1,55 @@
 import dataclasses
 import os.path
 import shutil
-from typing import Any, Annotated, Optional, Type
-
-from pydantic import BaseModel
+from calendar import c
+from typing import Annotated, Any, Optional, Type
 
 from app_provider import AppProvider
+from pydantic import BaseModel
+
 from nestipy.common import (
-    Controller,
-    Injectable,
-    Post,
-    Get,
-    logger,
-    UploadFile,
+    Catch,
     ConfigService,
+    Controller,
+    ExceptionFilter,
+    Get,
+    HttpException,
+    Injectable,
+    NestipyInterceptor,
+    Post,
+    Render,
+    Request,
+    Response,
+    UploadFile,
+    UseFilters,
+    UseInterceptors,
+    apply_decorators,
+    logger,
 )
-from nestipy.common import ExceptionFilter, Catch, UseFilters
-from nestipy.common import HttpException, apply_decorators
-from nestipy.common import NestipyInterceptor, UseInterceptors, Render
-from nestipy.common import Request, Response
 from nestipy.core import ArgumentHost, ExecutionContext
-from nestipy.event import OnEvent, EventEmitter
+from nestipy.event import EventEmitter, OnEvent
 from nestipy.ioc import (
-    Inject,
-    Req,
-    Res,
     Body,
     Cookie,
-    Session,
     Header,
-    create_type_annotated,
+    Inject,
+    Req,
     RequestContextContainer,
+    Res,
+    Session,
+    create_type_annotated,
 )
-from nestipy.openapi import ApiResponse, ApiParameter, ApiConsumer
 from nestipy.openapi import (
-    ApiTags,
-    ApiOkResponse,
-    ApiNotFoundResponse,
+    ApiBody,
+    ApiConsumer,
     ApiCreatedResponse,
     ApiExclude,
-    ApiBody,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiParameter,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
 )
 from nestipy.openapi.openapi_docs.v3 import Parameter, ParameterLocation, Schema
 from nestipy.types_ import NextFn
@@ -105,7 +115,8 @@ class TestMethodInterceptor(NestipyInterceptor):
 
 def ApiDecorator():
     return apply_decorators(
-        ApiNotFoundResponse(UnauthorizedResponse), UseInterceptors(TestInterceptor)
+        ApiNotFoundResponse(schema=UnauthorizedResponse),
+        UseInterceptors(TestInterceptor),
     )
 
 
@@ -144,16 +155,12 @@ class AppController:
         return await res.render("index.html", {"title": "Hello"})
 
     @Post()
-    @ApiBody(TestBody, ApiConsumer.MULTIPART)
+    @ApiBody(body=TestBody, consumer=ApiConsumer.MULTIPART)
     @ApiCreatedResponse()
-    @ApiResponse(401, UnauthorizedResponse)
+    @ApiResponse(status=401, schema=UnauthorizedResponse)
     @ApiOkResponse()
     @UseInterceptors(TestMethodInterceptor)
-    @ApiParameter(
-        Parameter(
-            in_=ParameterLocation.QUERY, name="param", schema=Schema(type="string")
-        )
-    )
+    @ApiQuery(name="param", schema=Schema(type="string"))
     @UseFilters(HttpExceptionFilter)
     async def post(
         self,

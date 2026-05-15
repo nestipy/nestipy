@@ -15,6 +15,8 @@ else:
 
 from starlette.concurrency import run_in_threadpool
 
+from nestipy.common.logger import logger
+
 P = ParamSpec("P")
 R = typing.TypeVar("R")
 
@@ -63,7 +65,7 @@ class BackgroundTask:
         except Exception as e:
             self.status = TaskStatus.FAILED
             self.error = str(e)
-            print(f"Task {self.task_id} failed: {e}")
+            logger.error(f"Task {self.task_id} failed: {e}")
 
 
 class BackgroundTasks:

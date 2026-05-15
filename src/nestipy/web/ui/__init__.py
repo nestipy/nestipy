@@ -13,6 +13,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 class HTMLProps(TypedDict, total=False):
     """Typed HTML/SVG props accepted by the `h` helper."""
+
     id: str
     key: str
     class_name: str
@@ -187,6 +188,7 @@ class HTMLProps(TypedDict, total=False):
 @dataclass(frozen=True, slots=True)
 class ExternalComponent:
     """Reference to a component imported from an external module."""
+
     module: str
     name: str
     default: bool = False
@@ -199,12 +201,17 @@ class ExternalComponent:
 
     def __call__(self, *children: Child, **props: HTMLProps) -> "Node":
         """Create a Node that references this external component."""
-        return Node(tag=self, props=_normalize_props(props), children=_flatten_children(children))
+        return Node(
+            tag=self,
+            props=_normalize_props(props),
+            children=_flatten_children(children),
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class ExternalFunction:
     """Reference to a callable imported from an external module."""
+
     module: str
     name: str
     alias: str | None = None
@@ -216,12 +223,15 @@ class ExternalFunction:
 
     def __call__(self, *args: Any, **kwargs: Any) -> object:
         """Disallow runtime execution (compile-time only)."""
-        raise RuntimeError("external_fn is compile-time only and cannot run at runtime.")
+        raise RuntimeError(
+            "external_fn is compile-time only and cannot run at runtime."
+        )
 
 
 @dataclass(slots=True)
 class Node:
     """Render tree node that represents a JSX element."""
+
     tag: Any
     props: dict[str, Any] = field(default_factory=dict)
     children: list[Any] = field(default_factory=list)
@@ -234,6 +244,7 @@ class JSExpr(str):
 @dataclass(frozen=True, slots=True)
 class ConditionalExpr:
     """Represent a conditional JSX expression."""
+
     test: JSExpr
     consequent: Any
     alternate: Any
@@ -242,6 +253,7 @@ class ConditionalExpr:
 @dataclass(frozen=True, slots=True)
 class ForExpr:
     """Represent a list comprehension compiled to JS map/filter."""
+
     target: str
     iterable: JSExpr
     body: Any
@@ -251,20 +263,27 @@ class ForExpr:
 @dataclass(frozen=True, slots=True)
 class LocalComponent:
     """Reference to a local component defined in the app."""
+
     name: str
 
     def __call__(self, *children: Child, **props: HTMLProps) -> "Node":
         """Create a Node that references this local component."""
-        return Node(tag=self, props=_normalize_props(props), children=_flatten_children(children))
+        return Node(
+            tag=self,
+            props=_normalize_props(props),
+            children=_flatten_children(children),
+        )
 
 
 class _Fragment:
     """Marker type for fragment rendering."""
+
     pass
 
 
 class _Slot:
     """Marker type for layout slot rendering."""
+
     pass
 
 
@@ -317,12 +336,16 @@ def new_(constructor: Any, *args: Any) -> Any:
     raise RuntimeError("new_ is a compile-time helper and cannot run at runtime.")
 
 
-def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent:
+def external(
+    module: str, name: str, *, default: bool = False, alias: str | None = None
+) -> ExternalComponent:
     """Create a reference to an external component import."""
     return ExternalComponent(module=module, name=name, default=default, alias=alias)
 
 
-def external_fn(module: str, name: str, *, alias: str | None = None) -> Type[ExternalFunction]:
+def external_fn(
+    module: str, name: str, *, alias: str | None = None
+) -> Type[ExternalFunction]:
     """Create a reference to an external function import."""
     return ExternalFunction(module=module, name=name, alias=alias)
 
@@ -334,6 +357,7 @@ def js_import(
     alias: str | None = None,
 ) -> Callable[[F], F]:
     """Declare a JS import for a Python-typed function (compile-time only)."""
+
     def decorator(fn: F) -> F:
         setattr(fn, JS_IMPORT_MARK_ATTR, (module, name or fn.__name__, alias))
         return fn
@@ -354,7 +378,9 @@ def props(cls: type) -> type:
     return cls
 
 
-def use_state(initial: Any = None) -> tuple[Any, Callable[[Any | Callable[[Any], Any]], None]]:
+def use_state(
+    initial: Any = None,
+) -> tuple[Any, Callable[[Any | Callable[[Any], Any]], None]]:
     """Declare a React useState hook (compile-time only)."""
     raise RuntimeError("use_state is a compile-time hook and cannot run at runtime.")
 
@@ -366,7 +392,9 @@ def use_effect(effect: Callable[[], None], deps: Any | None = None) -> None:
 
 def use_effect_async(effect: Callable[[], None], deps: Any | None = None) -> None:
     """Declare an async React useEffect hook (compile-time only)."""
-    raise RuntimeError("use_effect_async is a compile-time hook and cannot run at runtime.")
+    raise RuntimeError(
+        "use_effect_async is a compile-time hook and cannot run at runtime."
+    )
 
 
 def use_memo(factory: Callable[[], Any], deps: Any | None = None) -> Any:
@@ -374,7 +402,9 @@ def use_memo(factory: Callable[[], Any], deps: Any | None = None) -> Any:
     raise RuntimeError("use_memo is a compile-time hook and cannot run at runtime.")
 
 
-def use_callback(callback: Callable[..., Any], deps: list[Any] | None = None) -> Callable[..., Any]:
+def use_callback(
+    callback: Callable[..., Any], deps: list[Any] | None = None
+) -> Callable[..., Any]:
     """Declare a React useCallback hook (compile-time only)."""
     raise RuntimeError("use_callback is a compile-time hook and cannot run at runtime.")
 
@@ -391,7 +421,9 @@ def use_ref(initial: Any = None) -> Any:
 
 def create_context(default: TContext | None = None) -> Context[TContext]:
     """Declare a React context at module scope (compile-time only)."""
-    raise RuntimeError("create_context is a compile-time helper and cannot run at runtime.")
+    raise RuntimeError(
+        "create_context is a compile-time helper and cannot run at runtime."
+    )
 
 
 def _flatten_children(children: Iterable[Any]) -> list[Any]:
@@ -409,6 +441,7 @@ def _flatten_children(children: Iterable[Any]) -> list[Any]:
 
 class H:
     """Factory for building Node trees with attribute access for tags."""
+
     def __call__(
         self,
         tag: Any,
@@ -428,6 +461,7 @@ class H:
 
     def __getattr__(self, tag: str) -> TagCallable:
         """Return a callable that builds a Node for the given tag."""
+
         def _tag(*children: Child, **kwargs: Any) -> Node:
             """Build a Node for a specific HTML/SVG tag."""
             props: dict[str, Any] = {}

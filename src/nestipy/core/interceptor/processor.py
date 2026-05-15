@@ -3,11 +3,11 @@ from typing import TYPE_CHECKING
 
 from nestipy.common.decorator import Injectable
 from nestipy.common.helpers import SpecialProviderExtractor
-from nestipy.common.interceptor import NestipyInterceptor, InterceptorKey
+from nestipy.common.interceptor import InterceptorKey, NestipyInterceptor
 from nestipy.core.constant import APP_INTERCEPTOR
 from nestipy.core.context.execution_context import ExecutionContext
 from nestipy.ioc import NestipyContainer
-from nestipy.metadata import ClassMetadata, Reflect
+from nestipy.metadata import ClassMetadata, Reflector
 
 if TYPE_CHECKING:
     from nestipy.types_.handler import NextFn
@@ -40,10 +40,10 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
             NestipyInterceptor,
             APP_INTERCEPTOR,
         )
-        class_interceptors = Reflect.get_metadata(
+        class_interceptors = Reflector.get_metadata(
             handler_class, InterceptorKey.Meta, []
         )
-        handler_interceptors = Reflect.get_metadata(handler, InterceptorKey.Meta, [])
+        handler_interceptors = Reflector.get_metadata(handler, InterceptorKey.Meta, [])
         all_interceptors = (
             handler_interceptors
             + class_interceptors
@@ -55,7 +55,7 @@ class RequestInterceptor(NestipyInterceptor, SpecialProviderExtractor):
             if issubclass(intercept, NestipyInterceptor):
                 # Put dependency
                 services = self.container.get_all_services()
-                Reflect.set_metadata(
+                Reflector.set_metadata(
                     intercept,
                     ClassMetadata.Metadata,
                     ClassMetadata(handler_class, global_providers=services),

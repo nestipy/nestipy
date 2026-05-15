@@ -12,20 +12,6 @@ class ConfigOption:
     load: list[Callable] = field(default_factory=lambda: [])
 
 
-def extras_callback(dynamic_module: DynamicModule, extras: dict):
-    is_global = extras.get("is_global")
-    if is_global is not None:
-        dynamic_module.is_global = is_global
-
-
-ConfigurableModuleClass, CONFIG_OPTION = (
-    ConfigurableModuleBuilder[ConfigOption]()
-    .set_extras(
-        {
-            "is_global": False,
-        },
-        extras_callback,
-    )
-    .set_method("for_root")
-    .build()
-)
+ConfigurableModuleClass, CONFIG_OPTION = ConfigurableModuleBuilder[
+    ConfigOption
+]().build()

@@ -112,9 +112,7 @@ class ValidationPipe(PipeTransform):
             if allowed is not None:
                 extra = [k for k in value.keys() if k not in allowed]
                 if extra and self.forbid_non_whitelisted:
-                    raise ValueError(
-                        f"Non-whitelisted properties: {', '.join(extra)}"
-                    )
+                    raise ValueError(f"Non-whitelisted properties: {', '.join(extra)}")
                 value = {k: v for k, v in value.items() if k in allowed}
 
         if not self._transform:

@@ -29,7 +29,9 @@ class JSRUNRenderer(SSRRenderer):
         try:
             import jsrun  # type: ignore
         except Exception as exc:  # pragma: no cover - optional dependency
-            raise ImportError("jsrun is not installed. Install with nestipy[web-ssr].") from exc
+            raise ImportError(
+                "jsrun is not installed. Install with nestipy[web-ssr]."
+            ) from exc
 
         entry_file = Path(entry_path)
         if not entry_file.is_file():
@@ -86,7 +88,9 @@ class NodeRenderer(SSRRenderer):
         if not entry_file.is_file():
             raise FileNotFoundError(f"SSR entry not found: {entry_path}")
 
-        resolved_node = node_binary or os.getenv("NESTIPY_WEB_SSR_NODE") or shutil.which("node")
+        resolved_node = (
+            node_binary or os.getenv("NESTIPY_WEB_SSR_NODE") or shutil.which("node")
+        )
         if not resolved_node:
             raise ImportError("node is not installed or not found in PATH.")
 
@@ -127,7 +131,14 @@ class NodeRenderer(SSRRenderer):
     def _render_sync(self, url: str) -> str | None:
         try:
             result = subprocess.run(
-                [self._node, "--input-type=module", "-e", self._script, self._entry_path, url],
+                [
+                    self._node,
+                    "--input-type=module",
+                    "-e",
+                    self._script,
+                    self._entry_path,
+                    url,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
@@ -165,7 +176,12 @@ def resolve_ssr_entry(dist_dir: str) -> str:
 
 def env_ssr_enabled() -> bool:
     """Check if SSR is enabled via environment."""
-    return os.getenv("NESTIPY_WEB_SSR", "").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("NESTIPY_WEB_SSR", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def env_ssr_runtime() -> str:

@@ -14,7 +14,10 @@ from strawberry.types.field import StrawberryField
 
 from nestipy.ioc.dependency import TypeAnnotated
 from nestipy.metadata.dependency import CtxDepKey
-from nestipy.core.exception.error_policy import build_graphql_error, request_context_info
+from nestipy.core.exception.error_policy import (
+    build_graphql_error,
+    request_context_info,
+)
 from ..graphql_adapter import GraphqlAdapter
 from ..graphql_asgi import GraphqlASGI
 from ..graphql_module import GraphqlOption
@@ -26,9 +29,7 @@ class StrawberryAdapter(GraphqlAdapter):
         if isinstance(e, GraphQLError):
             raise e
         request_id, debug = request_context_info()
-        message, extensions = build_graphql_error(
-            e, request_id=request_id, debug=debug
-        )
+        message, extensions = build_graphql_error(e, request_id=request_id, debug=debug)
         raise GraphQLError(message, original_error=e, extensions=extensions or None)
 
     _schema: Optional[Schema] = None

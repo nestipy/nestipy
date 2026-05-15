@@ -13,7 +13,10 @@ if TYPE_CHECKING:
 
 class LifecycleRunner:
     """Handle application startup/shutdown hooks and resource cleanup."""
-    def __init__(self, background_tasks: "BackgroundTasks", instance_loader: "InstanceLoader") -> None:
+
+    def __init__(
+        self, background_tasks: "BackgroundTasks", instance_loader: "InstanceLoader"
+    ) -> None:
         self._background_tasks = background_tasks
         self._instance_loader = instance_loader
 

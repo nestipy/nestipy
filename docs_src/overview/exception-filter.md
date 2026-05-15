@@ -81,7 +81,7 @@ class CatsController:
 To create a global-scoped filter, you would do the following:
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core.factory import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 

@@ -165,8 +165,7 @@ def build_page_tsx(
                 component_defs,
                 "\n".join(component),
             ]
-        )
-        .strip()
+        ).strip()
         + "\n"
     )
 
@@ -355,9 +354,11 @@ def resolve_component_imports(
             continue
         import_map.setdefault(imp.path, []).append(imp)
 
-    unresolved = used_names - local_names - {
-        imp.alias for imp in parsed.imports if imp.path and not imp.type_only
-    }
+    unresolved = (
+        used_names
+        - local_names
+        - {imp.alias for imp in parsed.imports if imp.path and not imp.type_only}
+    )
     if unresolved:
         raise CompilerError(
             f"Unknown component(s) used: {', '.join(sorted(unresolved))}"
@@ -503,8 +504,7 @@ def build_component_module_tsx(
                 props_interfaces,
                 component_defs,
             ]
-        )
-        .strip()
+        ).strip()
         + "\n"
     )
 
@@ -562,6 +562,7 @@ def validate_component_usage(
     imported_props: dict[str, PropsSpec],
 ) -> None:
     """Validate required props for component usage in node trees."""
+
     def visit(node: Node) -> None:
         """Visit nodes and validate required props."""
         if isinstance(node.tag, LocalComponent):
@@ -785,13 +786,13 @@ def _extract_module_exports(module_prelude: list[str]) -> set[str]:
     for line in module_prelude:
         stripped = line.strip()
         if stripped.startswith("export const "):
-            remainder = stripped[len("export const "):]
+            remainder = stripped[len("export const ") :]
             name = remainder.split("=", 1)[0].strip().rstrip(";")
             if name:
                 exports.add(name)
             continue
         if stripped.startswith("export {") and stripped.endswith("};"):
-            inner = stripped[len("export {"):-2].strip()
+            inner = stripped[len("export {") : -2].strip()
             if not inner:
                 continue
             for chunk in inner.split(","):

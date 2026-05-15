@@ -1,10 +1,11 @@
 import inspect
 from dataclasses import is_dataclass
-from typing import Any, Type, Optional, cast
+from typing import Any, Optional, Type, cast
 
 from pydantic import BaseModel
 
 from nestipy.metadata import CtxDepKey
+
 from .annotation import ParamAnnotation, TypeAnnotatedCallable
 from .context_container import RequestContextContainer
 
@@ -42,7 +43,9 @@ class TypeAnnotated:
             pipe_list = [token] + pipe_list
             actual_token = None
         return TypeAnnotated(
-            ParamAnnotation(self.metadata.callback, self.metadata.key, actual_token, pipe_list)
+            ParamAnnotation(
+                self.metadata.callback, self.metadata.key, actual_token, pipe_list
+            )
         )
 
     @staticmethod
@@ -128,7 +131,8 @@ async def body_callback(
     if bool(form_data):
         return to_valid_value(form_data, _type_ref)
     else:
-        return to_valid_value(await req.json(), _type_ref)
+        json_data = await req.json()
+        return to_valid_value(json_data, _type_ref)
 
 
 def _get_request_param_value(

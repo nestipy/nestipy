@@ -13,7 +13,7 @@ class BaseCommand(ABC):
     @abstractmethod
     async def run(self):
         """The method to handle the command logic."""
-        raise NotImplemented("Must be implement")
+        raise NotImplementedError("Must be implement")
 
     @classmethod
     def info(
@@ -81,11 +81,11 @@ class BaseCommand(ABC):
         self._args = positional_args
         self._options = keyword_args
 
-    def get_opt(self, key: str = None, default=None):
+    def get_opt(self, key: str | None = None, default: Any = None):
         """Retrieve an option from the options dictionary safely."""
         return self._options.get(key, default) if key else self._options
 
-    def get_arg(self, index: int = None, default=None):
+    def get_arg(self, index: int | None = None, default: Any = None):
         """Retrieve an argument by index from the arguments list safely."""
         try:
             return self._args[index] if index is not None else self._args

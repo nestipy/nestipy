@@ -84,7 +84,9 @@ def _extract_params(handler: typing.Callable) -> list[RouteParamSpec]:
         if source is None:
             continue
         token = dep_key.metadata.token or name
-        required = param.default is inspect.Parameter.empty and not _is_optional(annotation)
+        required = param.default is inspect.Parameter.empty and not _is_optional(
+            annotation
+        )
         params.append(
             RouteParamSpec(
                 name=token,

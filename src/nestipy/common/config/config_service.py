@@ -1,17 +1,18 @@
 import os
-from typing import Annotated
+from typing import Annotated, Optional, Union
 
 from dotenv import dotenv_values
 
 from nestipy.common.decorator import Injectable
 from nestipy.ioc import Inject
+
 from .config_builder import CONFIG_OPTION, ConfigOption
 
 
 @Injectable()
 class ConfigService:
     options: Annotated[ConfigOption, Inject(CONFIG_OPTION)]
-    env: dict[str, str] = {}
+    env: dict[str, Union[str, None]] = {}
 
     def __init__(self):
         if self.options.ignore_env_file:
@@ -24,5 +25,5 @@ class ConfigService:
                     if callable(load):
                         self.env = {**self.env, **dict(load())}
 
-    def get(self, key: str):
-        return self.env.get(key)
+    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        return self.env.get(key, default)

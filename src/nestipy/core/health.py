@@ -1,16 +1,18 @@
 import inspect
 import time
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Literal, Optional, TypeAlias, Annotated
+from typing import Annotated, Awaitable, Callable, Literal, Optional, TypeAlias
 
-from nestipy.common import Controller, Get, Response, Injectable
+from nestipy.common import Controller, Get, Injectable, Response
 from nestipy.core.providers.background import BackgroundTasks
 from nestipy.core.types import JsonValue
 from nestipy.ioc import Inject, Res
-
+from nestipy.openapi.decorator import ApiExclude
 
 HealthKind = Literal["liveness", "readiness", "both"]
-HealthResult: TypeAlias = bool | dict[str, JsonValue] | tuple[bool, JsonValue] | JsonValue
+HealthResult: TypeAlias = (
+    bool | dict[str, JsonValue] | tuple[bool, JsonValue] | JsonValue
+)
 
 
 @dataclass(slots=True)
@@ -95,20 +97,21 @@ class HealthRegistry:
         return overall_ok, results
 
 
+@ApiExclude()
 @Controller("/")
 class HealthController:
     def __init__(self, registry: Annotated[HealthRegistry, Inject()]) -> None:
         self._registry = registry
 
     @Get("/healthz")
-    async def healthz(self, res: Response = Res()) -> dict[str, JsonValue]:
+    async def healthz(self, res: Annotated[Response, Res()]) -> dict[str, JsonValue]:
         ok, checks = await self._registry.run("liveness")
         if res is not None:
             res.status(200 if ok else 503)
         return {"status": "ok" if ok else "error", "checks": checks}
 
     @Get("/readyz")
-    async def readyz(self, res: Response = Res()) -> dict[str, JsonValue]:
+    async def readyz(self, res: Annotated[Response, Res()]) -> dict[str, JsonValue]:
         ok, checks = await self._registry.run("readiness")
         if res is not None:
             res.status(200 if ok else 503)

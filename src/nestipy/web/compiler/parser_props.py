@@ -22,7 +22,9 @@ def _collect_props(module: cst.Module) -> dict[str, PropsSpec]:
                 field_name = _normalize_prop_key(item.target.value)
                 ts_type = _annotation_to_ts(item.annotation.annotation)
                 optional = item.value is not None
-                fields.append(PropField(name=field_name, ts_type=ts_type, optional=optional))
+                fields.append(
+                    PropField(name=field_name, ts_type=ts_type, optional=optional)
+                )
         specs[stmt.name.value] = PropsSpec(name=stmt.name.value, fields=fields)
     return specs
 

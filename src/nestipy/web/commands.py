@@ -8,7 +8,9 @@ from .command_dev import dev
 from .command_pkg import add, install
 
 
-def run_command(command_name: str, args: Iterable[str], modules: list[Type] | None = None) -> None:
+def run_command(
+    command_name: str, args: Iterable[str], modules: list[Type] | None = None
+) -> None:
     """Dispatch the web subcommand by name."""
     if command_name == "web:init":
         init(args)

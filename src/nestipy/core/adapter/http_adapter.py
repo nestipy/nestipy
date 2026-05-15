@@ -2,34 +2,45 @@ import inspect
 import json
 import os
 import re
+import traceback
 import typing
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import asdict
-from typing import Callable, Union, Type, TYPE_CHECKING, AsyncIterator, overload, Literal
 from contextlib import asynccontextmanager
+from dataclasses import asdict
+from typing import (
+    TYPE_CHECKING,
+    AsyncIterator,
+    Callable,
+    Literal,
+    Type,
+    Union,
+    overload,
+)
+
 from nestipy.common import Response
+from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response, Websocket
-from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
+from nestipy.common.logger import logger
 from nestipy.common.template import TemplateKey
 from nestipy.common.template.interface import TemplateEngine
-from nestipy.core.router.router_proxy import RouterProxy
-from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.core.exception.error_policy import build_error_info
+from nestipy.core.router.router_proxy import RouterProxy
 from nestipy.core.security.cors import CorsOptions
+from nestipy.core.template import MinimalJinjaTemplateEngine
 from nestipy.core.types import (
     ASGIApp,
     FilterLike,
     GuardLike,
     InterceptorLike,
+    JsonValue,
     PipeLike,
     StateKey,
     StateValue,
-    JsonValue,
 )
-from nestipy.metadata import SetMetadata, Reflect
-from nestipy.types_ import CallableHandler, WebsocketHandler, MountHandler
+from nestipy.metadata import Reflector, SetMetadata
+from nestipy.types_ import CallableHandler, MountHandler, WebsocketHandler
 from nestipy.websocket.adapter import IoAdapter
 
 if TYPE_CHECKING:
@@ -69,7 +80,7 @@ class HttpAdapter(ABC):
         self._http_logging_enabled = True
 
     @abstractmethod
-    def create_wichard(self, prefix: str = "/",name: str = "path") -> str:
+    def create_wichard(self, prefix: str = "/", name: str = "path") -> str:
         pass
 
     @abstractmethod
@@ -248,7 +259,9 @@ class HttpAdapter(ABC):
         self.shutdown_hook.append(callback)
 
     @overload
-    def set(self, key: Literal[TemplateKey.MetaEngine], value: TemplateEngine | None) -> None: ...
+    def set(
+        self, key: Literal[TemplateKey.MetaEngine], value: TemplateEngine | None
+    ) -> None: ...
 
     @overload
     def set(
@@ -264,7 +277,9 @@ class HttpAdapter(ABC):
         SetMetadata(self.STATE_KEY, {key: value}, as_dict=True)(self)
 
     @overload
-    def get_state(self, key: Literal[TemplateKey.MetaEngine]) -> TemplateEngine | None: ...
+    def get_state(
+        self, key: Literal[TemplateKey.MetaEngine]
+    ) -> TemplateEngine | None: ...
 
     @overload
     def get_state(
@@ -275,7 +290,7 @@ class HttpAdapter(ABC):
     def get_state(self, key: StateKey) -> StateValue: ...
 
     def get_state(self, key: StateKey) -> StateValue:
-        meta: dict = Reflect.get_metadata(self, self.STATE_KEY, {})
+        meta: dict = Reflector.get_metadata(self, self.STATE_KEY, {})
         if key in meta.keys():
             return meta[key]
         else:
@@ -354,13 +369,18 @@ class HttpAdapter(ABC):
         if request_id:
             res.header("X-Request-Id", request_id)
 
-        async def next_fn(error: Union[HttpException | None] = None):
+        async def next_fn(error: Union[HttpException, None] = None):
             #  catch error
             if error is not None:
+                if error.status_code >= 500:
+                    _tb = traceback.format_exc()
+                    logger.error(error)
+                    logger.error(_tb)
                 accept = req.headers.get("accept", [])
                 payload = build_error_info(
                     error, request_id=request_id, debug=req.debug or self.debug
                 )
+
                 status_code = int(payload.get("status", 500) or 500)
                 if "application/json" in accept:
                     return await res.status(status_code).json(payload)

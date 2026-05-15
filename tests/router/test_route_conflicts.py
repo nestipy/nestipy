@@ -27,4 +27,6 @@ class ConflictModule:
 def test_route_conflict_detection():
     proxy = RouterProxy(router=object())
     with pytest.raises(ValueError):
-        proxy.apply_routes([ConflictModule], register_routes=False, detect_conflicts=True)
+        proxy.apply_routes(
+            [ConflictModule], register_routes=False, detect_conflicts=True
+        )

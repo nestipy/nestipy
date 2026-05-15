@@ -1,7 +1,7 @@
 from typing import Callable, Iterable, Literal, Optional, Union
 
-from nestipy.metadata import Reflect, RouteKey
 from nestipy.common.cache import CachePolicy
+from nestipy.metadata import Reflector, RouteKey
 
 HTTPMethod = Literal[
     "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "ALL", "ANY"
@@ -35,9 +35,9 @@ class Route:
         :return: The decorated handler.
         """
         # put path and kwargs in controller handler
-        Reflect.set_metadata(handler, RouteKey.path, self.path)
-        Reflect.set_metadata(handler, RouteKey.kwargs, self.kwargs)
-        Reflect.set_metadata(handler, RouteKey.method, self.method)
+        Reflector.set_metadata(handler, RouteKey.path, self.path)
+        Reflector.set_metadata(handler, RouteKey.kwargs, self.kwargs)
+        Reflector.set_metadata(handler, RouteKey.method, self.method)
         return handler
 
 
@@ -101,7 +101,7 @@ class Version:
         self.versions = [v for v in flat if v]
 
     def __call__(self, target: Callable):
-        Reflect.set_metadata(target, RouteKey.version, self.versions or None)
+        Reflector.set_metadata(target, RouteKey.version, self.versions or None)
         return target
 
 
@@ -143,5 +143,5 @@ class Cache:
         )
 
     def __call__(self, target: Callable):
-        Reflect.set_metadata(target, RouteKey.cache, self.policy)
+        Reflector.set_metadata(target, RouteKey.cache, self.policy)
         return target

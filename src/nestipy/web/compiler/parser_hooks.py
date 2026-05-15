@@ -134,9 +134,7 @@ def _hook_from_call(
 
     if name == "use_state":
         if len(target_names) == 2:
-            return (
-                f"const [{target_names[0]}, {target_names[1]}] = React.{hook_name}({args_str});"
-            )
+            return f"const [{target_names[0]}, {target_names[1]}] = React.{hook_name}({args_str});"
         if len(target_names) == 1:
             return f"const {target_names[0]} = React.{hook_name}({args_str});"
         raise CompilerError("use_state must assign to one or two names")

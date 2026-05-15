@@ -1,9 +1,9 @@
-from typing import Callable, TYPE_CHECKING
-
-from nestipy.metadata import Reflect
+from typing import TYPE_CHECKING, Callable
 
 from nestipy.common.template import TemplateEngine, TemplateKey
 from nestipy.core.types import JsonValue
+from nestipy.metadata import Reflector
+
 from .minimal_jinja import MinimalJinjaTemplateEngine
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class TemplateRendererProcessor:
         self.template_engine: TemplateEngine | None = self.adapter.get_state(
             TemplateKey.MetaEngine
         )
-        self.template = Reflect.get_metadata(method, TemplateKey.MetaRender, None)
+        self.template = Reflector.get_metadata(method, TemplateKey.MetaRender, None)
         self.context = context
         if self.template_engine is None:
             return False

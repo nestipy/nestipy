@@ -43,9 +43,7 @@ class MiddlewareExecutor:
 
     async def _create_middleware_callable(self, entry: _MiddlewareEntry):
         middleware = entry.middleware
-        if inspect.isclass(middleware) and issubclass(
-            middleware, NestipyMiddleware
-        ):
+        if inspect.isclass(middleware) and issubclass(middleware, NestipyMiddleware):
             try:
                 #  get instance of Middleware
                 try:

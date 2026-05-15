@@ -4,8 +4,8 @@ from typing import Callable, Type
 
 from rich.style import Style
 
-from nestipy.common.logger import console
-from nestipy.core import NestipyApplication, NestipyConfig, DiscoverService
+from nestipy.common.logger import console, logger
+from nestipy.core import DiscoverService, NestipyApplication, NestipyConfig
 from nestipy.microservice.client.base import MicroserviceOption
 from nestipy.microservice.client.factory import ClientModuleFactory
 from nestipy.microservice.proxy import MicroserviceProxy
@@ -62,7 +62,7 @@ class NestipyMicroservice:
                 await server.close()
             except RuntimeError as e:
                 traceback.print_exc()
-                print(e)
+                logger.error(e)
             finally:
                 pass
 

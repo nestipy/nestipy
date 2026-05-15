@@ -1,18 +1,25 @@
-from typing import Union, Annotated
 from asyncio import sleep as asyncsleep
-from nestipy.common import ConfigService
-from nestipy.common import Get, Post, Controller
-from nestipy.common import Request, Response
-from nestipy.common import UseGuards
+from typing import Annotated, Union
+
+from nestipy.common import (
+    ConfigService,
+    Controller,
+    Get,
+    Post,
+    Request,
+    Response,
+    UseGuards,
+)
 from nestipy.core import BackgroundTasks
-from nestipy.ioc import Req, Res, Inject, Header
+from nestipy.ioc import Header, Inject, Req, Res
 from nestipy.openapi import (
-    ApiTags,
-    ApiOkResponse,
+    ApiBearerAuth,
     ApiCreatedResponse,
     ApiNotFoundResponse,
-    ApiBearerAuth,
+    ApiOkResponse,
+    ApiTags,
 )
+
 from .user_guards import TestGuard, TestGuardMethod
 from .user_service import UserService
 
@@ -36,7 +43,7 @@ async def long_task2():
 @Controller("users")
 class UserController:
     user_service: Annotated[UserService, Inject()]
-    config_service: Annotated[ConfigService, Inject()]
+    env: Annotated[ConfigService, Inject()]
 
     @Get()
     @ApiOkResponse()
@@ -47,9 +54,9 @@ class UserController:
         req: Annotated[Request, Req()],
         headers: Annotated[dict, Header()],
         tasks: Annotated[BackgroundTasks, Inject()],
-    ) -> Union[Response | dict,]:
+    ) -> Union[Response, dict]:
         print(headers)
-        print(self.config_service.get("ENV"))
+        print(self.env.get("ENV"))
         tasks.add_task(long_task)
         tasks.add_task(long_task2)
         return await res.json({"user": "Me"})
@@ -60,6 +67,6 @@ class UserController:
     @ApiCreatedResponse()
     async def get_user_by_id(
         self, res: Annotated[Response, Res()], req: Annotated[Request, Req()]
-    ) -> Union[Response | dict]:
+    ) -> Union[Response, dict]:
         # return await res.json({'user': 'Me'})
         return {"user": "Me"}

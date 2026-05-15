@@ -131,9 +131,9 @@ flowchart TB
 
 **Entry Point**
 - `NestipyFactory.create(AppModule)` constructs `NestipyApplication` and calls `init` to register root providers and build metadata.
-  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/nestipy_factory.py`
+  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/factory.py`
 - The returned `NestipyApplication` is ASGI-callable; on lifespan it calls `ready()` and `setup()`.
-  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/nestipy_application.py`
+  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/application.py`
 
 **How Metadata Is Built and Read**
 - Decorators write metadata using `Reflect.set_metadata`:
@@ -238,4 +238,4 @@ flowchart TD
 
 **“When stop”**
 - App shutdown calls `NestipyApplication._destroy()` via the adapter shutdown hook; it stops background tasks and calls `InstanceLoader.destroy()` to invoke `OnDestroy` on providers/controllers and `on_shutdown` on modules.
-  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/nestipy_application.py`
+  File: `/Users/tsiresymila/Development/Python/nestipy/src/nestipy/core/application.py`

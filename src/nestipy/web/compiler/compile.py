@@ -14,7 +14,12 @@ from .compile_components import (
     render_page_tree,
     resolve_component_imports,
 )
-from .compile_routes import build_routes, discover_routes, _compile_layouts, _compile_notfound
+from .compile_routes import (
+    build_routes,
+    discover_routes,
+    _compile_layouts,
+    _compile_notfound,
+)
 from .compile_types import ErrorInfo, RouteInfo
 from .errors import CompilerError
 from .parser import ParsedFile
@@ -112,12 +117,12 @@ def compile_app(config: WebConfig, root: str | None = None) -> list[RouteInfo]:
     return routes
 
 
-def _write_ssr_routes(routes: list[RouteInfo], config: WebConfig, root: str | None) -> None:
+def _write_ssr_routes(
+    routes: list[RouteInfo], config: WebConfig, root: str | None
+) -> None:
     """Persist SSR opt-in routes to web/public for runtime lookup."""
     entries = [
-        {"path": info.route, "ssr": info.ssr}
-        for info in routes
-        if info.ssr is not None
+        {"path": info.route, "ssr": info.ssr} for info in routes if info.ssr is not None
     ]
     if not entries:
         return

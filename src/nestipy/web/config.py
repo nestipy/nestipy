@@ -9,6 +9,7 @@ from pathlib import Path
 @dataclass(slots=True)
 class WebConfig:
     """Configuration values for Nestipy Web compilation and dev tooling."""
+
     app_dir: str = "app"
     out_dir: str = "web"
     target: str = "vite"

@@ -1,31 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="SwaggerUI"
-    />
-    <title>SwaggerUI</title>
-    <link rel="stylesheet" href="/_devtools/static/swagger/swagger-ui.css" />
-  </head>
-  <body>
-  <div id="swagger-ui"></div>
-  <script src="/_devtools/static/swagger/swagger-ui-bundle.js" crossorigin></script>
-  <script src="/_devtools/static/swagger/swagger-ui-standalone-preset.js" crossorigin></script>
-  <script>
-    window.onload = () => {
-      window.ui = SwaggerUIBundle({
-        url: '/openapi.json',
-        dom_id: '#swagger-ui',
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        layout: "StandaloneLayout",
-      });
-    };
-  </script>
-  </body>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="SwaggerUI" />
+        <title>Nestipy - SwaggerUI</title>
+        <link
+            rel="stylesheet"
+            href="/_devtools/static/swagger/swagger-ui.css"
+        />
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="/_devtools/static/swagger/swagger-ui-bundle.js"></script>
+        <script src="/_devtools/static/swagger/swagger-ui-standalone-preset.js"></script>
+        <script src="/_devtools/static/swagger/init.js"></script>
+    </body>
 </html>

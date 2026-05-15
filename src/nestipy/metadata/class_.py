@@ -1,7 +1,7 @@
-from typing import Callable, Type, Union, Optional, Any
+from typing import Any, Callable, Optional, Type, Union
 
 from .module import ModuleMetadata
-from .reflect import Reflect
+from .reflect import Reflector
 
 
 class ClassMetadata:
@@ -43,16 +43,16 @@ class ClassMetadata:
         :param module: Optional module to use instead of the stored parent module.
         :return: A tuple of (local_providers, exported_import_providers).
         """
-        providers: list = Reflect.get_metadata(
+        providers: list = Reflector.get_metadata(
             module or self._module, ModuleMetadata.Providers, []
         )
         import_providers_form_exports: list = []
         # Only not a root module need to get import_providers to share
         # if not Reflect.get_metadata(self._module, ModuleMetadata.Root, False):
-        for im in Reflect.get_metadata(
+        for im in Reflector.get_metadata(
             module or self._module, ModuleMetadata.Imports, []
         ):
-            exports: list = Reflect.get_metadata(
+            exports: list = Reflector.get_metadata(
                 im.module if hasattr(im, "module") else im, ModuleMetadata.Exports, []
             )
             # check if dynamic module
@@ -60,13 +60,13 @@ class ClassMetadata:
             #     exports = getattr(im, 'exports', [])
             for export in exports:
                 # For module re-exporting
-                is_module: bool = Reflect.get_metadata(
+                is_module: bool = Reflector.get_metadata(
                     export, ModuleMetadata.Module, False
                 )
                 if is_module:
                     import_providers_form_exports = (
                         import_providers_form_exports
-                        + Reflect.get_metadata(export, ModuleMetadata.Providers, [])
+                        + Reflector.get_metadata(export, ModuleMetadata.Providers, [])
                     )
                 else:
                     import_providers_form_exports.append(export)

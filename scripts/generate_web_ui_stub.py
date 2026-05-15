@@ -293,7 +293,6 @@ HTML_PROPS = [
     ("on_error_capture", "Any"),
     ("on_input_capture", "Any"),
     ("on_wheel_capture", "Any"),
-
     # SVG props
     ("fill", "str"),
     ("stroke", "str"),
@@ -348,7 +347,9 @@ def render() -> str:
     lines: list[str] = []
     lines.append("from __future__ import annotations")
     lines.append("")
-    lines.append("from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar")
+    lines.append(
+        "from typing import Any, Callable, Iterable, Protocol, TypedDict, TypeVar"
+    )
     lines.append("from typing import Final, NotRequired, Unpack")
     lines.append("")
     lines.append("COMPONENT_MARK_ATTR: Final[str]")
@@ -362,13 +363,17 @@ def render() -> str:
     lines.append("    alias: str | None")
     lines.append("    @property")
     lines.append("    def import_name(self) -> str: ...")
-    lines.append("    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ...")
+    lines.append(
+        "    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ..."
+    )
     lines.append("")
     lines.append("class JSExpr(str): ...")
     lines.append("")
     lines.append("class LocalComponent:")
     lines.append("    name: str")
-    lines.append("    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ...")
+    lines.append(
+        "    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ..."
+    )
     lines.append("")
     lines.append("class Node:")
     lines.append("    tag: Any")
@@ -381,7 +386,9 @@ def render() -> str:
     lines.append("Slot: _Slot")
     lines.append("")
     lines.append("def js(expr: str) -> JSExpr: ...")
-    lines.append("def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent: ...")
+    lines.append(
+        "def external(module: str, name: str, *, default: bool = False, alias: str | None = None) -> ExternalComponent: ..."
+    )
     lines.append("def component(fn: Callable[..., Any]) -> Callable[..., Any]: ...")
     lines.append("def props(cls: type) -> type: ...")
     lines.append("")
@@ -392,16 +399,22 @@ def render() -> str:
     lines.append("Child = Node | str | int | float | bool | None | JSExpr")
     lines.append("")
     lines.append("class TagCallable(Protocol):")
-    lines.append("    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ...")
+    lines.append(
+        "    def __call__(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ..."
+    )
     lines.append("")
     lines.append("class H:")
-    lines.append("    def __call__(self, tag: Any, props: dict[str, Any] | None = None, *children: Child, **kwargs: Any) -> Node: ...")
+    lines.append(
+        "    def __call__(self, tag: Any, props: dict[str, Any] | None = None, *children: Child, **kwargs: Any) -> Node: ..."
+    )
     lines.append("    def __getattr__(self, tag: str) -> TagCallable: ...")
     lines.append("")
     for tag in HTML_TAGS + SVG_TAGS:
         if not tag.isidentifier() or tag in {"del"}:
             continue
-        lines.append(f"    def {tag}(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ...")
+        lines.append(
+            f"    def {tag}(self, *children: Child, **props: Unpack[HTMLProps]) -> Node: ..."
+        )
     lines.append("")
     lines.append("h: H")
     lines.append("")
@@ -411,5 +424,12 @@ def render() -> str:
 
 
 if __name__ == "__main__":
-    target = Path(__file__).resolve().parents[1] / "src" / "nestipy" / "web" / "ui" / "__init__.pyi"
+    target = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "nestipy"
+        / "web"
+        / "ui"
+        / "__init__.pyi"
+    )
     target.write_text(render(), encoding="utf-8")

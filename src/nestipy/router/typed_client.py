@@ -22,7 +22,11 @@ def _type_repr(tp: typing.Any, custom_types: dict[str, str] | None = None) -> st
     if hasattr(tp, "__name__"):
         name = tp.__name__
         module = getattr(tp, "__module__", "")
-        if custom_types is not None and module not in {"builtins", "typing", "typing_extensions"}:
+        if custom_types is not None and module not in {
+            "builtins",
+            "typing",
+            "typing_extensions",
+        }:
             if name not in {"dict", "list", "set", "tuple"}:
                 custom_types.setdefault(name, "typing.Any")
         return name
@@ -56,7 +60,13 @@ def _unique_name(name: str, used: set[str], suffix: str) -> str:
 
 
 def _group_params(route: RouteSpec) -> dict[str, list[RouteParamSpec]]:
-    grouped: dict[str, list[RouteParamSpec]] = {"path": [], "query": [], "body": [], "header": [], "cookie": []}
+    grouped: dict[str, list[RouteParamSpec]] = {
+        "path": [],
+        "query": [],
+        "body": [],
+        "header": [],
+        "cookie": [],
+    }
     for param in route.params:
         grouped.setdefault(param.source, []).append(param)
     return grouped
@@ -128,8 +138,8 @@ def generate_client_code(
         "        return {k: _jsonify(v) for k, v in value.items()}",
         "    if isinstance(value, (list, tuple)):",
         "        return [_jsonify(v) for v in value]",
-        "    if hasattr(value, \"model_dump\"):",
-        "        return value.model_dump(mode=\"json\")",
+        '    if hasattr(value, "model_dump"):',
+        '        return value.model_dump(mode="json")',
         "    return value",
         "",
         "def _normalize_mapping(value: typing.Any) -> typing.Optional[dict[str, typing.Any]]:",
@@ -141,15 +151,15 @@ def generate_client_code(
         "    return None",
         "",
         "def _encode_cookies(cookies: dict[str, typing.Any]) -> str:",
-        "    return \"; \".join(f\"{k}={v}\" for k, v in cookies.items())",
+        '    return "; ".join(f"{k}={v}" for k, v in cookies.items())',
         "",
         "",
         "def _join_url(base_url: str, path: str) -> str:",
-        "    if path.startswith(\"http://\") or path.startswith(\"https://\"):",
+        '    if path.startswith("http://") or path.startswith("https://"):',
         "        return path",
         "    if not base_url:",
         "        return path",
-        "    return base_url.rstrip(\"/\") + \"/\" + path.lstrip(\"/\")",
+        '    return base_url.rstrip("/") + "/" + path.lstrip("/")',
         "",
         "",
     ]
@@ -231,7 +241,7 @@ def generate_client_code(
         lines.extend(
             [
                 f"class {ctrl_class}:",
-                f"    def __init__(self, client: \"{class_name}\"):",
+                f'    def __init__(self, client: "{class_name}"):',
                 "        self._client = client",
                 "",
             ]
@@ -249,8 +259,12 @@ def generate_client_code(
             for token in path_tokens:
                 if token in param_names:
                     continue
-                spec = next((p for p in grouped.get("path", []) if p.name == token), None)
-                annotation = _type_repr(spec.type, custom_types) if spec else "typing.Any"
+                spec = next(
+                    (p for p in grouped.get("path", []) if p.name == token), None
+                )
+                annotation = (
+                    _type_repr(spec.type, custom_types) if spec else "typing.Any"
+                )
                 unique = _unique_name(token, used_names, "path")
                 param_names[token] = unique
                 signature_parts.append(f"{unique}: {annotation}")
@@ -261,7 +275,10 @@ def generate_client_code(
             cookies_name = _unique_name("cookies", used_names, "extra")
 
             has_extra = bool(
-                grouped.get("query") or grouped.get("header") or grouped.get("body") or grouped.get("cookie")
+                grouped.get("query")
+                or grouped.get("header")
+                or grouped.get("body")
+                or grouped.get("cookie")
             )
             if has_extra:
                 signature_parts.append("*")
@@ -293,11 +310,11 @@ def generate_client_code(
             )
 
             path_template = route.path
-            lines.append(f"        path = \"{path_template}\"")
+            lines.append(f'        path = "{path_template}"')
             for token in path_tokens:
                 var_name = param_names.get(token, token)
                 lines.append(
-                    f"        path = path.replace(\"{{{token}}}\", str({var_name}))"
+                    f'        path = path.replace("{{{token}}}", str({var_name}))'
                 )
 
             if grouped.get("query"):
@@ -305,7 +322,9 @@ def generate_client_code(
             else:
                 lines.append("        query_params = None")
             if grouped.get("header"):
-                lines.append(f"        header_params = _normalize_mapping({headers_name})")
+                lines.append(
+                    f"        header_params = _normalize_mapping({headers_name})"
+                )
             else:
                 lines.append("        header_params = None")
             if grouped.get("body"):
@@ -315,14 +334,18 @@ def generate_client_code(
             else:
                 lines.append("        json_body = None")
             if grouped.get("cookie"):
-                lines.append(f"        cookie_params = _normalize_mapping({cookies_name})")
+                lines.append(
+                    f"        cookie_params = _normalize_mapping({cookies_name})"
+                )
                 lines.append("        if cookie_params:")
                 lines.append("            header_params = header_params or {}")
-                lines.append("            header_params['Cookie'] = _encode_cookies(cookie_params)")
+                lines.append(
+                    "            header_params['Cookie'] = _encode_cookies(cookie_params)"
+                )
 
             method = (route.methods[0] if route.methods else "GET").upper()
             lines.append(
-                f"        return {await_kw}self._client._request(\"{method}\", path, params=query_params or None, json=json_body, headers=header_params or None)"
+                f'        return {await_kw}self._client._request("{method}", path, params=query_params or None, json=json_body, headers=header_params or None)'
             )
             lines.append("")
 
@@ -335,7 +358,7 @@ def generate_client_code(
             "        client: typing.Any = None,",
             "        request: typing.Optional[typing.Callable[..., typing.Any]] = None,",
             "    ):",
-            "        self._base_url = base_url.rstrip(\"/\")",
+            '        self._base_url = base_url.rstrip("/")',
             "        self._client = client",
             "        self._owns_client = False",
             "        if request is not None:",
@@ -344,8 +367,8 @@ def generate_client_code(
             "            if client is None:",
             f"                self._client = self._build_default_client(async_client={async_client})",
             "                self._owns_client = True",
-            "            if not hasattr(self._client, \"request\"):",
-            "                raise TypeError(\"Client must provide a request(method, url, ...) method\")",
+            '            if not hasattr(self._client, "request"):',
+            '                raise TypeError("Client must provide a request(method, url, ...) method")',
             "            self._requester = self._client.request",
             "",
         ]
@@ -361,13 +384,13 @@ def generate_client_code(
             "    def _build_default_client(self, async_client: bool = False):",
             "        if async_client:",
             "            if httpx is None:",
-            "                raise RuntimeError(\"httpx is required for async clients\")",
+            '                raise RuntimeError("httpx is required for async clients")',
             "            return httpx.AsyncClient()",
             "        if httpx is not None:",
             "            return httpx.Client()",
             "        if requests is not None:",
             "            return requests.Session()",
-            "        raise RuntimeError(\"No supported HTTP client found. Install httpx or requests.\")",
+            '        raise RuntimeError("No supported HTTP client found. Install httpx or requests.")',
             "",
             f"    {async_kw}def {close_name}(self) -> None:",
             "        if not self._owns_client or self._client is None:",
@@ -377,7 +400,7 @@ def generate_client_code(
     if async_client:
         lines.extend(
             [
-                "        close_fn = getattr(self._client, \"aclose\", None) or getattr(self._client, \"close\", None)",
+                '        close_fn = getattr(self._client, "aclose", None) or getattr(self._client, "close", None)',
                 "        if close_fn is None:",
                 "            return",
                 "        result = close_fn()",
@@ -389,7 +412,7 @@ def generate_client_code(
     else:
         lines.extend(
             [
-                "        close_fn = getattr(self._client, \"close\", None)",
+                '        close_fn = getattr(self._client, "close", None)',
                 "        if close_fn is not None:",
                 "            close_fn()",
                 "",
@@ -426,9 +449,9 @@ def generate_client_code(
         )
     lines.extend(
         [
-            "        if hasattr(response, \"raise_for_status\"):",
+            '        if hasattr(response, "raise_for_status"):',
             "            response.raise_for_status()",
-            "        status_code = getattr(response, \"status_code\", None)",
+            '        status_code = getattr(response, "status_code", None)',
             "        if status_code == 204:",
             "            return None",
             "        try:",
@@ -446,7 +469,7 @@ def generate_client_code(
         [
             "            return payload",
             "        except Exception:",
-            "            text = getattr(response, \"text\", None)",
+            '            text = getattr(response, "text", None)',
             "            if callable(text):",
             "                text = text()",
         ]
@@ -477,7 +500,9 @@ def write_client_file(
     class_name: str = "ApiClient",
     async_client: bool = False,
 ) -> str:
-    code = generate_client_code(router_spec, class_name=class_name, async_client=async_client)
+    code = generate_client_code(
+        router_spec, class_name=class_name, async_client=async_client
+    )
     with open(output_path, "w", encoding="utf-8") as handle:
         handle.write(code)
     return output_path

@@ -1,8 +1,8 @@
 from inspect import getmembers, isfunction
-from typing import Union, Type
+from typing import Type, Union
 
 from nestipy.graphql.meta import NestipyGraphqlKey
-from nestipy.metadata import ModuleMetadata, Reflect
+from nestipy.metadata import ModuleMetadata, Reflector
 
 
 class GraphqlExplorer:
@@ -14,9 +14,9 @@ class GraphqlExplorer:
         mutation: list[dict] = []
         subscription: list[dict] = []
         field_resolver: list[dict] = []
-        providers = Reflect.get_metadata(module_ref, ModuleMetadata.Providers, [])
+        providers = Reflector.get_metadata(module_ref, ModuleMetadata.Providers, [])
         for provider in providers:
-            if not Reflect.get_metadata(provider, NestipyGraphqlKey.resolver, False):
+            if not Reflector.get_metadata(provider, NestipyGraphqlKey.resolver, False):
                 continue
             cls._explore_resolver(
                 provider, query, mutation, subscription, field_resolver
@@ -33,7 +33,7 @@ class GraphqlExplorer:
         subscription: list,
         field_resolver: list[dict],
     ):
-        class_to_resolve = Reflect.get_metadata(
+        class_to_resolve = Reflector.get_metadata(
             resolver, NestipyGraphqlKey.return_type, None
         )
         members = getmembers(resolver, isfunction)
@@ -41,14 +41,14 @@ class GraphqlExplorer:
             if method_name.startswith("__"):
                 continue
             method = getattr(resolver, method_name)
-            graphql_handler = Reflect.get_metadata(
+            graphql_handler = Reflector.get_metadata(
                 method, NestipyGraphqlKey.handler, None
             )
             if graphql_handler is not None:
-                return_type = Reflect.get_metadata(
+                return_type = Reflector.get_metadata(
                     method, NestipyGraphqlKey.return_type, None
                 )
-                kwargs: dict = Reflect.get_metadata(
+                kwargs: dict = Reflector.get_metadata(
                     method, NestipyGraphqlKey.kwargs, {}
                 )
                 name: str = kwargs.get("name") or method_name

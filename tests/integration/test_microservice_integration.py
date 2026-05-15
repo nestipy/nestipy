@@ -205,9 +205,7 @@ async def test_microservice_integration_request_scoped_provider():
         await microservice.ms_setup()
         server = microservice.servers[0]
 
-        request_one = RpcRequest(
-            data=None, pattern="req-id", response_topic="resp-1"
-        )
+        request_one = RpcRequest(data=None, pattern="req-id", response_topic="resp-1")
         await server.handle_request(request_one)
 
         slave_one = client.slave_instance
@@ -216,9 +214,7 @@ async def test_microservice_integration_request_scoped_provider():
         response_one = await option.serializer.deserialize(payload_one)
         id_one = response_one["data"]["id"]
 
-        request_two = RpcRequest(
-            data=None, pattern="req-id", response_topic="resp-2"
-        )
+        request_two = RpcRequest(data=None, pattern="req-id", response_topic="resp-2")
         await server.handle_request(request_two)
 
         slave_two = client.slave_instance

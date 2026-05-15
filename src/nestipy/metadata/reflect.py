@@ -1,7 +1,7 @@
-from typing import Any, Union, Type, Callable
+from typing import Any, Callable, Type, Union
 
 
-class Reflect:
+class Reflector:
     """
     Utility class for storing and retrieving metadata on objects (classes, methods, functions).
     Uses a special attribute `__reflect__metadata__` to store metadata as a dictionary.

@@ -1,33 +1,31 @@
-from typing import Union, Awaitable
+from typing import Awaitable, Union
 
+from app_command import AppCommand
 from app_controller import AppController
 from app_provider import AppProvider
+from user.user_module import UserModule
+
 from nestipy.common import (
+    CanActivate,
     ConfigModule,
+    Injectable,
+    Module,
+    ModuleProviderDict,
+    NestipyMiddleware,
     Request,
     Response,
-    CanActivate,
-    Module,
-    Injectable,
-    NestipyMiddleware,
 )
-from nestipy.common import ModuleProviderDict
-from nestipy.core import AppKey, MiddlewareConsumer
-from nestipy.core import ExecutionContext
+from nestipy.core import AppKey, ExecutionContext, MiddlewareConsumer
 from nestipy.dynamic_module.module import NestipyModule
 from nestipy.event import EventEmitterModule
 from nestipy.graphql import GraphqlModule, GraphqlOption
-from nestipy.router import RouterModule, RouteItem
+from nestipy.router import RouteItem, RouterModule
 from nestipy.types_ import NextFn
-from user.user_module import UserModule
-from app_command import AppCommand
 
 
 @Injectable()
 class ModuleGuard(CanActivate):
-    async def can_activate(
-        self, context: ExecutionContext
-    ) -> Union[Awaitable[bool], bool]:
+    async def can_activate(self, context: ExecutionContext):
         print("Guarded")
         return True
 

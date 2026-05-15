@@ -1,13 +1,12 @@
 [project]
 name = "nestipy"
-version = "0.9.0"
-description = "Nestipy is a Python framework built on top of BlackSheep that follows the modular architecture of NestJS"
+version = "0.10.0"
+description = "Nestipy is a Python framework built on top of FastAPI/BlackSheep that follows the modular architecture of NestJS"
 authors = [{ name = "tsiresymila", email = "tsiresymila@gmail.com" }]
 requires-python = ">=3.11,<4"
 readme = "README.md"
 dependencies = [
     "pyee>=12.1.1,<13",
-    "snakecase>=1.0.1,<2",
     "python-socketio>=5.11.1,<6",
     "aiofiles>=24.1.0,<25",
     "ujson>=5.9.0,<6",
@@ -40,7 +39,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-blacksheep = []
+blacksheep = [
+    "blacksheep",
+]
 web-ssr = ["jsrun"]
 
 [dependency-groups]

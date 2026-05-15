@@ -1,5 +1,8 @@
-from nestipy.router.router_module import RouterModule, RouteItem
-from nestipy.metadata import Reflect, RouteKey
+import typing
+
+from nestipy.core.providers.discover import DiscoverService
+from nestipy.metadata import Reflector, RouteKey
+from nestipy.router.router_module import RouteItem, RouterModule
 
 
 class CatsController:
@@ -23,17 +26,21 @@ def test_router_module_normalize_path():
 
 
 def test_router_module_update_router_paths():
-    Reflect.set_metadata(CatsController, RouteKey.path, "/cats")
+    Reflector.set_metadata(CatsController, RouteKey.path, "/cats")
 
     module = RouterModule()
-    module._discover = FakeDiscover()
+    module._discover = typing.cast(DiscoverService, FakeDiscover())
     module._option = [
         RouteItem(path="api", module=CatsModule),
-        RouteItem(path="v1", module=CatsModule, children=[RouteItem(path="admin", module=CatsModule)]),
+        RouteItem(
+            path="v1",
+            module=CatsModule,
+            children=[RouteItem(path="admin", module=CatsModule)],
+        ),
     ]
 
     module._update_router([], module._option)
 
     # last update wins (nested update keeps previous prefix)
-    path = Reflect.get_metadata(CatsController, RouteKey.path, None)
+    path = Reflector.get_metadata(CatsController, RouteKey.path, None)
     assert path == "v1/admin/v1/api/cats"

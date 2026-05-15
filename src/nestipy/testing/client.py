@@ -1,7 +1,8 @@
 import json as _json
-from typing import Optional, Any
+from typing import Any, Optional
 
-from nestipy.core.nestipy_application import NestipyApplication
+from nestipy.core.application import NestipyApplication
+
 from .helpers import TestResponse
 from .simulator import TestSimulator
 

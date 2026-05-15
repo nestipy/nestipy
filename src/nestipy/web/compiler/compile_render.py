@@ -25,7 +25,9 @@ def render_node(node: Node, slot_token: str | None = None) -> str:
         return slot_token or ""
 
     if node.tag is Fragment:
-        children = [render_child(child, slot_token=slot_token) for child in node.children]
+        children = [
+            render_child(child, slot_token=slot_token) for child in node.children
+        ]
         children = [c for c in children if c is not None]
         inner = "".join(children)
         return f"<>{inner}</>"
@@ -168,17 +170,15 @@ def render_child(child: Any, slot_token: str | None = None) -> str | None:
     if isinstance(child, (int, float)):
         return f"{{{child}}}"
     if isinstance(child, list):
-        return "".join(filter(None, (render_child(c, slot_token=slot_token) for c in child)))
+        return "".join(
+            filter(None, (render_child(c, slot_token=slot_token) for c in child))
+        )
     return escape_text(str(child))
 
 
 def escape_text(text: str) -> str:
     """Escape JSX text nodes."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def render_conditional_expr(expr: ConditionalExpr) -> str:

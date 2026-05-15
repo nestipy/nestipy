@@ -156,7 +156,9 @@ class RouterProxy:
         controller: type | None = None,
         method_name: typing.Optional[str] = None,
         custom_callback: typing.Optional[
-            typing.Callable[["Request", "Response", NextFn], JsonValue | Response | None]
+            typing.Callable[
+                ["Request", "Response", NextFn], JsonValue | Response | None
+            ]
         ] = None,
         cache_policy: typing.Optional[CachePolicy] = None,
         container: typing.Optional[NestipyIContainer] = None,
@@ -347,7 +349,11 @@ class RouterProxy:
             )
         else:
             status_code = getattr(ex, "status_code", HttpStatus.INTERNAL_SERVER_ERROR)
-            if not isinstance(status_code, int) or status_code < 100 or status_code > 599:
+            if (
+                not isinstance(status_code, int)
+                or status_code < 100
+                or status_code > 599
+            ):
                 details = ex.details
                 if details is None:
                     details = {"rpc_status_code": status_code}

@@ -3,16 +3,21 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from nestipy.common.logger import DEFAULT_LOG_FORMAT, build_granian_log_dictconfig, logger
+from nestipy.common.logger import (
+    DEFAULT_LOG_FORMAT,
+    build_granian_log_dictconfig,
+    logger,
+)
 
 if TYPE_CHECKING:
-    from nestipy.core.nestipy_application import NestipyApplication
+    from nestipy.core.application import NestipyApplication
 
 
 class GranianServerRunner:
     """Launch Granian with Nestipy-specific defaults and web flags."""
+
     def __init__(self, app: "NestipyApplication") -> None:
         self._app = app
 
@@ -48,6 +53,7 @@ class GranianServerRunner:
         web_ssr_runtime = _cli_value("--ssr-runtime") or _cli_value("--web-ssr-runtime")
         web_ssr_entry = _cli_value("--ssr-entry") or _cli_value("--web-ssr-entry")
         del options["host"]
+
         def _default_web_dist() -> str:
             candidates = ("web/dist", "src/dist", "dist")
             for candidate in candidates:
@@ -59,8 +65,7 @@ class GranianServerRunner:
             dist = (
                 str(web_dist)
                 if web_dist
-                else os.getenv("NESTIPY_WEB_DIST")
-                or _default_web_dist()
+                else os.getenv("NESTIPY_WEB_DIST") or _default_web_dist()
             )
             os.environ["NESTIPY_WEB_DIST"] = dist
             logger.info("[WEB] Enabled (dist=%s)", dist)
@@ -89,14 +94,19 @@ class GranianServerRunner:
             except Exception:
                 pass
         if "log_dictconfig" not in options:
-            options["log_dictconfig"] = getattr(app, "_granian_log_dictconfig", None) or build_granian_log_dictconfig(
+            options["log_dictconfig"] = getattr(
+                app, "_granian_log_dictconfig", None
+            ) or build_granian_log_dictconfig(
                 level=getattr(app, "_log_level", None),
                 fmt=getattr(app, "_log_format", None) or DEFAULT_LOG_FORMAT,
                 datefmt=getattr(app, "_log_datefmt", None),
                 use_color=getattr(app, "_log_color", True),
                 use_json=getattr(app, "_log_json", False),
             )
-        if "log_access" not in options and getattr(app, "_granian_log_access", None) is not None:
+        if (
+            "log_access" not in options
+            and getattr(app, "_granian_log_access", None) is not None
+        ):
             options["log_access"] = getattr(app, "_granian_log_access")
         if (
             "log_access_format" not in options
@@ -175,7 +185,9 @@ class GranianServerRunner:
 
         from granian import Granian
 
-        server = Granian(target=target, **options, address=options.get("host", None))
+        server = Granian(
+            target=target, **options, address=options.get("host", "0.0.0.0")
+        )
         server.serve()
 
 

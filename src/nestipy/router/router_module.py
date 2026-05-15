@@ -4,8 +4,9 @@ from nestipy.common import Module
 from nestipy.core import DiscoverService
 from nestipy.dynamic_module import NestipyModule
 from nestipy.ioc import Inject
-from nestipy.metadata import RouteKey, Reflect
-from .router_builder import ConfigurableClassBuilder, ROUTER_CONFIG, RouteItem
+from nestipy.metadata import Reflector, RouteKey
+
+from .router_builder import ROUTER_CONFIG, ConfigurableClassBuilder, RouteItem
 
 
 @Module()
@@ -22,9 +23,9 @@ class RouterModule(ConfigurableClassBuilder, NestipyModule):
             controllers = self._discover.get_module_controllers(item.module)
             for controller in controllers:
                 controller_path = self._normalize_path(
-                    Reflect.get_metadata(controller, RouteKey.path, "")
+                    Reflector.get_metadata(controller, RouteKey.path, "")
                 )
-                Reflect.set_metadata(
+                Reflector.set_metadata(
                     controller,
                     RouteKey.path,
                     "/".join(

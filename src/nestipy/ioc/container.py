@@ -2,30 +2,31 @@ import inspect
 import sys
 from functools import lru_cache
 from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
     ForwardRef,
+    Optional,
     Type,
     Union,
-    Any,
-    Optional,
-    Callable,
-    Awaitable,
-    TYPE_CHECKING,
 )
 
-from nestipy.metadata import (
-    ClassMetadata,
-    CtxDepKey,
-    ModuleMetadata,
-    ProviderToken,
-    Reflect,
-)
-from nestipy.common.pipes import PipeTransform, PipeArgumentMetadata
 from nestipy.common.constant import (
     NESTIPY_SCOPE_ATTR,
     SCOPE_REQUEST,
     SCOPE_SINGLETON,
     SCOPE_TRANSIENT,
 )
+from nestipy.common.pipes import PipeArgumentMetadata, PipeTransform
+from nestipy.metadata import (
+    ClassMetadata,
+    CtxDepKey,
+    ModuleMetadata,
+    ProviderToken,
+    Reflector,
+)
+
 from .context_container import RequestContextContainer
 from .dependency import TypeAnnotated
 from .helper import ContainerHelper
@@ -192,18 +193,18 @@ class NestipyContainer:
         for service in cls._services:
             if service in global_providers:
                 continue
-            metadata: Union[ClassMetadata | None] = Reflect.get_metadata(
+            metadata: Union[ClassMetadata | None] = Reflector.get_metadata(
                 service, ClassMetadata.Metadata, None
             )
             if metadata is not None:
-                is_global = Reflect.get_metadata(
+                is_global = Reflector.get_metadata(
                     metadata.get_module(), ModuleMetadata.Global, False
                 )
-                is_root = Reflect.get_metadata(
+                is_root = Reflector.get_metadata(
                     metadata.get_module(), ModuleMetadata.Root, False
                 )
                 if is_global or is_root:
-                    global_providers += Reflect.get_metadata(
+                    global_providers += Reflector.get_metadata(
                         metadata.get_module(), ModuleMetadata.Providers, []
                     )
         return uniq(global_providers)
@@ -223,7 +224,7 @@ class NestipyContainer:
 
         # extract global data from _service, not from module because all provider is already saved in _services of
         # container
-        metadata: Union[ClassMetadata | None] = Reflect.get_metadata(
+        metadata: Union[ClassMetadata | None] = Reflector.get_metadata(
             service, ClassMetadata.Metadata, None
         )
         if metadata is not None:
@@ -260,8 +261,8 @@ class NestipyContainer:
             # Avoid importing DynamicModule at top-level to prevent cycles
             if hasattr(module, "module") and hasattr(module, "providers"):
                 module = module.module
-            providers = Reflect.get_metadata(module, ModuleMetadata.Providers, [])
-            controllers = Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
+            providers = Reflector.get_metadata(module, ModuleMetadata.Providers, [])
+            controllers = Reflector.get_metadata(module, ModuleMetadata.Controllers, [])
             for p in providers:
                 if isinstance(p, ModuleProviderDict):
                     if p.use_class is not None:
@@ -453,9 +454,7 @@ class NestipyContainer:
                             dep_key_value in self._request_scoped_classes
                             or (
                                 inspect.isclass(dep_key_value)
-                                and getattr(
-                                    dep_key_value, NESTIPY_SCOPE_ATTR, None
-                                )
+                                and getattr(dep_key_value, NESTIPY_SCOPE_ATTR, None)
                                 == SCOPE_REQUEST
                             )
                         )
@@ -552,11 +551,11 @@ class NestipyContainer:
                 args[name] = dependency
             else:
                 _name: str = (
-                    annotation.__name__ if not isinstance(annotation, str) else annotation
+                    annotation.__name__
+                    if not isinstance(annotation, str)
+                    else annotation
                 )
-                raise ValueError(
-                    f"Service {_name} not found in scope {search_scope}"
-                )
+                raise ValueError(f"Service {_name} not found in scope {search_scope}")
         return args
 
     @staticmethod
@@ -628,8 +627,8 @@ class NestipyContainer:
                     current = transform(current, metadata)
             except Exception as exc:
                 from nestipy.common.exception.http import HttpException
-                from nestipy.common.exception.status import HttpStatus
                 from nestipy.common.exception.message import HttpStatusMessages
+                from nestipy.common.exception.status import HttpStatus
 
                 if isinstance(exc, HttpException):
                     raise

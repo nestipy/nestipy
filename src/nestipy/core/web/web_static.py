@@ -29,6 +29,7 @@ from nestipy.core.adapter.http_adapter import HttpAdapter
 
 class WebStaticHandler:
     """Serve built web assets (and optional SSR) before adapter routing."""
+
     def __init__(
         self,
         http_adapter: HttpAdapter,
@@ -37,7 +38,9 @@ class WebStaticHandler:
     ) -> None:
         self._http_adapter = http_adapter
         self._on_ssr_renderer = on_ssr_renderer
-        self._try_handler: Optional[Callable[[Request, Response, bool], Awaitable[bool]]] = None
+        self._try_handler: Optional[
+            Callable[[Request, Response, bool], Awaitable[bool]]
+        ] = None
         self._ssr_renderer: Optional[SSRRenderer] = None
 
     def register(self) -> None:
@@ -92,7 +95,9 @@ class WebStaticHandler:
         ssr_renderer: Optional[SSRRenderer] = None
         ssr_cache_size = int(os.getenv("NESTIPY_WEB_SSR_CACHE", "0") or 0)
         ssr_cache_ttl = float(os.getenv("NESTIPY_WEB_SSR_CACHE_TTL", "0") or 0)
-        ssr_cache: "collections.OrderedDict[str, tuple[float, str]]" = collections.OrderedDict()
+        ssr_cache: "collections.OrderedDict[str, tuple[float, str]]" = (
+            collections.OrderedDict()
+        )
         ssr_stream = os.getenv("NESTIPY_WEB_SSR_STREAM", "").strip().lower() in {
             "1",
             "true",
@@ -113,7 +118,9 @@ class WebStaticHandler:
             if ssr_stream and runtime == "jsrun":
                 logger.warning("[WEB] SSR streaming disabled for jsrun runtime")
                 ssr_stream = False
-            entry_path = os.getenv("NESTIPY_WEB_SSR_ENTRY") or resolve_ssr_entry(static_dir)
+            entry_path = os.getenv("NESTIPY_WEB_SSR_ENTRY") or resolve_ssr_entry(
+                static_dir
+            )
             try:
                 ssr_renderer = create_ssr_renderer(runtime, entry_path)
                 self._ssr_renderer = ssr_renderer
@@ -136,10 +143,9 @@ class WebStaticHandler:
         if not index_name:
             index_name = "index.html"
 
-        fallback_enabled = (
-            os.getenv("NESTIPY_WEB_STATIC_FALLBACK", "1").strip().lower()
-            not in {"0", "false", "no", "off"}
-        )
+        fallback_enabled = os.getenv(
+            "NESTIPY_WEB_STATIC_FALLBACK", "1"
+        ).strip().lower() not in {"0", "false", "no", "off"}
 
         def _accepts_html(req: Request) -> bool:
             accept = (req.headers.get("accept") or "").lower()
@@ -158,7 +164,11 @@ class WebStaticHandler:
             return rel
 
         def _load_manifest() -> dict[str, JsonValue] | None:
-            nonlocal manifest_cache, manifest_mtime, manifest_tags_cache, manifest_assets_cache
+            nonlocal \
+                manifest_cache, \
+                manifest_mtime, \
+                manifest_tags_cache, \
+                manifest_assets_cache
             candidates = [
                 ssr_manifest_path,
                 os.path.join(static_dir, ".vite", "ssr-manifest.json"),
@@ -192,9 +202,13 @@ class WebStaticHandler:
             allow_env = os.getenv("NESTIPY_WEB_SSR_ROUTES", "").strip()
             deny_env = os.getenv("NESTIPY_WEB_SSR_EXCLUDE", "").strip()
             if allow_env:
-                ssr_allow_routes.extend([p.strip() for p in allow_env.split(",") if p.strip()])
+                ssr_allow_routes.extend(
+                    [p.strip() for p in allow_env.split(",") if p.strip()]
+                )
             if deny_env:
-                ssr_deny_routes.extend([p.strip() for p in deny_env.split(",") if p.strip()])
+                ssr_deny_routes.extend(
+                    [p.strip() for p in deny_env.split(",") if p.strip()]
+                )
             if ssr_allow_routes or ssr_deny_routes:
                 return
             route_path = os.path.join(static_dir, "ssr-routes.json")
@@ -244,7 +258,9 @@ class WebStaticHandler:
             if ssr_allow_routes:
                 return any(_match_route(pattern, path) for pattern in ssr_allow_routes)
             if ssr_deny_routes:
-                return not any(_match_route(pattern, path) for pattern in ssr_deny_routes)
+                return not any(
+                    _match_route(pattern, path) for pattern in ssr_deny_routes
+                )
             return True
 
         def _build_manifest_tags() -> str:
@@ -269,16 +285,16 @@ class WebStaticHandler:
                 links.append(tag)
 
             for css in entry.get("css", []) or []:
-                _add_link(f"<link rel=\"stylesheet\" href=\"/{css}\">")
+                _add_link(f'<link rel="stylesheet" href="/{css}">')
             file = entry.get("file")
             if file:
-                _add_link(f"<link rel=\"modulepreload\" href=\"/{file}\">")
+                _add_link(f'<link rel="modulepreload" href="/{file}">')
             for imp in entry.get("imports", []) or []:
                 target = manifest.get(imp)
                 if isinstance(target, dict):
                     imp_file = target.get("file")
                     if imp_file:
-                        _add_link(f"<link rel=\"modulepreload\" href=\"/{imp_file}\">")
+                        _add_link(f'<link rel="modulepreload" href="/{imp_file}">')
             manifest_tags_cache = "\n".join(links)
             return manifest_tags_cache
 
@@ -321,22 +337,28 @@ class WebStaticHandler:
                     template = f.read()
             except Exception:
                 return html
-            marker = "<div id=\"root\"></div>"
+            marker = '<div id="root"></div>'
             if marker in template:
-                template = template.replace(marker, f"<div id=\"root\">{html}</div>")
+                template = template.replace(marker, f'<div id="root">{html}</div>')
             tags = _build_manifest_tags()
             if tags and "</head>" in template:
                 template = template.replace("</head>", f"{tags}\n</head>")
             return template
 
-        async def _try_web_static(req: Request, res: Response, allow_fallback: bool) -> bool:
+        async def _try_web_static(
+            req: Request, res: Response, allow_fallback: bool
+        ) -> bool:
             rel_path = _resolve_rel_path(req.path)
             if rel_path is None:
                 return False
             if ssr_renderer is not None and _accepts_html(req):
                 try:
                     query = req.scope.get("query_string") or b""
-                    qs = query.decode() if isinstance(query, (bytes, bytearray)) else str(query)
+                    qs = (
+                        query.decode()
+                        if isinstance(query, (bytes, bytearray))
+                        else str(query)
+                    )
                     route_path = req.path or "/"
                     if static_path != "/" and route_path.startswith(static_path):
                         route_path = route_path[len(static_path) :] or "/"
@@ -347,8 +369,13 @@ class WebStaticHandler:
                         cached = ssr_cache.get(url)
                         if cached:
                             ts, payload = cached
-                            if ssr_cache_ttl <= 0 or (time.time() - ts) <= ssr_cache_ttl:
-                                await res.header("Content-Type", "text/html").send(payload)
+                            if (
+                                ssr_cache_ttl <= 0
+                                or (time.time() - ts) <= ssr_cache_ttl
+                            ):
+                                await res.header("Content-Type", "text/html").send(
+                                    payload
+                                )
                                 return True
                             ssr_cache.pop(url, None)
                     rendered = await ssr_renderer.render(url)
@@ -424,7 +451,9 @@ class WebStaticHandler:
         self._index_name = index_name
         self._fallback_enabled = fallback_enabled
 
-    async def maybe_handle(self, scope: dict, receive: Callable, send_fn: Callable) -> bool:
+    async def maybe_handle(
+        self, scope: dict, receive: Callable, send_fn: Callable
+    ) -> bool:
         """Handle static/SSR requests directly when appropriate."""
         if self._try_handler is None:
             return False
@@ -439,7 +468,9 @@ class WebStaticHandler:
         if not (wants_html or has_extension or path == "/"):
             return False
         req = Request(scope, receive, send_fn)
-        res = Response(template_engine=self._http_adapter.get_state(TemplateKey.MetaEngine))
+        res = Response(
+            template_engine=self._http_adapter.get_state(TemplateKey.MetaEngine)
+        )
         handled = await self._try_handler(req, res, allow_fallback=True)
         if not handled:
             return False
@@ -486,7 +517,11 @@ class WebStaticHandler:
             for k, v in typing.cast(set[tuple[str, str]], res.headers())
         ]
         await send_fn(
-            {"type": "http.response.start", "status": res.status_code(), "headers": headers}
+            {
+                "type": "http.response.start",
+                "status": res.status_code(),
+                "headers": headers,
+            }
         )
         if res.is_stream():
             stream_content = typing.cast(
@@ -495,11 +530,17 @@ class WebStaticHandler:
             )
             async for chunk in stream_content():
                 payload = chunk.encode() if isinstance(chunk, str) else chunk
-                await send_fn({"type": "http.response.body", "body": payload, "more_body": True})
-            await send_fn({"type": "http.response.body", "body": b"", "more_body": False})
+                await send_fn(
+                    {"type": "http.response.body", "body": payload, "more_body": True}
+                )
+            await send_fn(
+                {"type": "http.response.body", "body": b"", "more_body": False}
+            )
             return
         payload = res.content() or b""
-        await send_fn({"type": "http.response.body", "body": payload, "more_body": False})
+        await send_fn(
+            {"type": "http.response.body", "body": payload, "more_body": False}
+        )
 
 
 __all__ = ["WebStaticHandler"]

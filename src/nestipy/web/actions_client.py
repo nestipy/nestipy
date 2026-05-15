@@ -5,21 +5,21 @@ import json
 import os
 import types
 import urllib.request
-from dataclasses import dataclass
-from dataclasses import is_dataclass
-from typing import Any, Iterable, Annotated, get_args, get_origin, Callable
+from dataclasses import dataclass, is_dataclass
+from typing import Annotated, Any, Callable, Iterable, get_args, get_origin
 
 from pydantic import BaseModel
 
 from nestipy.dynamic_module import DynamicModule
 from nestipy.ioc.helper import ContainerHelper
-from nestipy.metadata import CtxDepKey, ModuleMetadata, Reflect
+from nestipy.metadata import CtxDepKey, ModuleMetadata, Reflector
 from nestipy.web.actions import ACTION_METADATA
 
 
 @dataclass(slots=True)
 class ActionParam:
     """Describe a single action parameter for client generation."""
+
     name: str
     ts_type: str
     py_type: str
@@ -29,6 +29,7 @@ class ActionParam:
 @dataclass(slots=True)
 class ActionSpec:
     """Describe a web action for client and schema generation."""
+
     name: str
     params: list[ActionParam]
     return_type: str
@@ -42,8 +43,8 @@ def build_action_specs(modules: Iterable[type]) -> list[ActionSpec]:
     for module in modules:
         if isinstance(module, DynamicModule):
             module = module.module
-        providers = Reflect.get_metadata(module, ModuleMetadata.Providers, [])
-        controllers = Reflect.get_metadata(module, ModuleMetadata.Controllers, [])
+        providers = Reflector.get_metadata(module, ModuleMetadata.Providers, [])
+        controllers = Reflector.get_metadata(module, ModuleMetadata.Controllers, [])
         for target in providers + controllers:
             if not inspect.isclass(target):
                 continue
@@ -89,7 +90,9 @@ def _build_action_spec(name: str, fn: Any) -> ActionSpec:
         ts_type = _py_to_ts(annotation)
         py_type = _py_to_py(annotation)
         _collect_model_types(annotation, model_types)
-        optional = param.default is not inspect.Parameter.empty or _is_optional(annotation)
+        optional = param.default is not inspect.Parameter.empty or _is_optional(
+            annotation
+        )
         params.append(ActionParam(param.name, ts_type, py_type, optional))
     return_type = "unknown"
     return_py = "Any"
@@ -190,7 +193,9 @@ def _py_to_py(annotation: Any) -> str:
         if origin in {list, tuple, set}:
             args = get_args(annotation)
             inner = _py_to_py(args[0]) if args else "Any"
-            container = "list" if origin is list else "tuple" if origin is tuple else "set"
+            container = (
+                "list" if origin is list else "tuple" if origin is tuple else "set"
+            )
             return f"{container}[{inner}]"
         if origin is dict:
             args = get_args(annotation)
@@ -345,7 +350,9 @@ def _schema_from_specs(specs: list[ActionSpec], endpoint: str) -> dict[str, Any]
     return {"endpoint": endpoint, "actions": actions_schema, "models": models_schema}
 
 
-def build_actions_schema(modules: Iterable[type], *, endpoint: str = "/_actions") -> dict[str, Any]:
+def build_actions_schema(
+    modules: Iterable[type], *, endpoint: str = "/_actions"
+) -> dict[str, Any]:
     """Build the actions schema from module metadata."""
     return _schema_from_specs(build_action_specs(modules), endpoint)
 
@@ -429,7 +436,7 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
         for spec in actions:
             if not spec.params:
                 lines.append(
-                    f"      {spec.name}: () => call<{spec.return_type}>(\"{group}.{spec.name}\"),"
+                    f'      {spec.name}: () => call<{spec.return_type}>("{group}.{spec.name}"),'
                 )
                 continue
             shape_fields: list[str] = []
@@ -438,7 +445,7 @@ def generate_actions_client_code_from_schema(schema: dict[str, Any]) -> str:
                 shape_fields.append(f"{param.name}{opt}: {param.ts_type}")
             shape = "{ " + "; ".join(shape_fields) + " }"
             lines.append(
-                f"      {spec.name}: (params: {shape}) => call<{spec.return_type}>(\"{group}.{spec.name}\", [], params as Record<string, unknown>),"
+                f'      {spec.name}: (params: {shape}) => call<{spec.return_type}>("{group}.{spec.name}", [], params as Record<string, unknown>),'
             )
         lines.append("    },")
     lines.append("    call,")
@@ -497,7 +504,7 @@ def generate_actions_types_code_from_schema(
         "",
         "from typing import Any, Protocol, TypedDict, NotRequired, Required, TypeVar, Generic, Callable",
         "",
-        "T = TypeVar(\"T\")",
+        'T = TypeVar("T")',
         "",
         "class ActionError(Protocol):",
         "    message: str",
@@ -513,7 +520,7 @@ def generate_actions_types_code_from_schema(
         "        self,",
         "        on_fulfilled: Callable[[T], Any] | None = ...,",
         "        on_rejected: Callable[[Any], Any] | None = ...,",
-        "    ) -> \"JsPromise[Any]\": ...",
+        '    ) -> "JsPromise[Any]": ...',
         "",
     ]
 
@@ -591,9 +598,7 @@ def generate_actions_types_code_from_schema(
         for group in grouped:
             group_name = _pascal_case(group)
             lines.append(f"    {group}: {group_name}")
-        lines.append(
-            "    call: Callable[..., JsPromise[ActionResponse[Any]]]"
-        )
+        lines.append("    call: Callable[..., JsPromise[ActionResponse[Any]]]")
     lines.append("")
     return "\n".join(lines)
 
@@ -609,7 +614,9 @@ def generate_actions_types_code(
     return generate_actions_types_code_from_schema(schema, class_name=class_name)
 
 
-def codegen_actions_types_from_url(url: str, output: str, *, class_name: str = "ActionsClient") -> None:
+def codegen_actions_types_from_url(
+    url: str, output: str, *, class_name: str = "ActionsClient"
+) -> None:
     """Write Python protocol types from a schema URL."""
     with urllib.request.urlopen(url) as response:
         schema = json.loads(response.read().decode("utf-8"))
@@ -628,7 +635,9 @@ def write_actions_types_file(
 ) -> None:
     """Write Python protocol types from module metadata."""
     _ensure_parent(output)
-    code = generate_actions_types_code(modules, class_name=class_name, endpoint=endpoint)
+    code = generate_actions_types_code(
+        modules, class_name=class_name, endpoint=endpoint
+    )
     with open(output, "w", encoding="utf-8") as f:
         f.write(code)
 

@@ -24,7 +24,12 @@ def web_log(message: str) -> None:
 def run_command_capture(cmd: list[str], cwd: str) -> tuple[int, list[str]]:
     lines: list[str] = []
     process = subprocess.Popen(
-        cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
     assert process.stdout is not None
     for raw in process.stdout:
@@ -58,7 +63,9 @@ def log_build_failure(lines: list[str], tail: int = 200) -> None:
     if not lines:
         web_log("Build failed with no output.")
         return
-    lower_lines = [line for line in lines if "error" in line.lower() or "failed" in line.lower()]
+    lower_lines = [
+        line for line in lines if "error" in line.lower() or "failed" in line.lower()
+    ]
     if lower_lines:
         web_log("Build errors:")
         for line in lower_lines[-tail:]:

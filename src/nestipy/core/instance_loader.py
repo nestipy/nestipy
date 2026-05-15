@@ -4,32 +4,38 @@ import time
 import typing
 from typing import Type, TypeVar
 
-from nestipy.dynamic_module import DynamicModule
-from nestipy.dynamic_module.module.consumer import MiddlewareConsumer
-from nestipy.dynamic_module.module.interface import NestipyModule
-from nestipy.ioc import NestipyContainer, ModuleProviderDict
-from nestipy.metadata import ModuleMetadata, Reflect
-from nestipy.core.providers.discover import DiscoverService
-from nestipy.core.types import ControllerInstance, ModuleInstance, ModuleRef, ProviderInstance
 from nestipy.common.constant import (
     NESTIPY_SCOPE_ATTR,
     SCOPE_REQUEST,
     SCOPE_SINGLETON,
     SCOPE_TRANSIENT,
 )
+from nestipy.core.providers.discover import DiscoverService
+from nestipy.core.types import (
+    ControllerInstance,
+    ModuleInstance,
+    ModuleRef,
+    ProviderInstance,
+)
+from nestipy.dynamic_module import DynamicModule
+from nestipy.dynamic_module.module.consumer import MiddlewareConsumer
+from nestipy.dynamic_module.module.interface import NestipyModule
+from nestipy.ioc import ModuleProviderDict, NestipyContainer
+from nestipy.metadata import ModuleMetadata, Reflector
+
+from ..graphql.graphql_module import GraphqlModule
 from .on_application_bootstrap import OnApplicationBootstrap
 from .on_application_shutdown import OnApplicationShutdown
 from .on_destroy import OnDestroy
 from .on_init import OnInit
 from .on_module_destroy import OnModuleDestroy
 from .on_module_init import OnModuleInit
-from ..graphql.graphql_module import GraphqlModule
 
 
 class InstanceType(enum.Enum):
-    providers: str = "Provider"
-    controller: tuple = ("Controller",)
-    module: str = "Module"
+    providers = "Provider"
+    controller = ("Controller",)
+    module = "Module"
 
 
 T = TypeVar("T")
@@ -95,10 +101,10 @@ class InstanceLoader:
         self, modules: list[ModuleRef]
     ) -> typing.Optional[GraphqlModule]:
         from nestipy.common import (
-            NestipyInterceptor,
             CanActivate,
-            NestipyMiddleware,
             ExceptionFilter,
+            NestipyInterceptor,
+            NestipyMiddleware,
         )
 
         self.discover: DiscoverService = await NestipyContainer.get_instance().get(
@@ -124,7 +130,7 @@ class InstanceLoader:
             self.discover.add_module(instance)
             if isinstance(instance, GraphqlModule):
                 self.graphql_instance = instance
-            imports = Reflect.get_metadata(module, ModuleMetadata.Imports, [])
+            imports = Reflector.get_metadata(module, ModuleMetadata.Imports, [])
             await self.create_instances(imports)
             await self._call_on_module_init(
                 providers=providers, controllers=controllers, module_instance=instance
@@ -158,7 +164,7 @@ class InstanceLoader:
     async def _create_providers(self, module: Type) -> list[ProviderInstance]:
         provider_instance: list[ProviderInstance] = []
         container = NestipyContainer.get_instance()
-        for provider in Reflect.get_metadata(module, ModuleMetadata.Providers, []):
+        for provider in Reflector.get_metadata(module, ModuleMetadata.Providers, []):
             if isinstance(provider, ModuleProviderDict):
                 continue
             if provider not in container.get_all_services():
@@ -180,7 +186,9 @@ class InstanceLoader:
     async def _create_controllers(self, module: Type) -> list[ControllerInstance]:
         controller_instance: list[ControllerInstance] = []
         container = NestipyContainer.get_instance()
-        for controller in Reflect.get_metadata(module, ModuleMetadata.Controllers, []):
+        for controller in Reflector.get_metadata(
+            module, ModuleMetadata.Controllers, []
+        ):
             if controller not in container.get_all_services():
                 container.add_singleton(controller)
             start = time.perf_counter() if self._profile_enabled else None
@@ -225,13 +233,19 @@ class InstanceLoader:
             self.discover = await NestipyContainer.get_instance().get(DiscoverService)
         for provider in self.discover.get_all_provider():
             if isinstance(provider, OnApplicationBootstrap):
-                await typing.cast(OnApplicationBootstrap, provider).on_application_bootstrap()
+                await typing.cast(
+                    OnApplicationBootstrap, provider
+                ).on_application_bootstrap()
         for controller in self.discover.get_all_controller():
             if isinstance(controller, OnApplicationBootstrap):
-                await typing.cast(OnApplicationBootstrap, controller).on_application_bootstrap()
+                await typing.cast(
+                    OnApplicationBootstrap, controller
+                ).on_application_bootstrap()
         for module in self.discover.get_all_module():
             if isinstance(module, OnApplicationBootstrap):
-                await typing.cast(OnApplicationBootstrap, module).on_application_bootstrap()
+                await typing.cast(
+                    OnApplicationBootstrap, module
+                ).on_application_bootstrap()
 
     async def destroy(self):
         for provider in self.discover.get_all_provider():
@@ -260,12 +274,18 @@ class InstanceLoader:
 
         for provider in self.discover.get_all_provider():
             if isinstance(provider, OnApplicationShutdown):
-                await typing.cast(OnApplicationShutdown, provider).on_application_shutdown()
+                await typing.cast(
+                    OnApplicationShutdown, provider
+                ).on_application_shutdown()
 
         for controller in self.discover.get_all_controller():
             if isinstance(controller, OnApplicationShutdown):
-                await typing.cast(OnApplicationShutdown, controller).on_application_shutdown()
+                await typing.cast(
+                    OnApplicationShutdown, controller
+                ).on_application_shutdown()
 
         for module in self.discover.get_all_module():
             if isinstance(module, OnApplicationShutdown):
-                await typing.cast(OnApplicationShutdown, module).on_application_shutdown()
+                await typing.cast(
+                    OnApplicationShutdown, module
+                ).on_application_shutdown()

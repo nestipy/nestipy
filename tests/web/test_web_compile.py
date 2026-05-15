@@ -33,9 +33,7 @@ def Page():
     assert (out_dir / "index.html").exists()
     assert (out_dir / "src" / "main.tsx").exists()
     assert (out_dir / "src" / "routes.tsx").exists()
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "export default function Page" in page_tsx
     assert "<div" in page_tsx
 
@@ -104,9 +102,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "function Header" in page_tsx
     assert "<Header" in page_tsx
 
@@ -146,15 +142,13 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "import { Card }" in page_tsx
     assert "<Card" in page_tsx
 
-    card_tsx = (
-        out_dir / "src" / "components" / "components" / "card.tsx"
-    ).read_text(encoding="utf-8")
+    card_tsx = (out_dir / "src" / "components" / "components" / "card.tsx").read_text(
+        encoding="utf-8"
+    )
     assert "interface CardProps" in card_tsx
     assert "export function Card(props: CardProps): JSX.Element" in card_tsx
 
@@ -188,9 +182,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "createActions" in page_tsx
     assert "actions.client" in page_tsx
     assert "const actions = createActions()" in page_tsx
@@ -229,9 +221,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "actions_types" not in page_tsx
 
 
@@ -380,13 +370,11 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "import React from 'react';" in page_tsx
     assert (
-        "export const AppContext = React.createContext(\"default\");" in page_tsx
-        or "const AppContext = React.createContext(\"default\");" in page_tsx
+        'export const AppContext = React.createContext("default");' in page_tsx
+        or 'const AppContext = React.createContext("default");' in page_tsx
     )
     assert "const [count, setCount] = React.useState(0);" in page_tsx
     assert "const value = React.useContext(AppContext);" in page_tsx
@@ -422,9 +410,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "].map" in page_tsx
     assert "show ? " in page_tsx
 
@@ -456,9 +442,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "].map" in page_tsx
     assert "show ? " in page_tsx
 
@@ -488,9 +472,7 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
     assert "show ? " in page_tsx
 
 
@@ -517,10 +499,8 @@ def Page():
     config = WebConfig(app_dir=str(app_dir), out_dir=str(out_dir))
     compile_app(config, root=str(tmp_path))
 
-    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(
-        encoding="utf-8"
-    )
-    assert "group[\"items\"].map" in page_tsx
+    page_tsx = (out_dir / "src" / "pages" / "index.tsx").read_text(encoding="utf-8")
+    assert 'group["items"].map' in page_tsx
 
 
 def test_layout_import_prefers_local(tmp_path: Path) -> None:

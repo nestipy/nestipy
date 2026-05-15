@@ -14,6 +14,7 @@ class AppController:
     def get_hi(self):
         return {"message": "Hi"}
 
+
 @Module(controllers=[AppController])
 class AppModule:
     pass

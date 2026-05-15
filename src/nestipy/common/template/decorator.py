@@ -1,6 +1,7 @@
-from typing import Callable, Any
+from typing import Any, Callable
 
-from nestipy.metadata import Reflect
+from nestipy.metadata import Reflector
+
 from .meta import TemplateKey
 
 
@@ -14,7 +15,7 @@ def Render(template: str) -> Callable[[Callable], Any]:
     """
 
     def wrapper(method: Callable) -> Callable:
-        Reflect.set_metadata(method, TemplateKey.MetaRender, template)
+        Reflector.set_metadata(method, TemplateKey.MetaRender, template)
         return method
 
     return wrapper

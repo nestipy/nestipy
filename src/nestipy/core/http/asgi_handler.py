@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from nestipy.common.logger import logger
 from nestipy.core.security.cors import apply_cors_headers
 
-
 if TYPE_CHECKING:
-    from nestipy.core.nestipy_application import NestipyApplication
+    from nestipy.core.application import NestipyApplication
 
 
 def _extract_header(scope: dict, name: str) -> str | None:
@@ -54,9 +53,7 @@ def _add_header(headers: list[tuple[bytes, bytes]], name: str, value: str) -> No
     headers.append((name.encode(), value.encode()))
 
 
-def _apply_security_headers(
-    headers: list[tuple[bytes, bytes]], enabled: bool
-) -> None:
+def _apply_security_headers(headers: list[tuple[bytes, bytes]], enabled: bool) -> None:
     if not enabled:
         return
     defaults = {
@@ -64,7 +61,7 @@ def _apply_security_headers(
         "X-Frame-Options": "DENY",
         "X-XSS-Protection": "1; mode=block",
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-        "Content-Security-Policy": "default-src 'self'",
+        # "Content-Security-Policy": "default-src 'self'",
         "Referrer-Policy": "no-referrer",
     }
     for name, value in defaults.items():
@@ -110,7 +107,8 @@ class AsgiHandler:
                     header_map = {
                         k.decode(): v.decode()
                         for k, v in headers
-                        if isinstance(k, (bytes, bytearray)) and isinstance(v, (bytes, bytearray))
+                        if isinstance(k, (bytes, bytearray))
+                        and isinstance(v, (bytes, bytearray))
                     }
                     apply_cors_headers(header_map, origin, cors_options)
                     headers = [(k.encode(), v.encode()) for k, v in header_map.items()]

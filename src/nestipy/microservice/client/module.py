@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from nestipy.common.decorator.class_ import Module
 from nestipy.dynamic_module import ConfigurableModuleBuilder, DynamicModule
 from nestipy.ioc.provider import ModuleProviderDict
+
 from .base import MicroserviceOption
 from .factory import ClientModuleFactory
 

@@ -1,6 +1,4 @@
-from typing import Union, Awaitable, Any, Callable, Type, Optional
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Type, Union
 
 if TYPE_CHECKING:
     from .container import NestipyContainer

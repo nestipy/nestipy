@@ -1,6 +1,6 @@
 from nestipy.commander.commander import NestipyCommander
 from nestipy.dynamic_module import DynamicModule
-from nestipy.metadata import ModuleMetadata, Reflect
+from nestipy.metadata import ModuleMetadata, Reflector
 
 
 class ModuleA:
@@ -13,7 +13,7 @@ class ModuleB:
 
 def test_get_modules_includes_dynamic_modules():
     dynamic = DynamicModule(module=ModuleB)
-    Reflect.set_metadata(ModuleA, ModuleMetadata.Imports, [dynamic])
+    Reflector.set_metadata(ModuleA, ModuleMetadata.Imports, [dynamic])
 
     modules = NestipyCommander._get_modules(ModuleA)
 

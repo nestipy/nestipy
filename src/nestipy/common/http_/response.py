@@ -67,7 +67,7 @@ class Response:
             response(Response): An instance of response
         """
         self._headers = set(
-            [(k, v) for k, v in self._headers if k.lower() != name.lower]
+            [(k, v) for k, v in self._headers if k.lower() != name.lower()]
         )
         self._headers.add((name, value))
         return self
@@ -83,7 +83,7 @@ class Response:
             response(Response): An instance of response
         """
         self._cookies = set(
-            [(k, v) for k, v in self._cookies if k.lower() != name.lower]
+            [(k, v) for k, v in self._cookies if k.lower() != name.lower()]
         )
         self._cookies.add((name, value))
         return self

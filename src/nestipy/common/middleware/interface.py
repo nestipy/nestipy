@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from nestipy.common.http_ import Request, Response
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 class NestipyMiddleware(ABC):
     @abstractmethod
-    async def use(self, req: "Request", res: "Response", next_fn: "NextFn"):
+    async def use(self, req: "Request", res: "Response", next_fn: "NextFn") -> Any:
         """
         Args:
             req (Request): The http request

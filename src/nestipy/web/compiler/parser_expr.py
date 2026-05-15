@@ -91,7 +91,11 @@ def _eval_expr(
             return bound
         if expr.value in externals:
             ext = externals[expr.value]
-            return JSExpr(name_map.get(expr.value, ext.import_name) if name_map else ext.import_name)
+            return JSExpr(
+                name_map.get(expr.value, ext.import_name)
+                if name_map
+                else ext.import_name
+            )
         if expr.value in component_names:
             return LocalComponent(expr.value)
         if expr.value == "Fragment":
@@ -105,7 +109,9 @@ def _eval_expr(
         if expr.value == "None":
             return None
         if expr.value in local_names:
-            return JSExpr(name_map.get(expr.value, expr.value) if name_map else expr.value)
+            return JSExpr(
+                name_map.get(expr.value, expr.value) if name_map else expr.value
+            )
         raise CompilerError(
             f"Unsupported name '{expr.value}'. Use external() for components or js(...) for expressions."
         )
@@ -124,32 +130,58 @@ def _eval_expr(
 
     if isinstance(expr, cst.List):
         return [
-            _eval_expr(el.value, externals, component_names, local_names, bound_values, name_map)
+            _eval_expr(
+                el.value,
+                externals,
+                component_names,
+                local_names,
+                bound_values,
+                name_map,
+            )
             for el in expr.elements
         ]
 
     if isinstance(expr, cst.ListComp):
-        return _eval_list_comp(expr, externals, component_names, local_names, bound_values, name_map)
+        return _eval_list_comp(
+            expr, externals, component_names, local_names, bound_values, name_map
+        )
 
     if isinstance(expr, cst.Tuple):
         return [
-            _eval_expr(el.value, externals, component_names, local_names, bound_values, name_map)
+            _eval_expr(
+                el.value,
+                externals,
+                component_names,
+                local_names,
+                bound_values,
+                name_map,
+            )
             for el in expr.elements
         ]
 
     if isinstance(expr, cst.Dict):
-        return _eval_dict(expr, externals, component_names, local_names, bound_values, name_map)
+        return _eval_dict(
+            expr, externals, component_names, local_names, bound_values, name_map
+        )
 
     if isinstance(expr, cst.Call):
         tag_name = _is_h_tag_call(expr)
         if tag_name is not None:
             return _eval_tag_call(
-                tag_name, expr.args, externals, component_names, local_names, bound_values, name_map
+                tag_name,
+                expr.args,
+                externals,
+                component_names,
+                local_names,
+                bound_values,
+                name_map,
             )
 
         call_name = _call_name(expr)
         if call_name == "h":
-            return _eval_h_call(expr, externals, component_names, local_names, bound_values, name_map)
+            return _eval_h_call(
+                expr, externals, component_names, local_names, bound_values, name_map
+            )
         if call_name == "js":
             if not expr.args:
                 raise CompilerError("js() requires a string")
@@ -191,9 +223,15 @@ def _eval_expr(
 
     if isinstance(expr, cst.IfExp):
         test_expr = JSExpr(_expr_to_js(expr.test, name_map, bindings))
-        consequent = _eval_expr(expr.body, externals, component_names, local_names, bound_values, name_map)
-        alternate = _eval_expr(expr.orelse, externals, component_names, local_names, bound_values, name_map)
-        return ConditionalExpr(test=test_expr, consequent=consequent, alternate=alternate)
+        consequent = _eval_expr(
+            expr.body, externals, component_names, local_names, bound_values, name_map
+        )
+        alternate = _eval_expr(
+            expr.orelse, externals, component_names, local_names, bound_values, name_map
+        )
+        return ConditionalExpr(
+            test=test_expr, consequent=consequent, alternate=alternate
+        )
 
     if isinstance(expr, cst.BooleanOperation):
         return JSExpr(_expr_to_js(expr, name_map, bindings))
@@ -232,7 +270,9 @@ def _eval_h_call(
     if not args:
         raise CompilerError("h() requires at least a tag argument")
 
-    tag = _eval_tag_expr(args[0].value, externals, component_names, locals, bindings, name_map)
+    tag = _eval_tag_expr(
+        args[0].value, externals, component_names, locals, bindings, name_map
+    )
     props, children_args = _split_props(
         args[1:], externals, component_names, locals, bindings, name_map
     )
@@ -277,7 +317,9 @@ def _eval_tag_call(
     name_map: dict[str, str] | None = None,
 ) -> Node:
     """Evaluate an h.tag(...) call into a Node."""
-    props, children_args = _split_props(args, externals, component_names, locals, bindings, name_map)
+    props, children_args = _split_props(
+        args, externals, component_names, locals, bindings, name_map
+    )
     children = [
         _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
         for arg in children_args
@@ -311,7 +353,12 @@ def _eval_list_comp(
         tests = [_expr_to_js(cond.test, local_map, bindings) for cond in comp.ifs]
         condition = JSExpr(" && ".join(f"({t})" for t in tests))
     body = _eval_expr(
-        expr.elt, externals, component_names, locals | {target_name}, bindings, local_map
+        expr.elt,
+        externals,
+        component_names,
+        locals | {target_name},
+        bindings,
+        local_map,
     )
     target = local_map.get(target_name, target_name)
     return ForExpr(target=target, iterable=iterable, body=body, condition=condition)
@@ -327,7 +374,9 @@ def _eval_component_call(
     name_map: dict[str, str] | None = None,
 ) -> Node:
     """Evaluate a call to a component function into a Node."""
-    props, children_args = _split_props(args, externals, component_names, locals, bindings, name_map)
+    props, children_args = _split_props(
+        args, externals, component_names, locals, bindings, name_map
+    )
     children = [
         _eval_expr(arg.value, externals, component_names, locals, bindings, name_map)
         for arg in children_args
@@ -432,7 +481,12 @@ def _binding_to_js(value: Any) -> str | None:
         if consequent is None or alternate is None:
             return None
         return f"{value.test} ? {consequent} : {alternate}"
-    if isinstance(value, (str, int, float)) or value is True or value is False or value is None:
+    if (
+        isinstance(value, (str, int, float))
+        or value is True
+        or value is False
+        or value is None
+    ):
         return None
     if isinstance(value, list):
         parts: list[str] = []
@@ -514,12 +568,16 @@ def _expr_to_js(
         return json.dumps(_eval_string(expr))
     if isinstance(expr, cst.List):
         items = [
-            _expr_to_js(el.value, name_map, bindings) for el in expr.elements if el is not None
+            _expr_to_js(el.value, name_map, bindings)
+            for el in expr.elements
+            if el is not None
         ]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Tuple):
         items = [
-            _expr_to_js(el.value, name_map, bindings) for el in expr.elements if el is not None
+            _expr_to_js(el.value, name_map, bindings)
+            for el in expr.elements
+            if el is not None
         ]
         return "[" + ", ".join(items) + "]"
     if isinstance(expr, cst.Dict):
@@ -533,7 +591,9 @@ def _expr_to_js(
             if element.key is None or element.value is None:
                 continue
             key = _eval_key(element.key)
-            parts.append(f"{json.dumps(key)}: {_expr_to_js(element.value, name_map, bindings)}")
+            parts.append(
+                f"{json.dumps(key)}: {_expr_to_js(element.value, name_map, bindings)}"
+            )
         return "{" + ", ".join(parts) + "}"
     if isinstance(expr, cst.Integer):
         return expr.value
@@ -639,7 +699,9 @@ def _expr_to_js(
         args: list[str] = []
         for arg in expr.args:
             if arg.keyword is not None:
-                raise CompilerError("Keyword arguments are not supported in hook functions.")
+                raise CompilerError(
+                    "Keyword arguments are not supported in hook functions."
+                )
             args.append(_expr_to_js(arg.value, name_map, bindings))
         return f"{func}({', '.join(args)})"
     if isinstance(expr, cst.Await):

@@ -9,7 +9,10 @@ from .spec import (
     router_spec_from_dict,
 )
 from .typed_client import generate_client_code, write_client_file
-from .typed_client_ts import generate_typescript_client_code, write_typescript_client_file
+from .typed_client_ts import (
+    generate_typescript_client_code,
+    write_typescript_client_file,
+)
 
 __all__ = [
     "RouterModule",

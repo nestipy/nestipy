@@ -1,6 +1,6 @@
 import os
 import traceback
-from typing import Type, Optional, cast, Union, Callable
+from typing import Callable, Optional, Type, Union, cast
 
 from socketio import AsyncServer
 
@@ -20,13 +20,14 @@ from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.strawberry.strawberry_adapter import StrawberryAdapter
 from nestipy.ioc.provider import ModuleProviderDict
 from nestipy.metadata import ModuleMetadata
-from nestipy.metadata.reflect import Reflect
-from nestipy.websocket.adapter import IoAdapter, SocketIoAdapter
+from nestipy.metadata.reflect import Reflector
 from nestipy.router import (
     build_router_spec,
     write_client_file,
     write_typescript_client_file,
 )
+from nestipy.websocket.adapter import IoAdapter, SocketIoAdapter
+
 from .abstract import BaseCommand
 from .meta import CommanderMeta
 from .style import echo
@@ -53,7 +54,7 @@ class NestipyCommander(object):
     @classmethod
     def _get_modules(cls, module: Type) -> list[Type]:
         modules: list[Type] = [module]
-        for m in Reflect.get_metadata(module, ModuleMetadata.Imports, []):
+        for m in Reflector.get_metadata(module, ModuleMetadata.Imports, []):
             if isinstance(m, DynamicModule):
                 modules.append(m.module)
             else:
@@ -81,11 +82,11 @@ class NestipyCommander(object):
     def _add_root_module_provider(
         self, *providers: Union[ModuleProviderDict, Type, Callable], _init: bool = True
     ):
-        root_providers: list = Reflect.get_metadata(
+        root_providers: list = Reflector.get_metadata(
             self._root_module, ModuleMetadata.Providers, []
         )
         root_providers = root_providers + list(providers)
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             self._root_module, ModuleMetadata.Providers, root_providers
         )
         #  re init setting metadata
@@ -163,7 +164,9 @@ class NestipyCommander(object):
             await self.instance_loader.create_instances(modules)
             commands: dict[str, BaseCommand] = {}
             for c in self.instance_loader.discover.get_all_provider():
-                meta: Optional[dict[str]] = Reflect.get_metadata(c, CommanderMeta.Meta)
+                meta: Optional[dict[str]] = Reflector.get_metadata(
+                    c, CommanderMeta.Meta
+                )
                 if meta is not None and issubclass(c.__class__, BaseCommand):
                     commands.update({meta.get("name"): cast(BaseCommand, c)})
 

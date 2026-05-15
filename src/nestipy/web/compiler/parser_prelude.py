@@ -98,7 +98,11 @@ def _collect_module_prelude(
             if isinstance(inner, cst.Assign):
                 if len(inner.targets) != 1:
                     continue
-                target = inner.targets[0].target if isinstance(inner.targets[0].target, cst.Name) else None
+                target = (
+                    inner.targets[0].target
+                    if isinstance(inner.targets[0].target, cst.Name)
+                    else None
+                )
                 value = inner.value
             elif isinstance(inner, cst.AnnAssign):
                 target = inner.target if isinstance(inner.target, cst.Name) else None
@@ -111,7 +115,9 @@ def _collect_module_prelude(
                 call_name = _call_name(value)
                 if call_name == "create_context":
                     default_expr = _get_call_arg(value, 0, ("default",))
-                    default_js = _expr_to_js(default_expr) if default_expr else "undefined"
+                    default_js = (
+                        _expr_to_js(default_expr) if default_expr else "undefined"
+                    )
                     prefix = "export " if export_values else ""
                     contexts.append(
                         f"{prefix}const {target.value} = React.createContext({default_js});"
@@ -126,16 +132,16 @@ def _collect_module_prelude(
                         if target.value == import_name:
                             contexts.append(f"export {{ {import_name} }};")
                         else:
-                            contexts.append(f"export const {target.value} = {import_name};")
+                            contexts.append(
+                                f"export const {target.value} = {import_name};"
+                            )
                     names.add(target.value)
                     continue
                 if call_name == "js":
                     js_expr = _get_call_arg(value, 0, ("expr",))
                     if js_expr is None:
                         raise CompilerError("js() requires a string literal")
-                    contexts.append(
-                        f"const {target.value} = {_eval_string(js_expr)};"
-                    )
+                    contexts.append(f"const {target.value} = {_eval_string(js_expr)};")
                     names.add(target.value)
                     continue
 

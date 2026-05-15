@@ -2,19 +2,26 @@ from typing import Annotated
 
 import pytest
 
-from nestipy.common import Module, PipeTransform, UsePipes, Catch, UseFilters
+from nestipy.common import (
+    Catch,
+    ExceptionFilter,
+    Module,
+    PipeTransform,
+    UseFilters,
+    UsePipes,
+)
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.status import HttpStatus
 from nestipy.core import NestipyFactory
 from nestipy.graphql import (
-    GraphqlModule,
-    GraphqlOption,
-    Resolver,
-    Query,
-    ResolveField,
     Args,
     Context,
+    GraphqlModule,
+    GraphqlOption,
     Parent,
+    Query,
+    ResolveField,
+    Resolver,
 )
 from nestipy.graphql.strawberry import ObjectType
 from nestipy.ioc import NestipyContainer
@@ -28,7 +35,7 @@ class UpperPipe(PipeTransform):
 
 
 @Catch(HttpException)
-class MyGraphqlFilter:
+class MyGraphqlFilter(ExceptionFilter):
     async def catch(self, exception: HttpException, host):
         return "filtered"
 
@@ -88,7 +95,7 @@ async def test_graphql_pipeline_features():
     await app.setup()
     client = TestClient(app)
     try:
-        r1 = await client.post("/graphql", json={"query": "{ echo(text: \"hi\") }"})
+        r1 = await client.post("/graphql", json={"query": '{ echo(text: "hi") }'})
         assert r1.status() == 200
         assert r1.json().get("data", {}).get("echo") == "HI"
 

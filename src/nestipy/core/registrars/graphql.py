@@ -10,11 +10,15 @@ from nestipy.graphql.graphql_module import GraphqlModule
 class GraphqlRegistrar:
     """Apply GraphQL resolvers through the configured adapter."""
 
-    def __init__(self, http_adapter: HttpAdapter, graphql_adapter: GraphqlAdapter) -> None:
+    def __init__(
+        self, http_adapter: HttpAdapter, graphql_adapter: GraphqlAdapter
+    ) -> None:
         self._http_adapter = http_adapter
         self._graphql_adapter = graphql_adapter
 
-    async def apply(self, graphql_module_instance: GraphqlModule, modules: list[ModuleRef]) -> None:
+    async def apply(
+        self, graphql_module_instance: GraphqlModule, modules: list[ModuleRef]
+    ) -> None:
         await GraphqlProxy(self._http_adapter, self._graphql_adapter).apply_resolvers(
             graphql_module_instance,
             modules,

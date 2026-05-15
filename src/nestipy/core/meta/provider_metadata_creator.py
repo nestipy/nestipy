@@ -1,6 +1,6 @@
 from typing import Type
 
-from nestipy.metadata import ModuleMetadata, Reflect
+from nestipy.metadata import ModuleMetadata, Reflector
 
 from .metadata_creator import MetadataCreator
 
@@ -10,4 +10,4 @@ class ProviderMetadataCreator(MetadataCreator):
         return ProviderMetadataCreator
 
     def _extract(self) -> list:
-        return Reflect.get_metadata(self.module, ModuleMetadata.Providers, [])
+        return Reflector.get_metadata(self.module, ModuleMetadata.Providers, [])

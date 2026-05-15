@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import enum
-from typing import Type, Callable, Union, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional, Type, Union
 
-from nestipy.dynamic_module import DynamicModule
-from nestipy.metadata import ModuleMetadata, Reflect, RouteKey
 from nestipy.common.constant import NESTIPY_SCOPE_ATTR
+from nestipy.dynamic_module import DynamicModule
+from nestipy.metadata import ModuleMetadata, Reflector, RouteKey
 
 if TYPE_CHECKING:
     from nestipy.ioc.provider import ModuleProviderDict
@@ -38,7 +38,7 @@ class Injectable:
 
         self.container = NestipyContainer.get_instance()
 
-    def __call__(self, cls: Union[Type, Callable]) -> Type:
+    def __call__(self, cls: Type) -> Type:
         """
         Register the class into the container with the specified scope.
         :param cls: The class to be marked as injectable.
@@ -73,7 +73,7 @@ class Controller:
 
         self.container = NestipyContainer.get_instance()
 
-    def __call__(self, cls, **kwargs):
+    def __call__(self, cls: Type, **kwargs) -> Type:
         """
         Register the class as a singleton in the container and set its route metadata.
         :param cls: The class to be marked as a controller.
@@ -81,8 +81,8 @@ class Controller:
         """
         self.container.add_singleton(cls)
         # put path and kwargs in controller property
-        Reflect.set_metadata(cls, RouteKey.path, self.path)
-        Reflect.set_metadata(cls, RouteKey.kwargs, self.kwargs)
+        Reflector.set_metadata(cls, RouteKey.path, self.path)
+        Reflector.set_metadata(cls, RouteKey.kwargs, self.kwargs)
         return cls
 
 
@@ -131,31 +131,31 @@ class Module:
         :param cls: The class to be marked as a module.
         :return: The decorated class.
         """
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             cls,
             ModuleMetadata.Providers,
             self.providers + getattr(cls, ModuleMetadata.Providers, []),
         )
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             cls,
             ModuleMetadata.Controllers,
             self.controllers + getattr(cls, ModuleMetadata.Controllers, []),
         )
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             cls,
             ModuleMetadata.Imports,
             self.imports + getattr(cls, ModuleMetadata.Imports, []),
         )
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             cls,
             ModuleMetadata.Exports,
             self.exports + getattr(cls, ModuleMetadata.Exports, []),
         )
-        Reflect.set_metadata(
+        Reflector.set_metadata(
             cls,
             ModuleMetadata.Global,
             self.is_global or getattr(cls, ModuleMetadata.Global, False),
         )
-        Reflect.set_metadata(cls, ModuleMetadata.Module, True)
+        Reflector.set_metadata(cls, ModuleMetadata.Module, True)
         self.container.add_singleton(cls)
         return cls

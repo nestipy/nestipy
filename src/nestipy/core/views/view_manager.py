@@ -13,14 +13,18 @@ class ViewManager:
     def __init__(self, http_adapter: HttpAdapter) -> None:
         self._http_adapter = http_adapter
 
-    def use_static_assets(self, assets_path: str, url: str = "/static", *args, **kwargs) -> None:
+    def use_static_assets(
+        self, assets_path: str, url: str = "/static", *args, **kwargs
+    ) -> None:
         self._http_adapter.static(f"/{url.strip('/')}", assets_path, *args, **kwargs)
 
     def set_base_view_dir(self, view_dir: str) -> None:
         self._http_adapter.set(TemplateKey.MetaBaseView, view_dir)
         self._setup_template_engine(view_dir)
 
-    def set_view_engine(self, engine: Union[Literal["minijinja"], TemplateEngine]) -> None:
+    def set_view_engine(
+        self, engine: Union[Literal["minijinja"], TemplateEngine]
+    ) -> None:
         if isinstance(engine, TemplateEngine):
             self._http_adapter.set(TemplateKey.MetaEngine, engine)
         else:

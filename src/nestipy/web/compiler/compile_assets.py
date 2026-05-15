@@ -222,7 +222,10 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         except OSError:
             existing = ""
         updated_existing = existing
-        if "@tailwindcss/vite" not in updated_existing and "plugins: [react()]" in updated_existing:
+        if (
+            "@tailwindcss/vite" not in updated_existing
+            and "plugins: [react()]" in updated_existing
+        ):
             lines = existing.splitlines()
             new_lines: list[str] = []
             inserted = False
@@ -234,7 +237,9 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
             if not inserted and lines:
                 new_lines.insert(1, "import tailwind from '@tailwindcss/vite';")
             updated_existing = "\n".join(new_lines)
-            updated_existing = updated_existing.replace("plugins: [react()],", "plugins: [react(), tailwind()],")
+            updated_existing = updated_existing.replace(
+                "plugins: [react()],", "plugins: [react(), tailwind()],"
+            )
 
         if "ssr:" not in updated_existing:
             lines = updated_existing.splitlines()
@@ -274,7 +279,8 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
 
         if updated_existing != existing:
             vite_config.write_text(
-                updated_existing + ("\n" if not updated_existing.endswith("\n") else ""),
+                updated_existing
+                + ("\n" if not updated_existing.endswith("\n") else ""),
                 encoding="utf-8",
             )
 
@@ -328,7 +334,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
     vite_env = src_dir / "vite-env.d.ts"
     if not vite_env.exists():
         vite_env.write_text(
-            "/// <reference types=\"vite/client\" />\n",
+            '/// <reference types="vite/client" />\n',
             encoding="utf-8",
         )
 
@@ -506,7 +512,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     [
                         "",
                         "export function createApiClient(options: Partial<ClientOptions> = {}): ApiClient {",
-                        "  return new ApiClient({ baseUrl: \"\", ...options });",
+                        '  return new ApiClient({ baseUrl: "", ...options });',
                         "}",
                         "export const create_api_client = createApiClient;",
                         "",
@@ -565,7 +571,10 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
                     ]
                 )
             )
-        if "credentials: init?.credentials" not in updated and "method: 'POST'" in updated:
+        if (
+            "credentials: init?.credentials" not in updated
+            and "method: 'POST'" in updated
+        ):
             updated = updated.replace(
                 "      method: 'POST',\n",
                 "      method: 'POST',\n      credentials: init?.credentials ?? 'include',\n",
@@ -579,7 +588,7 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         index_css.write_text(
             "\n".join(
                 [
-                    "@import \"tailwindcss\";",
+                    '@import "tailwindcss";',
                     "",
                 ]
             ),
@@ -591,8 +600,12 @@ def ensure_vite_files(config: WebConfig, root: str | None = None) -> None:
         except OSError:
             existing_css = ""
         lines = [line.strip() for line in existing_css.splitlines() if line.strip()]
-        if lines == ["@tailwind base;", "@tailwind components;", "@tailwind utilities;"]:
-            index_css.write_text("@import \"tailwindcss\";\n", encoding="utf-8")
+        if lines == [
+            "@tailwind base;",
+            "@tailwind components;",
+            "@tailwind utilities;",
+        ]:
+            index_css.write_text('@import "tailwindcss";\n', encoding="utf-8")
 
 
 def _sanitize_package_name(name: str) -> str:

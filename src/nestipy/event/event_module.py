@@ -1,14 +1,15 @@
 import inspect
-from typing import Annotated, Union, Callable
+from typing import Annotated, Callable, Union
 
 from nestipy.common import Module
 from nestipy.core import DiscoverService
 from nestipy.dynamic_module import NestipyModule
 from nestipy.ioc import Inject, ModuleProviderDict
-from nestipy.metadata import Reflect
+from nestipy.metadata import Reflector
+
 from .event_builder import ConfigurableClassBuilder, EventOption
 from .event_emitter import EventEmitter
-from .event_metadata import EventMetadata, EventData
+from .event_metadata import EventData, EventMetadata
 
 
 @Module(
@@ -21,11 +22,11 @@ class EventEmitterModule(ConfigurableClassBuilder, NestipyModule):
 
     @classmethod
     def _is_listener(cls, method: Callable):
-        v = Reflect.get_metadata(method, EventMetadata.Event)
+        v = Reflector.get_metadata(method, EventMetadata.Event)
         return v is not None
 
     def _register_listener(self, method: Callable):
-        event_data: Union[EventData, None] = Reflect.get_metadata(
+        event_data: Union[EventData, None] = Reflector.get_metadata(
             method, EventMetadata.Event, None
         )
         if event_data:

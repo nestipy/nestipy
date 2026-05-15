@@ -3,7 +3,7 @@
 # -------- Nestipy App --------
 from nestipy.common.decorator import Controller, Get, Module
 from nestipy.core import BlackSheepApplication, FastApiApplication
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core.factory import NestipyFactory
 
 
 @Controller()
@@ -31,8 +31,8 @@ class AppModule: ...
 
 
 async def run_server(host: str, port: int, workers: int, is_b: bool = False):
-    from granian.server.embed import Server as Granian
     from granian.constants import Interfaces
+    from granian.server.embed import Server as Granian
 
     if is_b:
         print("Running Black Sheep server .......")
@@ -52,13 +52,14 @@ async def run_server(host: str, port: int, workers: int, is_b: bool = False):
 
 
 import asyncio
-import httpx
-import time
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-from argparse import ArgumentParser
 import os
+import time
+from argparse import ArgumentParser
+from collections import defaultdict
+
+import httpx
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Benchmark:

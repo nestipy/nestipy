@@ -1,28 +1,27 @@
-import inspect
-import json
-import time
-import os
-from dataclasses import dataclass, field
-from typing import Any, Callable, Annotated, get_args, get_origin, Protocol, Iterable
-from urllib.parse import urlparse
 import hashlib
 import hmac
+import inspect
+import json
+import os
 import secrets
+import time
+from dataclasses import dataclass, field
+from typing import Annotated, Any, Callable, Iterable, Protocol, get_args, get_origin
+from urllib.parse import urlparse
 
 from pydantic import TypeAdapter, ValidationError
 
-from nestipy.common import Controller, Post, Get, Injectable, Request, Response
+from nestipy.common import Controller, Get, Injectable, Post, Request, Response
 from nestipy.common.exception.http import HttpException
 from nestipy.common.exception.status import HttpStatus
 from nestipy.common.logger import logger
 from nestipy.core.exception.error_policy import build_error_info
-from nestipy.dynamic_module import ConfigurableModuleBuilder
-from nestipy.ioc import Body, Inject, Req, Res, NestipyContainer
-from nestipy.ioc.helper import ContainerHelper
-from nestipy.metadata import CtxDepKey, SetMetadata
-from nestipy.metadata import Reflect, RouteKey
-from nestipy.core.providers.discover import DiscoverService
 from nestipy.core.on_application_bootstrap import OnApplicationBootstrap
+from nestipy.core.providers.discover import DiscoverService
+from nestipy.dynamic_module import ConfigurableModuleBuilder
+from nestipy.ioc import Body, Inject, NestipyContainer, Req, Res
+from nestipy.ioc.helper import ContainerHelper
+from nestipy.metadata import CtxDepKey, Reflector, RouteKey, SetMetadata
 
 ACTION_METADATA = "__nestipy_web_action__"
 ACTION_CACHE_TTL = "__nestipy_web_action_cache_ttl__"
@@ -34,6 +33,7 @@ ACTION_PERMISSIONS = "__nestipy_web_action_permissions__"
 @dataclass(slots=True)
 class ActionContext:
     """Context passed to action guards."""
+
     action: str
     action_fn: Callable[..., Any] | None
     payload: dict[str, Any]
@@ -53,13 +53,13 @@ class ActionContext:
 class ActionGuard(Protocol):
     """Guard protocol for actions."""
 
-    def can_activate(self, ctx: ActionContext) -> Any:
-        ...
+    def can_activate(self, ctx: ActionContext) -> Any: ...
 
 
 @dataclass
 class ActionNonceCache:
     """In-memory nonce cache for replay protection."""
+
     ttl_seconds: int = 300
     _entries: dict[str, float] = field(default_factory=dict)
 
@@ -106,7 +106,9 @@ class OriginActionGuard:
             return True
         origin = ctx.headers.get("origin") or ""
         referer = ctx.headers.get("referer") or ctx.headers.get("referrer") or ""
-        origin_value = self._origin_from_header(origin) or self._origin_from_header(referer)
+        origin_value = self._origin_from_header(origin) or self._origin_from_header(
+            referer
+        )
         if not origin_value:
             return self.allow_missing
         origin_value = origin_value.rstrip("/")
@@ -231,6 +233,7 @@ class ActionSignatureGuard:
 @dataclass(slots=True)
 class ActionsOption:
     """Options to configure the actions controller and schema."""
+
     path: str = "/_actions"
     wrap_errors: bool = True
     guards: list[Any] = field(default_factory=list)
@@ -256,6 +259,7 @@ def action(
     key: Callable[..., str] | None = None,
 ):
     """Mark a method as a web action with optional caching metadata."""
+
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         """Attach action metadata to the callable."""
         setattr(fn, ACTION_METADATA, name or fn.__name__)
@@ -286,6 +290,7 @@ def ActionAuth(
     require_permissions_guard: bool = True,
 ):
     """Attach permissions and guards to an action in one decorator."""
+
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         if permissions:
             fn = ActionPermissions(*permissions)(fn)
@@ -302,6 +307,7 @@ def ActionAuth(
 @Injectable()
 class ActionRegistry:
     """Store action callables and optional cache entries."""
+
     def __init__(self) -> None:
         """Initialize action registry storage."""
         self._actions: dict[str, Callable[..., Any]] = {}
@@ -349,6 +355,7 @@ class ActionRegistry:
 @Injectable()
 class ActionExplorer(OnApplicationBootstrap):
     """Discover action methods after application bootstrap."""
+
     registry: Annotated[ActionRegistry, Inject()]
     discover: Annotated[DiscoverService, Inject()]
 
@@ -388,12 +395,12 @@ def _get_action_name(fn: Any) -> str | None:
 def _get_action_guards(fn: Any) -> list[Any]:
     """Extract guard metadata from a callable."""
     target = fn.__func__ if inspect.ismethod(fn) else fn
-    return Reflect.get_metadata(target, ACTION_GUARDS, []) or []
+    return Reflector.get_metadata(target, ACTION_GUARDS, []) or []
 
 
 def _get_action_permissions(fn: Any) -> list[str]:
     target = fn.__func__ if inspect.ismethod(fn) else fn
-    return Reflect.get_metadata(target, ACTION_PERMISSIONS, []) or []
+    return Reflector.get_metadata(target, ACTION_PERMISSIONS, []) or []
 
 
 def _extract_user_permissions(user: Any) -> set[str]:
@@ -445,9 +452,7 @@ async def _resolve_guard_instance(guard: Any) -> Any:
     return guard
 
 
-async def _run_action_guards(
-    guards: list[Any], ctx: ActionContext
-) -> None:
+async def _run_action_guards(guards: list[Any], ctx: ActionContext) -> None:
     """Execute all action guards in order."""
     for guard in guards:
         instance = await _resolve_guard_instance(guard)
@@ -634,6 +639,7 @@ def _build_csrf_cookie(
 @Controller("/")
 class ActionsController:
     """HTTP controller that executes registered actions."""
+
     registry: Annotated[ActionRegistry, Inject()]
     config: Annotated[ActionsOption, Inject(ACTIONS_OPTION_TOKEN)]
 
@@ -770,11 +776,13 @@ class ActionsController:
             setattr(self, "_schema_etag", schema_etag)
 
         if schema_etag and res is not None:
-            res.header("ETag", f"\"{schema_etag}\"")
+            res.header("ETag", f'"{schema_etag}"')
 
         if req is not None and schema_etag:
-            client_etag = req.headers.get("if-none-match") or req.headers.get("If-None-Match")
-            if client_etag in {schema_etag, f"\"{schema_etag}\""}:
+            client_etag = req.headers.get("if-none-match") or req.headers.get(
+                "If-None-Match"
+            )
+            if client_etag in {schema_etag, f'"{schema_etag}"'}:
                 if res is not None:
                     res.status(304)
                 return {}
@@ -786,16 +794,17 @@ def _set_action_route(option: ActionsOption) -> None:
     """Apply the configured base path to the actions controller."""
     if not option.path.startswith("/"):
         option.path = "/" + option.path
-    Reflect.set_metadata(ActionsController, RouteKey.path, option.path)
+    Reflector.set_metadata(ActionsController, RouteKey.path, option.path)
     if option.csrf_endpoint:
         csrf_path = option.csrf_endpoint
         if not csrf_path.startswith("/"):
             csrf_path = "/" + csrf_path
-        Reflect.set_metadata(ActionsController.csrf, RouteKey.path, csrf_path)
+        Reflector.set_metadata(ActionsController.csrf, RouteKey.path, csrf_path)
 
 
 class ActionsModule(ConfigurableModuleClass):
     """Dynamic module that wires action discovery and endpoints."""
+
     config: Annotated[ActionsOption, Inject(ACTIONS_OPTION_TOKEN)]
 
     @classmethod
@@ -809,7 +818,9 @@ class ActionsModule(ConfigurableModuleClass):
                 guards: list[Any] = []
                 origins_env = os.getenv("NESTIPY_ACTION_ALLOWED_ORIGINS", "")
                 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
-                allow_missing_env = os.getenv("NESTIPY_ACTION_ALLOW_MISSING_ORIGIN", "").strip()
+                allow_missing_env = os.getenv(
+                    "NESTIPY_ACTION_ALLOW_MISSING_ORIGIN", ""
+                ).strip()
                 if allow_missing_env:
                     allow_missing = allow_missing_env.lower() in {
                         "1",
@@ -825,7 +836,9 @@ class ActionsModule(ConfigurableModuleClass):
                         allow_missing=allow_missing,
                     )
                 )
-                csrf_enabled = options.csrf_enabled and os.getenv("NESTIPY_ACTION_CSRF", "").lower() not in {
+                csrf_enabled = options.csrf_enabled and os.getenv(
+                    "NESTIPY_ACTION_CSRF", ""
+                ).lower() not in {
                     "0",
                     "false",
                     "no",

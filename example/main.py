@@ -2,16 +2,19 @@ import os.path
 from typing import Any
 
 import socketio
-from granian.constants import Interfaces
 from app_module import AppModule
-from nestipy.common import HttpException, ExceptionFilter, Catch, logger
-from nestipy.common import session
-from nestipy.core import ArgumentHost, NestipyFactory
-from nestipy.core import FastApiApplication, BlackSheepApplication
+from granian.constants import Interfaces
+
+from nestipy.common import Catch, ExceptionFilter, HttpException, logger, session
+from nestipy.core import (
+    ArgumentHost,
+    BlackSheepApplication,
+    NestipyConfig,
+    NestipyFactory,
+)
 from nestipy.core.adapter.blacksheep_adapter import BlackSheepAdapter
-from nestipy.openapi import SwaggerModule, DocumentBuilder
+from nestipy.openapi import DocumentBuilder, SwaggerModule
 from nestipy.websocket import WebsocketAdapter
-from nestipy.core import NestipyConfig
 
 config = NestipyConfig(
     adapter=BlackSheepAdapter(),
@@ -22,7 +25,7 @@ config = NestipyConfig(
     router_spec_path="/_router/spec",  # optional override
     router_spec_token="secret",  # optional token protection
     devtools_static_path="/_devtools/static",  # stable devtools path (no token)
-    devtools_graph_renderer="cytoscape",    # switch to "mermaid" if you prefer
+    devtools_graph_renderer="cytoscape",  # switch to "mermaid" if you prefer
 )
 
 
@@ -36,7 +39,7 @@ document = (
     DocumentBuilder()
     .set_title("Nestipy API Documentation")
     .set_description(
-        "Nestipy is a Python framework inspired by NestJS and built on top of FastAPI or Blacksheep" 
+        "Nestipy is a Python framework inspired by NestJS and built on top of FastAPI or Blacksheep"
     )
     .set_version("1.0")
     .add_bearer_auth()
@@ -86,10 +89,15 @@ app.use(session())
 async def startup():
     logger.info("Starting up ...")
     static_path = app.get_devtools_static_path()
-    root_path = static_path[: -len("/static")] if static_path.endswith("/static") else static_path
+    root_path = (
+        static_path[: -len("/static")]
+        if static_path.endswith("/static")
+        else static_path
+    )
     logger.info("[Devtools] Graph: %s/graph", root_path)
     logger.info("[Devtools] Graph JSON: %s/graph.json", root_path)
     logger.info("[RouterSpec] %s (token required)", config.router_spec_path)
+
 
 # app.generate_typed_client("clients/api_client.py", class_name="ApiClient")
 

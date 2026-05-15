@@ -1,12 +1,13 @@
 import asyncio
+import typing
 
 import pytest
-
 from nestipy.common import Module
+from nestipy.core.adapter import HttpAdapter
 from nestipy.ioc import NestipyContainer
-from nestipy.metadata import Reflect, ModuleMetadata
-from nestipy.websocket.proxy import IoSocketProxy
+from nestipy.metadata import ModuleMetadata, Reflector
 from nestipy.websocket.decorator import Gateway, SubscribeMessage, SuccessEvent
+from nestipy.websocket.proxy import IoSocketProxy
 
 
 class FakeIoAdapter:
@@ -80,7 +81,7 @@ async def test_io_socket_proxy_registers_and_emits():
     NestipyContainer.clear()
     io_adapter = FakeIoAdapter()
     http_adapter = FakeHttpAdapter(io_adapter)
-    proxy = IoSocketProxy(http_adapter)
+    proxy = IoSocketProxy(typing.cast(HttpAdapter, http_adapter))
 
     proxy.apply_routes([AppModule])
 

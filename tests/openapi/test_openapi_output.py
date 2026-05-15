@@ -35,7 +35,9 @@ class CatsController:
     )
     @ApiExternalDocs("https://docs.example.com", "Docs")
     @ApiServer("https://api.example.com", "prod")
-    @ApiCallbacks({"onEvent": Callback(expression="{$request.body#/url}", path=PathItem())})
+    @ApiCallbacks(
+        {"onEvent": Callback(expression="{$request.body#/url}", path=PathItem())}
+    )
     @ApiCookie("session_id")
     @ApiQuery("include", "Include extras", required=False)
     @ApiBearerAuth()

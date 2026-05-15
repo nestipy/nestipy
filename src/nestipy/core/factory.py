@@ -3,10 +3,11 @@ import typing
 from importlib import import_module
 from typing import Type
 
-from nestipy.common.logger import logger, configure_logger, DEFAULT_LOG_FORMAT
+from nestipy.common.logger import DEFAULT_LOG_FORMAT, configure_logger, logger
 from nestipy.microservice.client.base import MicroserviceOption
-from .nestipy_application import NestipyApplication, NestipyConfig
-from .nestipy_microservice import NestipyMicroservice, NestipyConnectMicroservice
+
+from .application import NestipyApplication, NestipyConfig
+from .microservice import NestipyConnectMicroservice, NestipyMicroservice
 
 
 class _NestipyFactoryMeta(type):
@@ -73,7 +74,10 @@ class NestipyFactory(metaclass=_NestipyFactoryMeta):
         if config is None:
             configure_logger(level=logging.INFO)
             return
-        def _resolve_level(value: typing.Optional[typing.Union[int, str]], default: int) -> int:
+
+        def _resolve_level(
+            value: typing.Optional[typing.Union[int, str]], default: int
+        ) -> int:
             if value is None:
                 return default
             if isinstance(value, int):

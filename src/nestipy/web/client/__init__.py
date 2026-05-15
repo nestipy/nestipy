@@ -22,7 +22,7 @@ def codegen_client(
     prefix: str = "",
 ) -> None:
     """Generate a typed API client file from router metadata."""
-    spec = build_router_spec(modules, prefix=prefix)
+    spec = build_router_spec([m.__class__() for m in modules], prefix=prefix)
     _ensure_parent(output)
     if language in {"ts", "typescript"}:
         write_typescript_client_file(spec, output, class_name=class_name)
@@ -41,7 +41,9 @@ def codegen_client_from_url(
     if language in {"ts", "typescript"}:
         write_typescript_client_file(router_spec, output, class_name=class_name)
     else:
-        write_client_file(router_spec, output, class_name=class_name, async_client=False)
+        write_client_file(
+            router_spec, output, class_name=class_name, async_client=False
+        )
 
 
 def _ensure_parent(output: str) -> None:

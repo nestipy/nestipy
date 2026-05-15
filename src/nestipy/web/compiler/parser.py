@@ -61,13 +61,13 @@ def parse_component_file(
     if target is None and target_list:
         raise CompilerError(f"No component found in {path}")
 
-    decorated = {fn.name.value for fn in parsed.functions if _has_component_decorator(fn)}
+    decorated = {
+        fn.name.value for fn in parsed.functions if _has_component_decorator(fn)
+    }
     component_names = set(decorated)
     if target is not None:
         component_names.add(target.name.value)
-    component_names.update(
-        name for name in imported_names if name[:1].isupper()
-    )
+    component_names.update(name for name in imported_names if name[:1].isupper())
 
     components: dict[str, Node] = {}
     hooks: dict[str, list[str]] = {}
@@ -76,7 +76,9 @@ def parse_component_file(
         if fn.name.value not in component_names:
             continue
         locals_map = _collect_locals(fn, module_names)
-        name_map = _build_name_map(locals_map, parsed.externals, fixed_names=imported_names)
+        name_map = _build_name_map(
+            locals_map, parsed.externals, fixed_names=imported_names
+        )
         return_value = _extract_return_value(
             fn, parsed.externals, component_names, locals_map, name_map
         )

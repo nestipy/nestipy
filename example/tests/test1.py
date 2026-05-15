@@ -1,9 +1,10 @@
+import typing
 from typing import Annotated
 from unittest.mock import MagicMock
 
 import pytest
 
-from nestipy.common import Injectable, Controller, Get
+from nestipy.common import Controller, Get, Injectable
 from nestipy.ioc import Inject
 from nestipy.testing import Test, TestingModuleRef
 
@@ -39,7 +40,9 @@ async def test_app_provider(module_ref: TestingModuleRef):
 
 @pytest.mark.asyncio
 async def test_app_controller(module_ref: TestingModuleRef):
-    app_controller: AppController = await module_ref.get(AppController)
+    app_controller: AppController = typing.cast(
+        AppController, await module_ref.get(AppController)
+    )
     assert isinstance(app_controller, AppController)
     assert isinstance(app_controller.provider, AppProvider)
     mock_result = "Hello from mock"

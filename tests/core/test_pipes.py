@@ -5,7 +5,12 @@ import pytest
 from nestipy.common import Injectable, Module, Controller, Get, UsePipes
 from nestipy.common.pipes import PipeTransform, PipeArgumentMetadata, ParseIntPipe
 from nestipy.core import ExecutionContext, AppKey
-from nestipy.ioc import NestipyContainer, RequestContextContainer, Query, ModuleProviderDict
+from nestipy.ioc import (
+    NestipyContainer,
+    RequestContextContainer,
+    Query,
+    ModuleProviderDict,
+)
 from nestipy.common.exception.http import HttpException
 from nestipy.common.http_ import Request, Response
 
@@ -126,9 +131,7 @@ async def test_pipe_order_global_module_controller_method_param():
             return value
 
     @Module(
-        providers=[
-            ModuleProviderDict(token=AppKey.APP_PIPE, use_class=ModulePipe)
-        ],
+        providers=[ModuleProviderDict(token=AppKey.APP_PIPE, use_class=ModulePipe)],
         controllers=[TestController],
     )
     class TestModule:
@@ -161,7 +164,9 @@ async def test_pipe_order_global_module_controller_method_param():
     res = Response()
 
     adapter = DummyAdapter([GlobalPipe])
-    ctx = ExecutionContext(adapter, TestModule, TestController, TestController.handler, req, res)
+    ctx = ExecutionContext(
+        adapter, TestModule, TestController, TestController.handler, req, res
+    )
     from nestipy.core.pipes.processor import PipeProcessor
 
     pipes = await PipeProcessor().get_pipes(ctx)

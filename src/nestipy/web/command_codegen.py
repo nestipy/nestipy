@@ -43,17 +43,25 @@ def codegen(args: Iterable[str], modules: list[Type] | None = None) -> None:
 
     spec_url = parsed.get("spec")
     if spec_url:
-        codegen_client_from_url(str(spec_url), str(output), language=language, class_name=class_name)
+        codegen_client_from_url(
+            str(spec_url), str(output), language=language, class_name=class_name
+        )
         if types_output:
-            codegen_client_types_from_url(str(spec_url), str(types_output), class_name=class_name)
+            codegen_client_types_from_url(
+                str(spec_url), str(types_output), class_name=class_name
+            )
         return
 
     if modules is None:
         raise RuntimeError("Modules are required to generate client without --spec")
 
-    codegen_client(modules, str(output), language=language, class_name=class_name, prefix=prefix)
+    codegen_client(
+        modules, str(output), language=language, class_name=class_name, prefix=prefix
+    )
     if types_output:
-        write_client_types_file(modules, str(types_output), class_name=class_name, prefix=prefix)
+        write_client_types_file(
+            modules, str(types_output), class_name=class_name, prefix=prefix
+        )
 
 
 def codegen_actions(args: Iterable[str], modules: list[Type] | None = None) -> None:
@@ -91,11 +99,15 @@ def maybe_codegen_client(parsed: dict[str, str | bool], config: WebConfig) -> No
         default_path = config.resolve_src_dir() / "api" / "client.ts"
         output = str(default_path)
     class_name = str(parsed.get("class_name", "ApiClient"))
-    codegen_client_from_url(str(spec_url), str(output), language=language, class_name=class_name)
+    codegen_client_from_url(
+        str(spec_url), str(output), language=language, class_name=class_name
+    )
     types_output = parsed.get("router_types")
     if not types_output:
         types_output = str(config.resolve_app_dir() / "_generated" / "api_types.py")
-    codegen_client_types_from_url(str(spec_url), str(types_output), class_name=class_name)
+    codegen_client_types_from_url(
+        str(spec_url), str(types_output), class_name=class_name
+    )
 
 
 def maybe_codegen_actions(

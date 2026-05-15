@@ -9,6 +9,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
     Optional,
     Protocol,
     Type,
@@ -16,11 +17,10 @@ from typing import (
     Union,
     cast,
     overload,
-    Literal,
 )
 
 from nestipy.ioc.provider import ModuleProviderDict
-from nestipy.metadata import ModuleMetadata, Reflect
+from nestipy.metadata import ModuleMetadata, Reflector
 
 T = TypeVar("T")
 
@@ -115,11 +115,11 @@ class ConfigurableModuleBuilder(Generic[T]):
         dynamic_module = DynamicModule(
             obj,
             providers=provider
-            + Reflect.get_metadata(obj, ModuleMetadata.Providers, []),
-            exports=Reflect.get_metadata(obj, ModuleMetadata.Exports, []),
-            imports=imports + Reflect.get_metadata(obj, ModuleMetadata.Imports, []),
-            controllers=Reflect.get_metadata(obj, ModuleMetadata.Controllers, []),
-            is_global=Reflect.get_metadata(obj, ModuleMetadata.Global, False),
+            + Reflector.get_metadata(obj, ModuleMetadata.Providers, []),
+            exports=Reflector.get_metadata(obj, ModuleMetadata.Exports, []),
+            imports=imports + Reflector.get_metadata(obj, ModuleMetadata.Imports, []),
+            controllers=Reflector.get_metadata(obj, ModuleMetadata.Controllers, []),
+            is_global=Reflector.get_metadata(obj, ModuleMetadata.Global, False),
         )
         return self._extra_return(dynamic_module)
 
@@ -196,7 +196,9 @@ class ConfigurableModuleBuilder(Generic[T]):
 
         cls = type("ConfigurableModuleClass", (object,), attrs)
         if self._method_name == "for_root":
-            return cast(type[ConfigurableModuleWithForRoot[T]], cls), module_option_token
+            return cast(
+                type[ConfigurableModuleWithForRoot[T]], cls
+            ), module_option_token
         return cast(type[ConfigurableModuleBase[T]], cls), module_option_token
 
 

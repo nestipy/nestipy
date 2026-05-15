@@ -1,7 +1,7 @@
 import asyncio
 
 from nestipy.microservice import NatsClientOption, Transport
-from nestipy.microservice.client import NatsClientProxy, MicroserviceOption
+from nestipy.microservice.client import MicroserviceOption, NatsClientProxy
 from nestipy.microservice.server.base import MicroServiceServer
 
 

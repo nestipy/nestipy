@@ -1,5 +1,13 @@
 from typing import Optional
-from .openapi_docs.v3 import Info, OpenAPI, Components, SecurityScheme, HTTPSecurity
+
+from .openapi_docs.v3 import (
+    Components,
+    HTTPSecurity,
+    Info,
+    OpenAPI,
+    SecurityScheme,
+    SecuritySchemeType,
+)
 
 
 class DocumentBuilder:
@@ -56,23 +64,39 @@ class DocumentBuilder:
         self._info["version"] = version
         return self
 
-    def add_basic_auth(self):
+    def add_basic_auth(
+        self,
+        type: SecuritySchemeType = SecuritySchemeType.HTTP,
+        description: str | None = None,
+        bearer_format: str | None = None,
+    ):
         """
         Add Basic Authentication to the security schemes.
         :return: Self for chaining.
         """
         self._security_schemes["basicAuth"] = HTTPSecurity(
             scheme="basic",
+            type=type,
+            description=description,
+            bearer_format=bearer_format,
         )
         return self
 
-    def add_bearer_auth(self):
+    def add_bearer_auth(
+        self,
+        type: SecuritySchemeType = SecuritySchemeType.HTTP,
+        description: str | None = None,
+        bearer_format: str | None = None,
+    ):
         """
         Add Bearer Authentication (JWT) to the security schemes.
         :return: Self for chaining.
         """
         self._security_schemes["bearer"] = HTTPSecurity(
             scheme="bearer",
+            type=type,
+            description=description,
+            bearer_format=bearer_format,
         )
         return self
 

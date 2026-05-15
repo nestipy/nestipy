@@ -1,6 +1,6 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from nestipy.metadata import ClassMetadata, Reflect
+from nestipy.metadata import ClassMetadata, Reflector
 
 
 # Mock ModuleMetadata for testing
@@ -35,7 +35,7 @@ def test_get_service_providers_no_imports():
     module = MockModule()
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata", return_value=[]):
+    with patch.object(Reflector, "get_metadata", return_value=[]):
         providers, import_providers = metadata.get_service_providers()
 
     assert providers == []  # No providers set
@@ -47,7 +47,7 @@ def test_get_service_providers_with_providers():
     module = MockModule()
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata") as mock_get_metadata:
+    with patch.object(Reflector, "get_metadata") as mock_get_metadata:
         mock_get_metadata.side_effect = [
             ["provider1", "provider2"],  # Providers for the current module
             [],  # Imports for the current module (empty)
@@ -64,7 +64,7 @@ def test_get_service_providers_with_imports():
 
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata") as mock_get_metadata:
+    with patch.object(Reflector, "get_metadata") as mock_get_metadata:
         mock_get_metadata.side_effect = [
             [],  # Providers for the current module
             [imported_module],  # Imports (imported_module is being imported)
@@ -83,7 +83,7 @@ def test_get_service_providers_with_re_exported_modules():
 
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata") as mock_get_metadata:
+    with patch.object(Reflector, "get_metadata") as mock_get_metadata:
         mock_get_metadata.side_effect = [
             [],
             [imported_module],
@@ -104,7 +104,7 @@ def test_get_service_providers_with_dynamic_module():
 
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata") as mock_get_metadata:
+    with patch.object(Reflector, "get_metadata") as mock_get_metadata:
         mock_get_metadata.side_effect = [
             [],  # No providers for the current module
             [dynamic_module],  # Imports, including the dynamic module
@@ -126,7 +126,7 @@ def test_get_service_providers_no_re_export():
 
     metadata = ClassMetadata(module)
 
-    with patch.object(Reflect, "get_metadata") as mock_get_metadata:
+    with patch.object(Reflector, "get_metadata") as mock_get_metadata:
         mock_get_metadata.side_effect = [
             [],  # Providers for the current module
             [imported_module],  # Imports

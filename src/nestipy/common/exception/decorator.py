@@ -1,13 +1,14 @@
-from typing import Union, Type, TYPE_CHECKING, Callable
-
-from nestipy.metadata import SetMetadata
+from typing import TYPE_CHECKING, Callable, Type, Union
 
 from nestipy.common.decorator import Injectable
+from nestipy.metadata import SetMetadata
+
 from .meta import ExceptionKey
 
 if TYPE_CHECKING:
-    from .interface import ExceptionFilter
     from nestipy.common.exception.http import HttpException
+
+    from .interface import ExceptionFilter
 
 
 def Catch(

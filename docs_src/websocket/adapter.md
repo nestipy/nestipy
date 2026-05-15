@@ -200,7 +200,7 @@ class WebsocketAdapter(IoAdapter):
 ## Register the Adapter
 
 ```python
-from nestipy.core.nestipy_factory import NestipyFactory
+from nestipy.core.factory import NestipyFactory
 
 app = NestipyFactory.create(AppModule)
 app.use_io_adapter(WebsocketAdapter())

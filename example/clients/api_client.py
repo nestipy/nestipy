@@ -26,6 +26,7 @@ def _jsonify(value: typing.Any) -> typing.Any:
         return value.model_dump(mode="json")
     return value
 
+
 def _normalize_mapping(value: typing.Any) -> typing.Optional[dict[str, typing.Any]]:
     if value is None:
         return None
@@ -33,6 +34,7 @@ def _normalize_mapping(value: typing.Any) -> typing.Optional[dict[str, typing.An
     if isinstance(payload, dict):
         return payload
     return None
+
 
 def _encode_cookies(cookies: dict[str, typing.Any]) -> str:
     return "; ".join(f"{k}={v}" for k, v in cookies.items())
@@ -48,14 +50,18 @@ def _join_url(base_url: str, path: str) -> str:
 
 AppControllerPostBody = TestBody
 
+
 class AppControllerTestHeaders(TypedDict, total=False):
     headers: Required[dict[str, typing.Any]]
+
 
 class AppControllerTestCookies(TypedDict, total=False):
     cookies: Required[dict[str, typing.Any]]
 
+
 class UserControllerGetUserHeaders(TypedDict, total=False):
     headers: Required[dict[str, typing.Any]]
+
 
 class ApiClient:
     def __init__(
@@ -74,7 +80,9 @@ class ApiClient:
                 self._client = self._build_default_client(async_client=False)
                 self._owns_client = True
             if not hasattr(self._client, "request"):
-                raise TypeError("Client must provide a request(method, url, ...) method")
+                raise TypeError(
+                    "Client must provide a request(method, url, ...) method"
+                )
             self._requester = self._client.request
 
     def _build_default_client(self, async_client: bool = False):
@@ -126,14 +134,27 @@ class ApiClient:
                 text = text()
             return text
 
-    def post(self, *, body: typing.Optional[AppControllerPostBody] = None) -> typing.Any:
+    def post(
+        self, *, body: typing.Optional[AppControllerPostBody] = None
+    ) -> typing.Any:
         path = "/"
         query_params = None
         header_params = None
         json_body = _jsonify(body) if body is not None else None
-        return self._request("POST", path, params=query_params or None, json=json_body, headers=header_params or None)
+        return self._request(
+            "POST",
+            path,
+            params=query_params or None,
+            json=json_body,
+            headers=header_params or None,
+        )
 
-    def test(self, *, headers: typing.Optional[AppControllerTestHeaders] = None, cookies: typing.Optional[AppControllerTestCookies] = None) -> typing.Any:
+    def test(
+        self,
+        *,
+        headers: typing.Optional[AppControllerTestHeaders] = None,
+        cookies: typing.Optional[AppControllerTestCookies] = None,
+    ) -> typing.Any:
         path = "/"
         query_params = None
         header_params = _normalize_mapping(headers)
@@ -141,15 +162,29 @@ class ApiClient:
         cookie_params = _normalize_mapping(cookies)
         if cookie_params:
             header_params = header_params or {}
-            header_params['Cookie'] = _encode_cookies(cookie_params)
-        return self._request("GET", path, params=query_params or None, json=json_body, headers=header_params or None)
+            header_params["Cookie"] = _encode_cookies(cookie_params)
+        return self._request(
+            "GET",
+            path,
+            params=query_params or None,
+            json=json_body,
+            headers=header_params or None,
+        )
 
-    def get_user(self, *, headers: typing.Optional[UserControllerGetUserHeaders] = None) -> Union[Response, dict[str, typing.Any]]:
+    def get_user(
+        self, *, headers: typing.Optional[UserControllerGetUserHeaders] = None
+    ) -> Union[Response, dict[str, typing.Any]]:
         path = "/users"
         query_params = None
         header_params = _normalize_mapping(headers)
         json_body = None
-        return self._request("GET", path, params=query_params or None, json=json_body, headers=header_params or None)
+        return self._request(
+            "GET",
+            path,
+            params=query_params or None,
+            json=json_body,
+            headers=header_params or None,
+        )
 
     def get_user_by_id(self, id: typing.Any) -> Union[Response, dict[str, typing.Any]]:
         path = "/users/{id}"
@@ -157,7 +192,13 @@ class ApiClient:
         query_params = None
         header_params = None
         json_body = None
-        return self._request("POST", path, params=query_params or None, json=json_body, headers=header_params or None)
+        return self._request(
+            "POST",
+            path,
+            params=query_params or None,
+            json=json_body,
+            headers=header_params or None,
+        )
 
 
 Response = typing.Any

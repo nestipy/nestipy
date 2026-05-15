@@ -48,4 +48,3 @@ class CachePolicy:
             return None
         values = [v.strip() for v in self.vary if v and str(v).strip()]
         return ", ".join(values) if values else None
-

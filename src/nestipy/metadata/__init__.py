@@ -4,7 +4,7 @@ from .decorator import SetMetadata
 from .dependency import CtxDepKey
 from .module import ModuleMetadata
 from .provider_token import ProviderToken
-from .reflect import Reflect
+from .reflect import Reflector
 from .route import RouteKey
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "SetMetadata",
     "CtxDepKey",
     "RouteKey",
-    "Reflect",
+    "Reflector",
 ]

@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from typing import Awaitable, Callable, Mapping, Protocol, TypeAlias, Literal, TYPE_CHECKING
+from typing import (
+    Awaitable,
+    Callable,
+    Mapping,
+    Protocol,
+    TypeAlias,
+    Literal,
+    TYPE_CHECKING,
+)
 
 from nestipy.common.constant import DEVTOOLS_STATIC_PATH_KEY
 from nestipy.common.template import TemplateEngine, TemplateKey
@@ -17,6 +25,7 @@ JsonValue: TypeAlias = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"
 
 if TYPE_CHECKING:
     from nestipy.dynamic_module import DynamicModule
+
     ModuleRef: TypeAlias = type | DynamicModule
 else:
     ModuleRef: TypeAlias = type
@@ -39,13 +48,17 @@ ControllerInstance: TypeAlias = InstanceLike
 class SocketServerLike(Protocol):
     """Minimal socket server surface used by websocket context helpers."""
 
-    def emit(self, event: str, data: JsonValue | None = None, **kwargs: JsonValue) -> None: ...
+    def emit(
+        self, event: str, data: JsonValue | None = None, **kwargs: JsonValue
+    ) -> None: ...
 
 
 class SocketClientLike(Protocol):
     """Minimal socket client surface used by websocket context helpers."""
 
-    def emit(self, event: str, data: JsonValue | None = None, **kwargs: JsonValue) -> None: ...
+    def emit(
+        self, event: str, data: JsonValue | None = None, **kwargs: JsonValue
+    ) -> None: ...
 
 
 ASGIValue: TypeAlias = (
@@ -66,6 +79,7 @@ ProviderToken: TypeAlias = type | str
 
 class TokenProvider(Protocol):
     token: ProviderToken
+
 
 RequestHandler: TypeAlias = Callable[
     [Request, Response, Callable],
@@ -104,7 +118,9 @@ class HttpAdapterLike(Protocol):
     def all(
         self, path: str, handler: RequestHandler, meta: MetaMapping | None = None
     ) -> None: ...
-    def static(self, path: str, directory: str, *args: MetaValue, **kwargs: MetaValue) -> None: ...
+    def static(
+        self, path: str, directory: str, *args: MetaValue, **kwargs: MetaValue
+    ) -> None: ...
     def get_io_adapter(self) -> IoAdapter | None: ...
     def enable_cors(self, options: CorsOptions | None = None) -> None: ...
     def add_global_interceptors(self, *interceptors: InterceptorLike) -> None: ...

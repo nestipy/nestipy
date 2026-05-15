@@ -2,35 +2,35 @@ import dataclasses
 import inspect
 import os.path
 import traceback
-from typing import Union, Type, Callable, Any
+from typing import Any, Callable, Type, Union
 
+from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.core.guards import GuardProcessor
 from nestipy.core.interceptor import RequestInterceptor
 from nestipy.core.pipes.processor import PipeProcessor
-from nestipy.core.exception.processor import ExceptionFilterHandler
 from nestipy.graphql.graphql_adapter import GraphqlAdapter
 from nestipy.graphql.meta import NestipyGraphqlKey
-from nestipy.ioc import NestipyContainer
-from nestipy.ioc import RequestContextContainer
+from nestipy.ioc import NestipyContainer, RequestContextContainer
 from nestipy.ioc.helper import ContainerHelper
-from nestipy.metadata import Reflect, CtxDepKey
-from .graphql_explorer import GraphqlExplorer
-from .graphql_module import GraphqlModule, GraphqlOption
+from nestipy.metadata import CtxDepKey, Reflector
+
 from ..common import (
-    Request,
-    Response,
     HttpException,
     HttpStatus,
     HttpStatusMessages,
+    Request,
+    Response,
     Websocket,
 )
+from ..common.constant import DEVTOOLS_STATIC_PATH_KEY
 from ..common.logger import logger
 from ..core.adapter.http_adapter import HttpAdapter
 from ..core.context.execution_context import ExecutionContext
 from ..core.exception.error_policy import build_graphql_error, request_context_info
 from ..core.security.cors import apply_cors_headers, resolve_cors_options
-from ..common.constant import DEVTOOLS_STATIC_PATH_KEY
 from ..types_ import NextFn
+from .graphql_explorer import GraphqlExplorer
+from .graphql_module import GraphqlModule, GraphqlOption
 
 
 class GraphqlProxy:
@@ -80,7 +80,9 @@ class GraphqlProxy:
                     fr, resolver, fr.get("field_options")
                 )
 
-        await self._create_graphql_request_handler(graphql_module.config or GraphqlOption())
+        await self._create_graphql_request_handler(
+            graphql_module.config or GraphqlOption()
+        )
 
     def _create_graphql_query_handler(
         self, module_ref: Union[Type, object], meta: dict, is_field: bool = False
@@ -88,20 +90,27 @@ class GraphqlProxy:
         resolver: Union[object, Type] = meta["class"]
         method_name: str = meta["handler_name"]
         method = getattr(resolver, method_name)
-        default_return_type = Reflect.get_metadata(
+        default_return_type = Reflector.get_metadata(
             method, NestipyGraphqlKey.return_type, None
         )
         signature = inspect.signature(method)
         arg_token_map: dict[str, str] = {}
         for param_name, param in signature.parameters.items():
-            if param_name in ("self", "cls") or param.annotation is inspect.Parameter.empty:
+            if (
+                param_name in ("self", "cls")
+                or param.annotation is inspect.Parameter.empty
+            ):
                 continue
             _annotation, dep_key = ContainerHelper.get_type_from_annotation(
                 param.annotation
             )
             if dep_key.metadata.key == CtxDepKey.Args:
                 token = dep_key.metadata.token
-                if isinstance(token, str) and token not in ("root", "info", "__all_args__"):
+                if isinstance(token, str) and token not in (
+                    "root",
+                    "info",
+                    "__all_args__",
+                ):
                     arg_token_map[token] = param_name
 
         async def graphql_handler(*_args, **kwargs):
@@ -153,9 +162,7 @@ class GraphqlProxy:
                     )
 
                 pipe_processor: PipeProcessor = await self.container.get(PipeProcessor)
-                pipes = await pipe_processor.get_pipes(
-                    execution_context, is_http=True
-                )
+                pipes = await pipe_processor.get_pipes(execution_context, is_http=True)
                 execution_context.set_pipes(pipes)
 
                 async def next_fn():
@@ -256,7 +263,9 @@ class GraphqlProxy:
             await self.container.preload_request_scoped_properties()
             try:
                 from starlette.requests import Request as StarletteRequest
-                from starlette.responses import StreamingResponse as StarletteStreamingResponse
+                from starlette.responses import (
+                    StreamingResponse as StarletteStreamingResponse,
+                )
 
                 sreq = StarletteRequest(scope=_req.scope, receive=_req.receive)
                 sresp = await gql_asgi.run(sreq)
@@ -269,6 +278,7 @@ class GraphqlProxy:
                 for key, value in sresp.headers.items():
                     res.header(key, value)
                 if isinstance(sresp, StarletteStreamingResponse):
+
                     async def _stream():
                         async for chunk in sresp.body_iterator:
                             yield chunk

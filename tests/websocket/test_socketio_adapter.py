@@ -1,3 +1,5 @@
+from socketio import AsyncServer
+import typing
 import asyncio
 
 import pytest
@@ -47,7 +49,7 @@ class FakeAsyncServer:
 
 def test_socketio_adapter_on_event():
     fake = FakeAsyncServer()
-    adapter = SocketIoAdapter(fake)
+    adapter = SocketIoAdapter(typing.cast(AsyncServer, fake))
     called = {}
 
     @adapter.on("ping")
@@ -67,7 +69,7 @@ def test_socketio_adapter_on_event():
 
 def test_socketio_adapter_connect_disconnect():
     fake = FakeAsyncServer()
-    adapter = SocketIoAdapter(fake)
+    adapter = SocketIoAdapter(typing.cast(AsyncServer, fake))
     called = {"connect": False, "disconnect": False}
 
     @adapter.on_connect()
@@ -93,7 +95,7 @@ def test_socketio_adapter_connect_disconnect():
 @pytest.mark.asyncio
 async def test_socketio_adapter_call_delegates_to_server():
     fake = FakeAsyncServer()
-    adapter = SocketIoAdapter(fake)
+    adapter = SocketIoAdapter(typing.cast(AsyncServer, fake))
 
     scope = {"type": "http", "path": "/socket.io"}
 
