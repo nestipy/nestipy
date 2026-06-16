@@ -4,6 +4,95 @@
   --vp-c-brand-3: #a01830;
 }
 
+/* Hide scrollbars site-wide while keeping scroll functionality */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari/WebKit */
+}
+
+/* Dark-mode color tokens for the custom landing (light defaults live in the
+   scoped component styles; these global rules override in dark mode). */
+html.dark .nx {
+  --nx-bg: #07080d;
+  --nx-fg: #eef0f6;
+  --nx-muted: #9aa0b4;
+  --nx-line: rgba(148, 163, 184, 0.14);
+  --nx-brand-2: #ff6b54;
+  --nx-surface: rgba(255, 255, 255, 0.03);
+  --nx-surface-hover: rgba(255, 255, 255, 0.07);
+  --nx-grid-line: rgba(148, 163, 184, 0.06);
+  --nx-card-grad: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  --nx-card-shadow: none;
+  --nx-orb-opacity: 0.55;
+  /* terminal / code window (dark) */
+  --nx-win-bg: linear-gradient(180deg, rgba(13, 16, 26, 0.92), rgba(7, 8, 13, 0.96));
+  --nx-win-bar: rgba(255, 255, 255, 0.02);
+  --nx-win-border: rgba(148, 163, 184, 0.14);
+  --nx-win-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.8);
+  --nx-code-fg: #d6d9e6;
+  --nx-c-k: #ff7b6b;
+  --nx-c-d: #ffd166;
+  --nx-c-s: #7ee0a8;
+  --nx-c-t: #7cc5ff;
+  --nx-c-f: #c4a7ff;
+  --nx-c-b: #ff9f7a;
+  --nx-c-c: #5a6172;
+  --nx-install-bg: #0b0d14;
+  --nx-install-border: rgba(148, 163, 184, 0.18);
+  --nx-install-fg: #e8eaf2;
+  --nx-install-prompt: #ff6b54;
+  --nx-install-hint: #9aa0b4;
+}
+
+/* Full-bleed custom landing (index.md uses layout: page) */
+.VPPage:has(.nx) {
+  padding: 0;
+  margin: 0;
+}
+.VPPage .nx {
+  width: 100%;
+}
+
+/* App bar (site-wide): fully transparent at the top of the page, glassy
+   translucent once scrolled. The base rule (low specificity) is transparent;
+   the `:not(.top)` rule (higher specificity) only matches once scrolled. */
+.VPNavBar {
+  background-color: transparent !important;
+  transition: background-color 0.25s ease;
+}
+.VPNavBar .content-body {
+  background-color: transparent !important;
+}
+.VPNavBar.top .divider-line,
+.VPNavBar.top .divider {
+  background-color: transparent !important;
+}
+.VPNavBar:not(.top) {
+  background-color: color-mix(in srgb, var(--vp-c-bg) 72%, transparent) !important;
+  backdrop-filter: saturate(180%) blur(14px);
+}
+
+/* Dark mode only: blend the bar into the dark hero on the landing page. */
+html.dark .Layout:has(.nx) .VPNav {
+  --vp-c-bg: #07080d;
+  --vp-c-bg-alt: #07080d;
+}
+html.dark .Layout:has(.nx) .VPNavBarSearch .DocSearch-Button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
 .vp-doc h1 {
   font-weight: 700;
   letter-spacing: -0.02em;

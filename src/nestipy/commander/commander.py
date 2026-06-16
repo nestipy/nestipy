@@ -179,10 +179,10 @@ class NestipyCommander(object):
                     self._list_route(modules)
                 elif command_name == "codegen:client":
                     self._codegen_client(modules, args)
-                elif command_name.startswith("web:"):
-                    from nestipy.web.commands import run_command
+                elif command_name == "client:gen":
+                    from nestipy.client.command import run_client_gen
 
-                    run_command(command_name, args, modules=modules)
+                    run_client_gen(modules, args)
                 else:
                     echo.error(f"Command '{command_name}' not found ")
             await self.instance_loader.destroy()

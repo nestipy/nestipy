@@ -142,78 +142,29 @@ class AppService:
 
 ```
 
-## Web Actions Security
+## Typed TypeScript Client
 
-Nestipy Web actions support guard-based security similar to NestJS. You can enable default
-guards globally or attach guards per action.
+Generate a typed TypeScript HTTP client straight from your controllers so any JS/TS
+frontend can call your API with full typing:
 
-Enable security presets globally:
-
-```python
-from nestipy.common import Module
-from nestipy.web import ActionsModule, ActionsOption
-
-
-@Module(
-    imports=[
-        ActionsModule.for_root(
-            ActionsOption(
-                path="/_actions",
-                csrf_enabled=True,
-            )
-        )
-    ],
-)
-class AppModule: ...
+```bash
+nestipy run client:gen --output clients/api_client.ts --class ApiClient
 ```
-
-Attach guards/permissions per action:
-
-```python
-from nestipy.web import (
-    action,
-    ActionAuth,
-    ActionPermissions,
-    UseActionGuards,
-    OriginActionGuard,
-    CsrfActionGuard,
-    ActionSignatureGuard,
-)
-
-
-class AppActions:
-    @action()
-    @ActionAuth("admin", guards=[OriginActionGuard, CsrfActionGuard])
-    async def secure_action(self, payload: dict) -> str:
-        return "ok"
-
-    @action()
-    @UseActionGuards(ActionSignatureGuard)
-    async def signed_action(self, payload: dict) -> str:
-        return "ok"
-```
-
-When CSRF protection is enabled, call the CSRF endpoint once on the client to set the cookie:
 
 ```ts
-import { fetchCsrfToken } from './actions';
+import { createApiClient } from "./api_client";
 
-await fetchCsrfToken('/_actions/csrf');
+const api = createApiClient({ baseUrl: "/api" });
+const cat = await api.CatsController.getCat(1); // fully typed, grouped by controller
 ```
 
-Environment presets (read at import time):
+See [Typed Client](https://nestipy.vercel.app/overview/typed-client) for the full guide.
 
-- `NESTIPY_ACTION_SECURITY=1` enable defaults
-- `NESTIPY_ACTION_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
-- `NESTIPY_ACTION_CSRF=1` / `0`
-- `NESTIPY_ACTION_SIGNATURE_SECRET=...`
-- `NESTIPY_ACTION_PERMISSIONS=1`
+## Web Frontends with Inertia
 
-CLI convenience flags map to these env vars:
-
-```
-nestipy start --action-security --action-origins "http://localhost:5173" --action-csrf
-```
+For server-driven pages, Nestipy ships a first-class [Inertia.js](https://inertiajs.com)
+adapter (`nestipy-inertia`) with full protocol parity — partial reloads, deferred props,
+merge props, history encryption and SSR. See [Inertia](https://nestipy.vercel.app/technique/inertia).
 
 ## Documentation
 

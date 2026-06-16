@@ -49,5 +49,3 @@ Nestipy also supports lightweight runtime flags without the config module:
 - `NESTIPY_CORS_ALLOW_CREDENTIALS=1`
 - `NESTIPY_CORS_MAX_AGE=600`
 - `NESTIPY_CORS_ORIGIN_REGEX=^https?://.*\.example\.com$`
-
-For actions security defaults, see [Actions (RPC)](/web/actions).

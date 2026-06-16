@@ -66,7 +66,6 @@ from nestipy.ioc import (
     NestipyContainer,
 )
 from nestipy.openapi.openapi_docs.v3 import PathItem, Reference, Schema
-from nestipy.web.ssr import SSRRenderer
 
 from ..websocket.adapter import IoAdapter
 from .adapter.fastapi_adapter import FastApiAdapter
@@ -236,7 +235,6 @@ class NestipyApplication:
     _router_spec_token: Optional[str] = None
     _router_detect_conflicts: bool = True
     _devtools_graph_renderer: Literal["mermaid", "cytoscape"] = "mermaid"
-    _web_ssr_renderer: Optional[SSRRenderer] = None
     _log_json: bool = False
     _security_headers_enabled: bool = True
     _cors_options: Optional[CorsOptions] = None
@@ -338,9 +336,7 @@ class NestipyApplication:
         self._dependency_graph_limit = config.dependency_graph_limit
         self._dependency_graph_json_path = config.dependency_graph_json_path
         self.instance_loader.enable_profile(self._profile or self._log_bootstrap)
-        web_static = WebStaticHandler(
-            self._http_adapter, on_ssr_renderer=self._set_web_ssr_renderer
-        )
+        web_static = WebStaticHandler(self._http_adapter)
         server = GranianServerRunner(self)
         lifecycle = LifecycleRunner(self._background_tasks, self.instance_loader)
         self._helpers = _NestipyHelpers(
@@ -699,12 +695,6 @@ class NestipyApplication:
         if not self._ready:
             await self.setup()
         return self._ready
-
-    # ------------------------------------------------------------------
-    # Web SSR Hook
-    # ------------------------------------------------------------------
-    def _set_web_ssr_renderer(self, renderer: Optional[SSRRenderer]) -> None:
-        self._web_ssr_renderer = renderer
 
     # ------------------------------------------------------------------
     # Adapter Accessors

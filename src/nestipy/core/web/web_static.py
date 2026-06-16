@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import collections
 import json
 import mimetypes
 import os
 import re
 import sys
-import time
 import typing
 from typing import Callable, Optional, Awaitable
 
@@ -16,35 +14,20 @@ from nestipy.common.http_ import Request, Response
 from nestipy.common.logger import logger
 from nestipy.common.template import TemplateKey
 from nestipy.core.types import JsonValue
-from nestipy.web.ssr import (
-    SSRRenderError,
-    SSRRenderer,
-    create_ssr_renderer,
-    env_ssr_enabled,
-    env_ssr_runtime,
-    resolve_ssr_entry,
-)
 from nestipy.core.adapter.http_adapter import HttpAdapter
 
 
 class WebStaticHandler:
-    """Serve built web assets (and optional SSR) before adapter routing."""
+    """Serve built web assets (a Vite/SPA ``dist/``) before adapter routing."""
 
-    def __init__(
-        self,
-        http_adapter: HttpAdapter,
-        *,
-        on_ssr_renderer: Optional[Callable[[Optional[SSRRenderer]], None]] = None,
-    ) -> None:
+    def __init__(self, http_adapter: HttpAdapter) -> None:
         self._http_adapter = http_adapter
-        self._on_ssr_renderer = on_ssr_renderer
         self._try_handler: Optional[
             Callable[[Request, Response, bool], Awaitable[bool]]
         ] = None
-        self._ssr_renderer: Optional[SSRRenderer] = None
 
     def register(self) -> None:
-        """Register static/SSR handlers on the HTTP adapter."""
+        """Register the static-file handler on the HTTP adapter."""
         dist_dir = os.getenv("NESTIPY_WEB_DIST") or ""
         if not dist_dir:
             if os.getenv("NESTIPY_WEB_DEV") == "1" or "--dev" in sys.argv:
@@ -59,15 +42,6 @@ class WebStaticHandler:
                     if arg.startswith(flag + "="):
                         return arg.split("=", 1)[1]
                 return None
-
-            if "--ssr" in argv and not os.getenv("NESTIPY_WEB_SSR"):
-                os.environ["NESTIPY_WEB_SSR"] = "1"
-            cli_ssr_runtime = _cli_value("--ssr-runtime")
-            if cli_ssr_runtime and not os.getenv("NESTIPY_WEB_SSR_RUNTIME"):
-                os.environ["NESTIPY_WEB_SSR_RUNTIME"] = cli_ssr_runtime
-            cli_ssr_entry = _cli_value("--ssr-entry")
-            if cli_ssr_entry and not os.getenv("NESTIPY_WEB_SSR_ENTRY"):
-                os.environ["NESTIPY_WEB_SSR_ENTRY"] = cli_ssr_entry
 
             dist_dir = _cli_value("--web-dist") or ""
             if not dist_dir and "--web" in argv:
@@ -86,51 +60,15 @@ class WebStaticHandler:
         static_dir = os.path.realpath(dist_dir)
         if not os.path.isdir(static_dir):
             logger.warning(
-                "[WEB] Static dist directory not found: %s (run `nestipy run web:build`)",
+                "[WEB] Static dist directory not found: %s (build your frontend first)",
                 static_dir,
             )
             return
 
-        ssr_enabled = env_ssr_enabled()
-        ssr_renderer: Optional[SSRRenderer] = None
-        ssr_cache_size = int(os.getenv("NESTIPY_WEB_SSR_CACHE", "0") or 0)
-        ssr_cache_ttl = float(os.getenv("NESTIPY_WEB_SSR_CACHE_TTL", "0") or 0)
-        ssr_cache: "collections.OrderedDict[str, tuple[float, str]]" = (
-            collections.OrderedDict()
-        )
-        ssr_stream = os.getenv("NESTIPY_WEB_SSR_STREAM", "").strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        ssr_manifest_path = os.getenv("NESTIPY_WEB_SSR_MANIFEST")
         manifest_cache: dict[str, JsonValue] | None = None
         manifest_mtime: float | None = None
-        manifest_tags_cache: str | None = None
         manifest_assets_cache: set[str] | None = None
         hash_re = re.compile(r"[-.][a-f0-9]{8,}\.")
-        ssr_allow_routes: list[str] = []
-        ssr_deny_routes: list[str] = []
-        ssr_routes_loaded = False
-        if ssr_enabled:
-            runtime = env_ssr_runtime()
-            if ssr_stream and runtime == "jsrun":
-                logger.warning("[WEB] SSR streaming disabled for jsrun runtime")
-                ssr_stream = False
-            entry_path = os.getenv("NESTIPY_WEB_SSR_ENTRY") or resolve_ssr_entry(
-                static_dir
-            )
-            try:
-                ssr_renderer = create_ssr_renderer(runtime, entry_path)
-                self._ssr_renderer = ssr_renderer
-                if self._on_ssr_renderer:
-                    self._on_ssr_renderer(ssr_renderer)
-                logger.info("[WEB] SSR enabled (runtime=%s)", runtime)
-            except ImportError as exc:
-                logger.warning("[WEB] SSR disabled (%s)", exc)
-            except Exception as exc:
-                logger.warning("[WEB] SSR init failed (%s)", exc)
 
         static_path = os.getenv("NESTIPY_WEB_STATIC_PATH", "/").strip()
         if not static_path:
@@ -164,21 +102,13 @@ class WebStaticHandler:
             return rel
 
         def _load_manifest() -> dict[str, JsonValue] | None:
-            nonlocal \
-                manifest_cache, \
-                manifest_mtime, \
-                manifest_tags_cache, \
-                manifest_assets_cache
+            nonlocal manifest_cache, manifest_mtime, manifest_assets_cache
             candidates = [
-                ssr_manifest_path,
-                os.path.join(static_dir, ".vite", "ssr-manifest.json"),
                 os.path.join(static_dir, ".vite", "manifest.json"),
                 os.path.join(static_dir, "manifest.json"),
             ]
             for candidate in candidates:
-                if not candidate:
-                    continue
-                if not os.path.isfile(candidate):
+                if not candidate or not os.path.isfile(candidate):
                     continue
                 try:
                     mtime = os.path.getmtime(candidate)
@@ -187,116 +117,11 @@ class WebStaticHandler:
                     with open(candidate, "r", encoding="utf-8") as f:
                         manifest_cache = json.load(f)
                     manifest_mtime = mtime
-                    manifest_tags_cache = None
                     manifest_assets_cache = None
                     return manifest_cache
                 except Exception:
                     return None
             return None
-
-        def _load_ssr_routes() -> None:
-            nonlocal ssr_routes_loaded
-            if ssr_routes_loaded:
-                return
-            ssr_routes_loaded = True
-            allow_env = os.getenv("NESTIPY_WEB_SSR_ROUTES", "").strip()
-            deny_env = os.getenv("NESTIPY_WEB_SSR_EXCLUDE", "").strip()
-            if allow_env:
-                ssr_allow_routes.extend(
-                    [p.strip() for p in allow_env.split(",") if p.strip()]
-                )
-            if deny_env:
-                ssr_deny_routes.extend(
-                    [p.strip() for p in deny_env.split(",") if p.strip()]
-                )
-            if ssr_allow_routes or ssr_deny_routes:
-                return
-            route_path = os.path.join(static_dir, "ssr-routes.json")
-            if not os.path.isfile(route_path):
-                return
-            try:
-                with open(route_path, "r", encoding="utf-8") as f:
-                    payload = json.load(f)
-            except Exception:
-                return
-            for entry in payload.get("routes", []):
-                path = entry.get("path")
-                if not path:
-                    continue
-                if entry.get("ssr") is False:
-                    ssr_deny_routes.append(path)
-                else:
-                    ssr_allow_routes.append(path)
-
-        def _match_route(pattern: str, path: str) -> bool:
-            if not pattern:
-                return False
-            if pattern == "/":
-                return path == "/" or path == ""
-            pat = pattern.strip("/")
-            target = path.strip("/")
-            if not pat:
-                return target == ""
-            pat_parts = pat.split("/")
-            tgt_parts = target.split("/") if target else []
-            idx = 0
-            for part in pat_parts:
-                if part == "*":
-                    return True
-                if idx >= len(tgt_parts):
-                    return False
-                if part.startswith(":"):
-                    idx += 1
-                    continue
-                if part != tgt_parts[idx]:
-                    return False
-                idx += 1
-            return idx == len(tgt_parts)
-
-        def _should_ssr(path: str) -> bool:
-            _load_ssr_routes()
-            if ssr_allow_routes:
-                return any(_match_route(pattern, path) for pattern in ssr_allow_routes)
-            if ssr_deny_routes:
-                return not any(
-                    _match_route(pattern, path) for pattern in ssr_deny_routes
-                )
-            return True
-
-        def _build_manifest_tags() -> str:
-            nonlocal manifest_tags_cache
-            if manifest_tags_cache is not None:
-                return manifest_tags_cache
-            manifest = _load_manifest()
-            if not isinstance(manifest, dict):
-                manifest_tags_cache = ""
-                return manifest_tags_cache
-            entry = manifest.get("src/entry-client.tsx") or manifest.get("src/main.tsx")
-            if not isinstance(entry, dict):
-                manifest_tags_cache = ""
-                return manifest_tags_cache
-            links: list[str] = []
-            seen: set[str] = set()
-
-            def _add_link(tag: str) -> None:
-                if tag in seen:
-                    return
-                seen.add(tag)
-                links.append(tag)
-
-            for css in entry.get("css", []) or []:
-                _add_link(f'<link rel="stylesheet" href="/{css}">')
-            file = entry.get("file")
-            if file:
-                _add_link(f'<link rel="modulepreload" href="/{file}">')
-            for imp in entry.get("imports", []) or []:
-                target = manifest.get(imp)
-                if isinstance(target, dict):
-                    imp_file = target.get("file")
-                    if imp_file:
-                        _add_link(f'<link rel="modulepreload" href="/{imp_file}">')
-            manifest_tags_cache = "\n".join(links)
-            return manifest_tags_cache
 
         def _manifest_assets() -> set[str]:
             nonlocal manifest_assets_cache
@@ -330,77 +155,12 @@ class WebStaticHandler:
                 return "public, max-age=31536000, immutable"
             return "public, max-age=3600"
 
-        def _render_ssr_payload(html: str) -> str:
-            index_file = os.path.join(static_dir, index_name)
-            try:
-                with open(index_file, "r", encoding="utf-8") as f:
-                    template = f.read()
-            except Exception:
-                return html
-            marker = '<div id="root"></div>'
-            if marker in template:
-                template = template.replace(marker, f'<div id="root">{html}</div>')
-            tags = _build_manifest_tags()
-            if tags and "</head>" in template:
-                template = template.replace("</head>", f"{tags}\n</head>")
-            return template
-
         async def _try_web_static(
             req: Request, res: Response, allow_fallback: bool
         ) -> bool:
             rel_path = _resolve_rel_path(req.path)
             if rel_path is None:
                 return False
-            if ssr_renderer is not None and _accepts_html(req):
-                try:
-                    query = req.scope.get("query_string") or b""
-                    qs = (
-                        query.decode()
-                        if isinstance(query, (bytes, bytearray))
-                        else str(query)
-                    )
-                    route_path = req.path or "/"
-                    if static_path != "/" and route_path.startswith(static_path):
-                        route_path = route_path[len(static_path) :] or "/"
-                    if not _should_ssr(route_path):
-                        raise SSRRenderError("SSR disabled for route")
-                    url = route_path + (f"?{qs}" if qs else "")
-                    if ssr_cache_size > 0:
-                        cached = ssr_cache.get(url)
-                        if cached:
-                            ts, payload = cached
-                            if (
-                                ssr_cache_ttl <= 0
-                                or (time.time() - ts) <= ssr_cache_ttl
-                            ):
-                                await res.header("Content-Type", "text/html").send(
-                                    payload
-                                )
-                                return True
-                            ssr_cache.pop(url, None)
-                    rendered = await ssr_renderer.render(url)
-                    if rendered:
-                        payload = _render_ssr_payload(rendered)
-                        if ssr_cache_size > 0:
-                            ssr_cache[url] = (time.time(), payload)
-                            while len(ssr_cache) > ssr_cache_size:
-                                ssr_cache.popitem(last=False)
-                        if ssr_stream:
-                            res.header("Content-Type", "text/html")
-
-                            async def _stream():
-                                yield payload
-
-                            await res.stream(_stream)
-                            return True
-                        await res.header("Content-Type", "text/html").send(payload)
-                        return True
-                except SSRRenderError as exc:
-                    message = str(exc)
-                    if "disabled for route" not in message.lower():
-                        logger.warning("[WEB] SSR render failed (%s)", exc)
-                except Exception:
-                    logger.exception("[WEB] SSR render crashed")
             file_path = os.path.realpath(os.path.join(static_dir, rel_path))
             if not file_path.startswith(static_dir):
                 return False
@@ -454,7 +214,7 @@ class WebStaticHandler:
     async def maybe_handle(
         self, scope: dict, receive: Callable, send_fn: Callable
     ) -> bool:
-        """Handle static/SSR requests directly when appropriate."""
+        """Handle static requests directly when appropriate."""
         if self._try_handler is None:
             return False
         path = scope.get("path") or "/"

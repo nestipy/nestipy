@@ -7,7 +7,12 @@ export default withMermaid(defineConfig({
   description: "A Python framework inspired by NestJS and built on top of FastAPI or Blacksheep.",
   srcDir: '.',
   outDir: '../docs', 
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    ['link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap' }],
+  ],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: '/images/nestipy.png',
@@ -83,22 +88,6 @@ export default withMermaid(defineConfig({
           { text: 'NATS', link: '/microservice/nats' },
           { text: 'RabbitMQ', link: '/microservice/rabbitmq' },
           { text: 'GRPC', link: '/microservice/grpc' },
-        ]
-      },
-      {
-        text: 'Web',
-        items: [
-          { text: 'Overview', link: '/web/' },
-          { text: 'Getting Started', link: '/web/getting-started' },
-          { text: 'Routing + Layouts', link: '/web/routing-layouts' },
-          { text: 'Components + UI', link: '/web/components' },
-          { text: 'Actions (RPC)', link: '/web/actions' },
-          { text: 'Typed Clients', link: '/web/typed-clients' },
-          { text: 'CLI', link: '/web/cli' },
-          { text: 'Environment', link: '/web/environment' },
-          { text: 'Production', link: '/web/production' },
-          { text: 'SSR', link: '/web/ssr' },
-          { text: 'Troubleshooting', link: '/web/troubleshooting' },
         ]
       },
       { text: 'OpenAPI', link: '/openapi/start' },

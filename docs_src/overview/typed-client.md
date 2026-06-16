@@ -1,127 +1,28 @@
 # Typed Client
 
-Nestipy can build a typed HTTP client directly from your controllers. This mirrors the “router‑based client” flow you get in frameworks like Hono or tRPC, but stays fully HTTP.
+Nestipy builds a typed **TypeScript** HTTP client directly from your controllers, so a
+JS/TS frontend (Inertia, React, Vue, Svelte, anything) can call your API with full typing.
+This mirrors the “router-based client” flow you get in frameworks like Hono or tRPC, but
+stays plain HTTP. A Python client generator is also available (see the end of this page).
 
-## Generate From App
+## CLI: `client:gen`
 
-```python
-from nestipy.core import NestipyFactory
-from app_module import AppModule
+The quickest way — generate a `.ts` client straight from your modules:
 
-app = NestipyFactory.create(AppModule)
-
-# Generate a sync client
-app.generate_typed_client("clients/api_client.py", class_name="ApiClient")
-
-# Generate an async client
-app.generate_typed_client(
-    "clients/api_client_async.py",
-    class_name="ApiClientAsync",
-    async_client=True,
-)
+```bash
+nestipy run client:gen --output clients/api_client.ts --class ApiClient
 ```
 
-The generator reads:
-- Controller route metadata
-- HTTP method + path
-- Parameter sources (`Param`, `Query`, `Body`, `Header`)
-- Return annotations (for type hints)
+Or from a running server's router-spec endpoint:
 
-## Generate From Router Spec
-
-```python
-from nestipy.router import build_router_spec, write_client_file, write_typescript_client_file
-from app_module import AppModule
-
-spec = build_router_spec([AppModule], prefix="/api")
-write_client_file(spec, "clients/api_client.py", class_name="ApiClient")
-write_typescript_client_file(spec, "clients/api_client.ts", class_name="ApiClient")
+```bash
+nestipy run client:gen --spec http://127.0.0.1:8000/_router/spec --output clients/api_client.ts
 ```
 
-## Client Usage
+Flags: `--output/-o` (required), `--class`/`--name` (client class name), `--prefix`
+(route prefix), `--spec`/`--url` (generate from a spec endpoint instead of local modules).
 
-```python
-from clients.api_client import ApiClient
-
-client = ApiClient(base_url="http://localhost:8001")
-cat = client.get_cat(1, query={"q": "tom"})
-client.close()
-```
-
-Notes:
-- Query/body/header values set to `None` are skipped.
-- `Body` values support dicts, dataclasses, and Pydantic models.
-- The generated client can use `httpx`, `requests`, or any client that exposes `.request(...)`.
-- Path params are positional arguments; query/headers/body/cookies are grouped into dicts.
-
-## Dynamic HTTP Clients
-
-You can inject any HTTP implementation:
-
-```python
-import requests
-from clients.api_client import ApiClient
-
-session = requests.Session()
-client = ApiClient(base_url="http://localhost:8001", client=session)
-```
-
-Or pass a custom request function:
-
-```python
-def request(method, url, **kwargs):
-    ...
-
-client = ApiClient(base_url="http://localhost:8001", request=request)
-```
-
-## TypeScript Client
-
-```python
-from nestipy.core import NestipyFactory
-from app_module import AppModule
-
-app = NestipyFactory.create(AppModule)
-app.generate_typescript_client("clients/api_client.ts", class_name="ApiClient")
-```
-
-The generated client uses `fetch` by default and accepts a custom fetcher.
-It groups inputs into a single `options` object with `query`, `headers`, `body`, and `cookies` fields.
-Path params are positional arguments.
-
-## Router Spec Endpoint (Optional)
-
-Expose the RouterSpec JSON only when explicitly enabled:
-
-```python
-from nestipy.core import NestipyFactory, NestipyConfig
-
-app = NestipyFactory.create(
-    AppModule,
-    config=NestipyConfig(router_spec_enabled=True),
-)
-```
-
-By default the endpoint is disabled.
-
-You can also protect it with a token:
-
-```python
-config = NestipyConfig(
-    router_spec_enabled=True,
-    router_spec_token="secret",
-)
-```
-
-The endpoint defaults to `/_router/spec` and accepts the token via:
-- `x-router-spec-token` header
-- `?token=...` query param
-
-You can override the path with `router_spec_path="/internal/router-spec"`.
-
-## CLI Codegen (Optional)
-
-Enable codegen explicitly via the commander entrypoint:
+The `client:gen` command is wired through the commander entrypoint:
 
 ```python
 import asyncio
@@ -134,14 +35,91 @@ if __name__ == "__main__":
     asyncio.run(command.run(sys.argv[1], tuple(sys.argv[2:])))
 ```
 
-Then run:
-
 ```bash
-NESTIPY_ROUTER_SPEC=1 python cli.py codegen:client --output clients/api_client.py
+python cli.py client:gen --output clients/api_client.ts
 ```
 
-Generate TypeScript:
+## Programmatic generation
 
-```bash
-NESTIPY_ROUTER_SPEC=1 python cli.py codegen:client --output clients/api_client.ts --lang ts
+From the `nestipy.client` facade:
+
+```python
+from nestipy.client import generate_client, generate_client_from_url
+from app_module import AppModule
+
+generate_client([AppModule], "clients/api_client.ts", class_name="ApiClient", prefix="/api")
+
+# or from a running server's spec endpoint
+generate_client_from_url(
+    "http://127.0.0.1:8000/_router/spec",
+    "clients/api_client.ts",
+    class_name="ApiClient",
+)
 ```
+
+From the app instance:
+
+```python
+from nestipy.core import NestipyFactory
+from app_module import AppModule
+
+app = NestipyFactory.create(AppModule)
+app.generate_typescript_client("clients/api_client.ts", class_name="ApiClient")
+```
+
+The generator reads controller route metadata: HTTP method + path, parameter sources
+(`Param`, `Query`, `Body`, `Header`), and return annotations for type hints.
+
+## Using the generated client
+
+```ts
+import { createApiClient } from "./api_client"
+
+const api = createApiClient({ baseUrl: "http://localhost:8001" })
+
+// methods grouped by controller, fully typed
+const cat = await api.CatsController.getCat(1, { query: { q: "tom" } })
+```
+
+- Uses `fetch` by default; pass a custom fetcher to `createApiClient`.
+- Inputs are grouped into a single `options` object with `query`, `headers`, `body`, `cookies`.
+- Path params are positional arguments.
+
+## Router spec endpoint (optional)
+
+Expose the RouterSpec JSON only when explicitly enabled — useful for `--spec` generation:
+
+```python
+from nestipy.core import NestipyFactory, NestipyConfig
+
+app = NestipyFactory.create(
+    AppModule,
+    config=NestipyConfig(router_spec_enabled=True, router_spec_token="secret"),
+)
+```
+
+The endpoint defaults to `/_router/spec` and accepts the token via the
+`x-router-spec-token` header or `?token=...` query param. Override the path with
+`router_spec_path="/internal/router-spec"`.
+
+## Python client (optional)
+
+The same router spec can emit a typed **Python** client:
+
+```python
+from nestipy.router import build_router_spec, write_client_file
+
+spec = build_router_spec([AppModule], prefix="/api")
+write_client_file(spec, "clients/api_client.py", class_name="ApiClient")
+```
+
+```python
+from clients.api_client import ApiClient
+
+client = ApiClient(base_url="http://localhost:8001")
+cat = client.get_cat(1, query={"q": "tom"})
+client.close()
+```
+
+The generated Python client works with `httpx`, `requests`, or any object exposing
+`.request(...)`; pass `client=` or a custom `request=` function to inject it.
